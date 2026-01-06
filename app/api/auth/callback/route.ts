@@ -89,9 +89,9 @@ export async function GET(request: NextRequest) {
       throw new Error("Invalid auth token")
     }
 
-    // Get IP from x-forwarded-for header (for proxies/load balancers) or direct IP
+    // Get IP from x-forwarded-for header (for proxies/load balancers)
     const forwardedFor = request.headers.get("x-forwarded-for")
-    const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : request.ip || null
+    const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
     const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
     const session = createSession(ipAddress, userAgent)
