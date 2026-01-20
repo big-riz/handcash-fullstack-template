@@ -64,143 +64,147 @@ export function InventoryDisplay() {
 
   return (
     <>
-      <Card className="p-6 rounded-3xl border-border">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Package className="w-6 h-6 text-primary" />
-            <h3 className="text-xl font-bold">My Inventory</h3>
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 glass rounded-2xl flex items-center justify-center shadow-lg">
+              <Package className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-3xl font-black uppercase italic tracking-tighter">My Collection</h3>
+              <p className="text-sm text-muted-foreground font-medium uppercase tracking-[0.2em]">Inventory System</p>
+            </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => fetchInventory()} disabled={isLoading} className="rounded-full">
-            <RefreshCw className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`} />
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => fetchInventory()}
+            disabled={isLoading}
+            className="rounded-2xl px-6 h-14 font-bold border-border bg-background/50 backdrop-blur-sm hover:translate-y-[-2px] transition-all"
+          >
+            <RefreshCw className={`w-5 h-5 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            Refresh Gear
           </Button>
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+            <p className="font-bold text-muted-foreground animate-pulse uppercase tracking-widest text-xs">Accessing Vault...</p>
           </div>
         ) : error ? (
-          <Alert variant="destructive" className="rounded-2xl">
-            <AlertDescription className="font-medium">{error}</AlertDescription>
+          <Alert variant="destructive" className="rounded-[2rem] border-destructive/20 bg-destructive/5 p-8">
+            <AlertDescription className="font-bold text-lg text-center">{error}</AlertDescription>
           </Alert>
         ) : items.length === 0 ? (
-          <div className="text-center py-16">
-            <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground text-lg">No items in your inventory yet</p>
+          <div className="text-center py-32 glass rounded-[3rem]">
+            <div className="w-24 h-24 glass rounded-full flex items-center justify-center mx-auto mb-6 opacity-40">
+              <Package className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h4 className="text-2xl font-black uppercase italic tracking-tighter mb-2">The Vault is Empty</h4>
+            <p className="text-muted-foreground font-medium max-w-[250px] mx-auto">
+              Start minting to populate your exclusive collection.
+            </p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-4">
-              {(isExpanded ? items : items.slice(0, 4)).map((item) => (
-              <div
-                key={item.id}
-                className="border border-border rounded-2xl overflow-hidden hover:shadow-xl transition-shadow"
-              >
-                <div className="aspect-square bg-muted relative">
-                  <img
-                    src={item.imageUrl || "/placeholder.svg?height=200&width=200"}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-bold truncate text-base">{item.name}</h4>
-                    {item.count !== undefined && item.count > 1 && (
-                      <Badge variant="outline" className="rounded-full text-xs font-semibold shrink-0 ml-2">
-                        ×{item.count}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    {item.collection?.name && (
-                      <Badge variant="secondary" className="rounded-full font-semibold text-xs">
-                        {item.collection.name}
-                      </Badge>
-                    )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(isExpanded ? items : items.slice(0, 6)).map((item) => (
+                <div
+                  key={item.id}
+                  className="glass-card rounded-[2.5rem] overflow-hidden group transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:translate-y-[-8px] border-white/5"
+                >
+                  <div className="aspect-square bg-muted/20 relative overflow-hidden">
+                    <img
+                      src={item.imageUrl || "/placeholder.svg?height=400&width=400"}
+                      alt={item.name}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
                     {item.rarity && (
-                      <Badge variant="secondary" className="rounded-full font-semibold text-xs">
-                        {item.rarity}
-                      </Badge>
+                      <div className="absolute top-4 right-4">
+                        <Badge className="bg-primary/90 text-primary-foreground backdrop-blur-md px-4 py-1.5 rounded-xl border-none font-black text-[10px] tracking-[0.2em] shadow-xl">
+                          {item.rarity.toUpperCase()}
+                        </Badge>
+                      </div>
                     )}
                   </div>
-                  {item.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.description}</p>
-                  )}
-                  {item.attributes && item.attributes.length > 0 && (
-                    <div className="space-y-1 mb-3">
-                      {item.attributes.map((attr, idx) => (
-                        <div key={idx} className="flex items-center justify-between gap-2 text-xs">
-                          <span className="text-muted-foreground font-medium">{attr.name}:</span>
-                          <Badge variant="outline" className="text-xs rounded-full font-normal">
-                            {attr.value}
-                          </Badge>
-                        </div>
-                      ))}
+
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-black uppercase italic tracking-tighter text-xl truncate">{item.name}</h4>
+                      {item.count !== undefined && item.count > 1 && (
+                        <Badge variant="outline" className="rounded-lg text-[10px] font-black shrink-0 ml-2 border-primary/30 text-primary uppercase">
+                          x{item.count}
+                        </Badge>
+                      )}
                     </div>
-                  )}
-                  {item.color && (
-                    <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-lg">
-                      <div
-                        className="w-4 h-4 rounded border border-border shrink-0"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-xs text-muted-foreground font-mono">{item.color}</span>
+
+                    <div className="flex items-center gap-2 mb-4">
+                      <Badge variant="secondary" className="rounded-lg font-bold text-[10px] uppercase tracking-widest bg-muted/60 text-muted-foreground">
+                        {item.collection?.name || "Standard Edition"}
+                      </Badge>
                     </div>
-                  )}
-                  <div className="flex gap-2 min-w-0">
+
+                    {item.description && (
+                      <p className="text-xs text-muted-foreground font-medium line-clamp-2 mb-4 h-8">{item.description}</p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-xl font-bold h-12 border-border/50 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all gap-2"
+                        onClick={() => {
+                          setInspectItem(item)
+                          setIsInspectOpen(true)
+                        }}
+                      >
+                        <Eye className="w-4 h-4" />
+                        View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-xl font-bold h-12 border-border/50 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all gap-2"
+                        onClick={() => handleTransfer(item)}
+                      >
+                        <Send className="w-4 h-4" />
+                        Send
+                      </Button>
+                    </div>
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="flex-1 min-w-0 rounded-full font-semibold h-10"
-                      onClick={() => {
-                        setInspectItem(item)
-                        setIsInspectOpen(true)
-                      }}
-                    >
-                      <Eye className="w-4 h-4 mr-1.5 shrink-0" />
-                      <span className="truncate">Inspect</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 min-w-0 rounded-full font-semibold h-10"
-                      onClick={() => handleTransfer(item)}
-                    >
-                      <Send className="w-4 h-4 mr-1.5 shrink-0" />
-                      <span className="truncate">Send</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="rounded-full font-semibold h-10 px-3 shrink-0"
+                      variant="ghost"
+                      className="w-full mt-3 rounded-xl font-bold h-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100 duration-300 gap-2"
                       onClick={() => handleBurnClick(item)}
                       disabled={!item.origin}
                     >
-                      <Flame className="w-4 h-4" />
+                      <Flame className="w-3.5 h-3.5" />
+                      <span className="text-[10px] uppercase tracking-widest font-black">Destroy Item</span>
                     </Button>
                   </div>
                 </div>
-              </div>
               ))}
             </div>
-            {items.length > 4 && (
-              <div className="flex justify-center mt-4">
+            {items.length > 6 && (
+              <div className="flex justify-center mt-12">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="lg"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="rounded-full"
+                  className="rounded-[1.5rem] px-10 h-16 font-black uppercase italic tracking-tighter text-lg border-border bg-background/50 backdrop-blur-sm shadow-xl hover:translate-y-[-2px] transition-all"
                 >
                   {isExpanded ? (
                     <>
-                      <ChevronUp className="w-4 h-4 mr-2" />
+                      <ChevronUp className="w-6 h-6 mr-3" />
                       Show Less
                     </>
                   ) : (
                     <>
-                      <ChevronDown className="w-4 h-4 mr-2" />
-                      Show More ({items.length - 4} more)
+                      <ChevronDown className="w-6 h-6 mr-3" />
+                      Show All Gear ({items.length - 6} more)
                     </>
                   )}
                 </Button>
@@ -208,7 +212,7 @@ export function InventoryDisplay() {
             )}
           </>
         )}
-      </Card>
+      </div>
 
       {selectedItem && (
         <ItemTransferDialog

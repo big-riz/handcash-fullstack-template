@@ -1,7 +1,6 @@
-import { promises as fs } from "fs"
-import path from "path"
-
-const TEMPLATES_FILE_PATH = path.join(process.cwd(), "data", "item-templates.json")
+import { db } from "./db"
+import { itemTemplates } from "./schema"
+import { eq } from "drizzle-orm"
 
 export interface ItemTemplate {
   id: string
@@ -21,78 +20,112 @@ export interface ItemTemplate {
   updatedAt?: string
 }
 
-async function ensureDataDirectory() {
-  const dataDir = path.dirname(TEMPLATES_FILE_PATH)
+export async function saveTemplate(template: ItemTemplate): Promise<void> {
   try {
-    await fs.mkdir(dataDir, { recursive: true })
+    // Check if template with this ID already exists
+    const existing = await db
+      .select()
+      .from(itemTemplates)
+      .where(eq(itemTemplates.id, template.id))
+      .limit(1)
+
+    if (existing.length > 0) {
+      // Update existing template
+      await db
+        .update(itemTemplates)
+        .set({
+          name: template.name,
+          description: template.description,
+          imageUrl: template.imageUrl,
+          multimediaUrl: template.multimediaUrl,
+          collectionId: template.collectionId,
+          attributes: template.attributes,
+          rarity: template.rarity,
+          color: template.color,
+          updatedAt: new Date(),
+        })
+        .where(eq(itemTemplates.id, template.id))
+    } else {
+      // Add new template
+      await db.insert(itemTemplates).values({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        imageUrl: template.imageUrl,
+        multimediaUrl: template.multimediaUrl,
+        collectionId: template.collectionId,
+        attributes: template.attributes,
+        rarity: template.rarity,
+        color: template.color,
+        createdAt: template.createdAt ? new Date(template.createdAt) : new Date(),
+      })
+    }
   } catch (error) {
-    // Directory might already exist, ignore
+    console.error("[ItemTemplatesStorage] Error saving template:", error)
+    throw error
   }
 }
 
-async function readTemplatesFile(): Promise<ItemTemplate[]> {
+export async function getTemplates(): Promise<ItemTemplate[]> {
   try {
-    await ensureDataDirectory()
-    const fileContent = await fs.readFile(TEMPLATES_FILE_PATH, "utf-8")
-    if (!fileContent.trim()) {
-      return []
-    }
-    const parsed = JSON.parse(fileContent)
-    return Array.isArray(parsed) ? parsed : []
+    const results = await db.select().from(itemTemplates)
+
+    return results.map((t) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description || undefined,
+      imageUrl: t.imageUrl || undefined,
+      multimediaUrl: t.multimediaUrl || undefined,
+      collectionId: t.collectionId!,
+      attributes: t.attributes as ItemTemplate["attributes"],
+      rarity: t.rarity || undefined,
+      color: t.color || undefined,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt?.toISOString(),
+    }))
   } catch (error) {
-    // File doesn't exist, is invalid JSON, or directory doesn't exist - return empty array
-    const err = error as NodeJS.ErrnoException
-    if (err.code === "ENOENT") {
-      // File or directory doesn't exist - that's fine
-      return []
-    }
-    // Invalid JSON or other error - log but don't throw
-    console.warn("[ItemTemplatesStorage] Error reading templates file:", err.message)
+    console.error("[ItemTemplatesStorage] Error reading templates:", error)
     return []
   }
 }
 
-async function writeTemplatesFile(templates: ItemTemplate[]): Promise<void> {
-  await ensureDataDirectory()
-  await fs.writeFile(TEMPLATES_FILE_PATH, JSON.stringify(templates, null, 2), "utf-8")
-}
-
-export async function saveTemplate(template: ItemTemplate): Promise<void> {
-  const templates = await readTemplatesFile()
-
-  // Check if template with this ID already exists
-  const existingIndex = templates.findIndex((t) => t.id === template.id)
-
-  if (existingIndex >= 0) {
-    // Update existing template
-    templates[existingIndex] = {
-      ...templates[existingIndex],
-      ...template,
-      updatedAt: new Date().toISOString(),
-    }
-  } else {
-    // Add new template
-    templates.push({
-      ...template,
-      createdAt: template.createdAt || new Date().toISOString(),
-    })
-  }
-
-  await writeTemplatesFile(templates)
-}
-
-export async function getTemplates(): Promise<ItemTemplate[]> {
-  return readTemplatesFile()
-}
-
 export async function getTemplateById(id: string): Promise<ItemTemplate | null> {
-  const templates = await readTemplatesFile()
-  return templates.find((t) => t.id === id) || null
+  try {
+    const results = await db
+      .select()
+      .from(itemTemplates)
+      .where(eq(itemTemplates.id, id))
+      .limit(1)
+
+    if (results.length === 0) return null
+
+    const t = results[0]
+    return {
+      id: t.id,
+      name: t.name,
+      description: t.description || undefined,
+      imageUrl: t.imageUrl || undefined,
+      multimediaUrl: t.multimediaUrl || undefined,
+      collectionId: t.collectionId!,
+      attributes: t.attributes as ItemTemplate["attributes"],
+      rarity: t.rarity || undefined,
+      color: t.color || undefined,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt?.toISOString(),
+    }
+  } catch (error) {
+    console.error("[ItemTemplatesStorage] Error getting template by ID:", error)
+    return null
+  }
 }
 
 export async function deleteTemplate(templateId: string): Promise<void> {
-  const templates = await readTemplatesFile()
-  const filtered = templates.filter((t) => t.id !== templateId)
-  await writeTemplatesFile(filtered)
+  try {
+    await db.delete(itemTemplates).where(eq(itemTemplates.id, templateId))
+  } catch (error) {
+    console.error("[ItemTemplatesStorage] Error deleting template:", error)
+    throw error
+  }
 }
+
 

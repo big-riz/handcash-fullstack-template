@@ -42,59 +42,54 @@ export default function HomePage() {
       */}
       <HeaderBar />
 
-      <div className="container mx-auto px-6 py-12 max-w-2xl">
+      <div className="flex-grow">
         {/* 
           ═══════════════════════════════════════════════════════════
           CUSTOMIZABLE LANDING CONTENT
           Edit components/landing-content.tsx to change hero section
           ═══════════════════════════════════════════════════════════
         */}
-        <LandingContent />
+        {!isLoading && !isAuthenticated && <LandingContent />}
 
-        {/* Main Content */}
-        <div className="space-y-6">
-          {configStatus && !configStatus.isConfigured && (
-            <Alert variant="destructive" className="rounded-3xl border-border">
-              <AlertCircle className="h-5 w-5" />
-              <AlertTitle className="font-bold">Configuration Required</AlertTitle>
-              <AlertDescription>
-                {!configStatus.hasAppId && !configStatus.hasAppSecret && (
-                  <>You need to add <code className="px-2 py-1 bg-background rounded font-mono text-sm">HANDCASH_APP_ID</code> and <code className="px-2 py-1 bg-background rounded font-mono text-sm">HANDCASH_APP_SECRET</code> to your environment variables.</>
-                )}
-                {!configStatus.hasAppId && configStatus.hasAppSecret && (
-                  <>You need to add <code className="px-2 py-1 bg-background rounded font-mono text-sm">HANDCASH_APP_ID</code> to your environment variables.</>
-                )}
-                {configStatus.hasAppId && !configStatus.hasAppSecret && (
-                  <>You need to add <code className="px-2 py-1 bg-background rounded font-mono text-sm">HANDCASH_APP_SECRET</code> to your environment variables.</>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
+        {/* Main Content for Authenticated Users */}
+        {isAuthenticated && (
+          <div className="space-y-6">
+            {configStatus && !configStatus.isConfigured && (
+              <div className="container mx-auto px-6 pt-8">
+                <Alert variant="destructive" className="rounded-3xl border-border max-w-2xl mx-auto">
+                  <AlertCircle className="h-5 w-5" />
+                  <AlertTitle className="font-bold">Configuration Required</AlertTitle>
+                  <AlertDescription>
+                    {!configStatus.hasAppId && !configStatus.hasAppSecret && (
+                      <>You need to add <code className="px-2 py-1 bg-background rounded font-mono text-sm">HANDCASH_APP_ID</code> and <code className="px-2 py-1 bg-background rounded font-mono text-sm">HANDCASH_APP_SECRET</code> to your environment variables.</>
+                    )}
+                    {!configStatus.hasAppId && configStatus.hasAppSecret && (
+                      <>You need to add <code className="px-2 py-1 bg-background rounded font-mono text-sm">HANDCASH_APP_ID</code> to your environment variables.</>
+                    )}
+                    {configStatus.hasAppId && !configStatus.hasAppSecret && (
+                      <>You need to add <code className="px-2 py-1 bg-background rounded font-mono text-sm">HANDCASH_APP_SECRET</code> to your environment variables.</>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
 
-          {/* 
-            ═══════════════════════════════════════════════════════════
-            ⚠️  DO NOT MODIFY - HandCash Login Card
-            This UserProfile component shows the login button when
-            user is logged out. Keep this intact.
-            ═══════════════════════════════════════════════════════════
-          */}
-          <div className="bg-card rounded-3xl p-8 border border-border">
-            <UserProfile />
+            {/* 
+              ═══════════════════════════════════════════════════════════
+              ⚠️  DO NOT MODIFY - HandCash Login Card
+              This UserProfile component shows the login button when
+              user is logged out. Keep this intact.
+              ═══════════════════════════════════════════════════════════
+            */}
+            {!isLoading && <AuthenticatedContent />}
           </div>
+        )}
 
-          {!isLoading && (
-            <>
-              {!isAuthenticated ? (
-                // Shows setup instructions and template info when logged out
-                <TemplateInfo />
-              ) : (
-                // Shows your custom app content when logged in
-                // Edit components/authenticated-content.tsx to customize
-                <AuthenticatedContent />
-              )}
-            </>
-          )}
-        </div>
+        {!isLoading && !isAuthenticated && (
+          <div className="container mx-auto px-6 max-w-2xl pb-20">
+            <TemplateInfo />
+          </div>
+        )}
       </div>
     </div>
   )

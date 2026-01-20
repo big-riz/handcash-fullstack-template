@@ -1,7 +1,6 @@
-import { promises as fs } from "fs"
-import path from "path"
-
-const COLLECTIONS_FILE_PATH = path.join(process.cwd(), "data", "collections.json")
+import { db } from "./db"
+import { collections } from "./schema"
+import { eq } from "drizzle-orm"
 
 interface Collection {
   id: string
@@ -12,81 +11,69 @@ interface Collection {
   updatedAt?: string
 }
 
-async function ensureDataDirectory() {
-  const dataDir = path.dirname(COLLECTIONS_FILE_PATH)
+export async function saveCollection(collection: Collection): Promise<void> {
   try {
-    await fs.mkdir(dataDir, { recursive: true })
+    // Check if collection with this ID already exists
+    const existing = await db
+      .select()
+      .from(collections)
+      .where(eq(collections.id, collection.id))
+      .limit(1)
+
+    if (existing.length > 0) {
+      // Update existing collection
+      await db
+        .update(collections)
+        .set({
+          name: collection.name,
+          description: collection.description,
+          imageUrl: collection.imageUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(collections.id, collection.id))
+    } else {
+      // Add new collection
+      await db.insert(collections).values({
+        id: collection.id,
+        name: collection.name,
+        description: collection.description,
+        imageUrl: collection.imageUrl,
+        createdAt: collection.createdAt ? new Date(collection.createdAt) : new Date(),
+      })
+    }
   } catch (error) {
-    // Directory might already exist, ignore
+    console.error("[CollectionsStorage] Error saving collection:", error)
+    throw error
   }
 }
 
-async function readCollectionsFile(): Promise<Collection[]> {
+export async function getCollections(): Promise<Collection[]> {
   try {
-    await ensureDataDirectory()
-    const fileContent = await fs.readFile(COLLECTIONS_FILE_PATH, "utf-8")
-    if (!fileContent.trim()) {
-      return []
-    }
-    const parsed = JSON.parse(fileContent)
-    return Array.isArray(parsed) ? parsed : []
+    const results = await db.select().from(collections)
+
+    return results.map((c) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description || undefined,
+      imageUrl: c.imageUrl || undefined,
+      createdAt: c.createdAt.toISOString(),
+      updatedAt: c.updatedAt?.toISOString(),
+    }))
   } catch (error) {
-    // File doesn't exist, is invalid JSON, or directory doesn't exist - return empty array
-    const err = error as NodeJS.ErrnoException
-    if (err.code === "ENOENT") {
-      // File or directory doesn't exist - that's fine
-      return []
-    }
-    // Invalid JSON or other error - log but don't throw
-    console.warn("[CollectionsStorage] Error reading collections file:", err.message)
+    console.error("[CollectionsStorage] Error reading collections:", error)
     return []
   }
 }
 
-async function writeCollectionsFile(collections: Collection[]): Promise<void> {
-  try {
-    await ensureDataDirectory()
-    await fs.writeFile(COLLECTIONS_FILE_PATH, JSON.stringify(collections, null, 2), "utf-8")
-  } catch (error) {
-    // If directory creation or write fails, log but don't throw
-    console.error("[CollectionsStorage] Error writing collections file:", error)
-    throw error // Re-throw for write operations since they're critical
-  }
-}
-
-export async function saveCollection(collection: Collection): Promise<void> {
-  const collections = await readCollectionsFile()
-  
-  // Check if collection with this ID already exists
-  const existingIndex = collections.findIndex((c) => c.id === collection.id)
-  
-  if (existingIndex >= 0) {
-    // Update existing collection
-    collections[existingIndex] = {
-      ...collections[existingIndex],
-      ...collection,
-      updatedAt: new Date().toISOString(),
-    }
-  } else {
-    // Add new collection
-    collections.push({
-      ...collection,
-      createdAt: collection.createdAt || new Date().toISOString(),
-    })
-  }
-  
-  await writeCollectionsFile(collections)
-}
-
-export async function getCollections(): Promise<Collection[]> {
-  return readCollectionsFile()
-}
-
 export async function deleteCollection(collectionId: string): Promise<void> {
-  const collections = await readCollectionsFile()
-  const filtered = collections.filter((c) => c.id !== collectionId)
-  await writeCollectionsFile(filtered)
+  try {
+    await db.delete(collections).where(eq(collections.id, collectionId))
+  } catch (error) {
+    console.error("[CollectionsStorage] Error deleting collection:", error)
+    throw error
+  }
 }
+
 
 
 

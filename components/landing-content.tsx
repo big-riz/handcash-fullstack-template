@@ -1,66 +1,54 @@
 "use client"
 
 import { useState, useEffect } from "react"
-
-interface BusinessProfile {
-  publicProfile?: {
-    avatarUrl?: string
-    displayName?: string
-  }
-}
+import { Button } from "@/components/ui/button"
+import { LandingHero } from "@/components/landing-hero"
+import { TrustSection } from "@/components/trust-section"
+import { AppFooter } from "@/components/app-footer"
+import { useAuth } from "@/lib/auth-context"
+import { Wallet } from "lucide-react"
 
 export function LandingContent() {
-  const [businessAvatar, setBusinessAvatar] = useState<string | null>(null)
-  const [businessDisplayName, setBusinessDisplayName] = useState<string | null>(null)
   const [isMounted, setIsMounted] = useState(false)
+  const { login } = useAuth()
 
   useEffect(() => {
     setIsMounted(true)
-    const fetchBusinessProfile = async () => {
-      try {
-        const response = await fetch("/api/business/profile")
-        if (response.ok) {
-          const data: BusinessProfile = await response.json()
-          if (data.publicProfile?.avatarUrl) {
-            setBusinessAvatar(data.publicProfile.avatarUrl)
-          }
-          if (data.publicProfile?.displayName) {
-            setBusinessDisplayName(data.publicProfile.displayName)
-          }
-        }
-      } catch (err) {
-        // Silently fail - will use default logo
-        console.error("Failed to fetch business profile:", err)
-      }
-    }
-
-    fetchBusinessProfile()
   }, [])
 
+  const handleConnect = async () => {
+    await login()
+  }
+
   return (
-    <div className="text-center mb-16 pt-8">
-      {/* 
-        ═══════════════════════════════════════════════════════════════
-        CUSTOMIZE YOUR LANDING PAGE HERO SECTION HERE
-        Replace the content below with your app's branding and messaging
-        ═══════════════════════════════════════════════════════════════
-      */}
-      <div className="inline-flex p-6 bg-primary/10 rounded-3xl mb-6">
-        {isMounted && businessAvatar ? (
-          <img src={businessAvatar} alt="App Logo" className="w-24 h-24 rounded-2xl object-cover" />
-        ) : (
-          <span className="text-6xl">🚀</span>
-        )}
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-grow pb-20">
+        <LandingHero />
+
+        <div className="flex flex-col items-center justify-center mb-24 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-700">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary via-primary/50 to-primary rounded-full blur opacity-40 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
+            <Button
+              size="lg"
+              className="relative rounded-full h-24 px-12 text-3xl font-black uppercase italic tracking-tighter shadow-2xl hover:scale-105 transition-all bg-foreground text-background"
+              onClick={handleConnect}
+            >
+              <Wallet className="w-8 h-8 mr-4" />
+              Join the Underground
+            </Button>
+          </div>
+          <p className="mt-8 text-muted-foreground font-bold uppercase tracking-[0.2em] text-xs">
+            Powered by HandCash Wallet
+          </p>
+        </div>
+
+        <div className="container mx-auto px-4 max-w-5xl">
+          <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-border to-transparent mb-24" />
+          <TrustSection />
+        </div>
       </div>
-      <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight">
-        {isMounted && businessDisplayName ? businessDisplayName : "Your App Name"}
-      </h1>
-      <p className="text-muted-foreground text-xl max-w-md mx-auto leading-relaxed">Your app description goes here</p>
-      {/* 
-        ═══════════════════════════════════════════════════════════════
-        END OF CUSTOMIZABLE HERO SECTION
-        ═══════════════════════════════════════════════════════════════
-      */}
+      <AppFooter />
     </div>
   )
 }
+

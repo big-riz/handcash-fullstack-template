@@ -125,14 +125,25 @@ export class HandCashService {
       appSecret: this.appSecret,
     })
 
-    const { data: rate, error } = await Connect.getExchangeRate({
+    const { data, error } = await Connect.getExchangeRate({
       client: sdk.client,
       path: {
-        currencyCode,
+        currencyCode: currencyCode as any,
       },
     })
 
-    if (error) throw new Error(error.message || "Failed to get exchange rate")
+    if (error) {
+      console.error("[HandCashService] Exchange rate error:", error)
+      throw new Error(error.message || "Failed to get exchange rate")
+    }
+
+    // Handle variation in SDK response structure
+    const rate = typeof data === "number" ? data : ((data as any)?.rate || (data as any)?.exchangeRate)
+
+    if (typeof rate !== "number") {
+      console.error("[HandCashService] Invalid exchange rate data received:", data)
+    }
+
     return rate
   }
 

@@ -1,7 +1,6 @@
-import { promises as fs } from "fs"
-import path from "path"
-
-const PAYMENTS_FILE_PATH = path.join(process.cwd(), "data", "payments.json")
+import { db } from "./db"
+import { payments } from "./schema"
+import { eq, desc, or } from "drizzle-orm"
 
 export interface Payment {
   id: string
@@ -15,79 +14,134 @@ export interface Payment {
   metadata?: Record<string, any>
 }
 
-async function ensureDataDirectory() {
-  const dataDir = path.dirname(PAYMENTS_FILE_PATH)
+export async function savePayment(payment: Payment): Promise<void> {
   try {
-    await fs.mkdir(dataDir, { recursive: true })
+    // Check if payment with this ID or transaction ID already exists
+    const existing = await db
+      .select()
+      .from(payments)
+      .where(
+        or(
+          eq(payments.id, payment.id),
+          eq(payments.transactionId, payment.transactionId)
+        )
+      )
+      .limit(1)
+
+    if (existing.length > 0) {
+      // Update existing payment
+      await db
+        .update(payments)
+        .set({
+          paymentRequestId: payment.paymentRequestId,
+          transactionId: payment.transactionId,
+          amount: payment.amount.toString(),
+          currency: payment.currency,
+          paidBy: payment.paidBy,
+          paidAt: new Date(payment.paidAt),
+          status: payment.status,
+          metadata: payment.metadata,
+        })
+        .where(eq(payments.id, existing[0].id))
+    } else {
+      // Insert new payment
+      await db.insert(payments).values({
+        id: payment.id,
+        paymentRequestId: payment.paymentRequestId,
+        transactionId: payment.transactionId,
+        amount: payment.amount.toString(),
+        currency: payment.currency,
+        paidBy: payment.paidBy,
+        paidAt: payment.paidAt ? new Date(payment.paidAt) : new Date(),
+        status: payment.status,
+        metadata: payment.metadata,
+      })
+    }
   } catch (error) {
-    // Directory might already exist, ignore
+    console.error("[PaymentsStorage] Error saving payment:", error)
+    throw error
   }
 }
 
-async function readPaymentsFile(): Promise<Payment[]> {
+export async function getPaymentsByPaymentRequestId(paymentRequestId: string): Promise<Payment[]> {
   try {
-    await ensureDataDirectory()
-    const fileContent = await fs.readFile(PAYMENTS_FILE_PATH, "utf-8")
-    if (!fileContent.trim()) {
-      return []
-    }
-    const parsed = JSON.parse(fileContent)
-    return Array.isArray(parsed) ? parsed : []
+    const results = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.paymentRequestId, paymentRequestId))
+      .orderBy(desc(payments.paidAt))
+
+    return results.map((p) => ({
+      id: p.id,
+      paymentRequestId: p.paymentRequestId,
+      transactionId: p.transactionId,
+      amount: parseFloat(p.amount),
+      currency: p.currency,
+      paidBy: p.paidBy || undefined,
+      paidAt: p.paidAt.toISOString(),
+      status: p.status as "completed" | "failed" | "cancelled",
+      metadata: p.metadata as Record<string, any> | undefined,
+    }))
   } catch (error) {
-    // File doesn't exist, is invalid JSON, or directory doesn't exist - return empty array
-    const err = error as NodeJS.ErrnoException
-    if (err.code === "ENOENT") {
-      // File or directory doesn't exist - that's fine
-      return []
-    }
-    // Invalid JSON or other error - log but don't throw
-    console.warn("[PaymentsStorage] Error reading payments file:", err.message)
+    console.error("[PaymentsStorage] Error getting payments by request ID:", error)
     return []
   }
 }
 
-async function writePaymentsFile(payments: Payment[]): Promise<void> {
-  await ensureDataDirectory()
-  await fs.writeFile(PAYMENTS_FILE_PATH, JSON.stringify(payments, null, 2), "utf-8")
-}
-
-export async function savePayment(payment: Payment): Promise<void> {
-  const payments = await readPaymentsFile()
-  
-  // Check if payment with this ID already exists
-  const existingIndex = payments.findIndex((p) => p.id === payment.id || p.transactionId === payment.transactionId)
-  
-  if (existingIndex >= 0) {
-    // Update existing payment
-    payments[existingIndex] = {
-      ...payments[existingIndex],
-      ...payment,
-    }
-  } else {
-    // Add new payment
-    payments.push({
-      ...payment,
-      paidAt: payment.paidAt || new Date().toISOString(),
-    })
-  }
-  
-  await writePaymentsFile(payments)
-}
-
-export async function getPaymentsByPaymentRequestId(paymentRequestId: string): Promise<Payment[]> {
-  const payments = await readPaymentsFile()
-  return payments.filter((p) => p.paymentRequestId === paymentRequestId).sort((a, b) => 
-    new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime()
-  )
-}
-
 export async function getAllPayments(): Promise<Payment[]> {
-  const payments = await readPaymentsFile()
-  return payments.sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())
+  try {
+    const results = await db
+      .select()
+      .from(payments)
+      .orderBy(desc(payments.paidAt))
+
+    return results.map((p) => ({
+      id: p.id,
+      paymentRequestId: p.paymentRequestId,
+      transactionId: p.transactionId,
+      amount: parseFloat(p.amount),
+      currency: p.currency,
+      paidBy: p.paidBy || undefined,
+      paidAt: p.paidAt.toISOString(),
+      status: p.status as "completed" | "failed" | "cancelled",
+      metadata: p.metadata as Record<string, any> | undefined,
+    }))
+  } catch (error) {
+    console.error("[PaymentsStorage] Error getting all payments:", error)
+    return []
+  }
 }
 
 export async function getPaymentById(paymentId: string): Promise<Payment | null> {
-  const payments = await readPaymentsFile()
-  return payments.find((p) => p.id === paymentId || p.transactionId === paymentId) || null
+  try {
+    const results = await db
+      .select()
+      .from(payments)
+      .where(
+        or(
+          eq(payments.id, paymentId),
+          eq(payments.transactionId, paymentId)
+        )
+      )
+      .limit(1)
+
+    if (results.length === 0) return null
+
+    const p = results[0]
+    return {
+      id: p.id,
+      paymentRequestId: p.paymentRequestId,
+      transactionId: p.transactionId,
+      amount: parseFloat(p.amount),
+      currency: p.currency,
+      paidBy: p.paidBy || undefined,
+      paidAt: p.paidAt.toISOString(),
+      status: p.status as "completed" | "failed" | "cancelled",
+      metadata: p.metadata as Record<string, any> | undefined,
+    }
+  } catch (error) {
+    console.error("[PaymentsStorage] Error getting payment by ID:", error)
+    return null
+  }
 }
 

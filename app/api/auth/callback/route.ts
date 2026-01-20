@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
     console.error("[Auth] Callback validation error:", error)
 
     const forwardedFor = request.headers.get("x-forwarded-for")
-    const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : request.ip || null
+    const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
     const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
     logAuditEvent({
