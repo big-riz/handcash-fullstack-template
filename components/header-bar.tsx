@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Rocket, LogOut, Shield, Menu } from "lucide-react"
+import { Rocket, LogOut, Shield, Menu, ShoppingBag, Package, ShieldCheck } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { FaqModal } from "@/components/faq-modal"
 import { LoginButton } from "@/components/login-button"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface BusinessProfile {
   publicProfile?: {
@@ -31,7 +32,12 @@ interface BusinessProfile {
   }
 }
 
-export function HeaderBar() {
+interface HeaderBarProps {
+  activeTab?: string
+  onTabChange?: (value: string) => void
+}
+
+export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuth()
   const [businessAvatar, setBusinessAvatar] = useState<string | null>(null)
@@ -92,51 +98,108 @@ export function HeaderBar() {
 
   const NavContent = () => (
     <>
-      {isAuthenticated && (
+      {isAuthenticated && activeTab && onTabChange ? (
+        <Tabs value={activeTab} onValueChange={onTabChange} className="hidden md:flex">
+          <TabsList className="h-12 p-1 bg-muted/50 backdrop-blur-md border border-border/50 rounded-xl shadow-sm">
+            <TabsTrigger
+              value="mint"
+              className="rounded-lg px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm font-bold transition-all gap-2"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Mint
+            </TabsTrigger>
+            <TabsTrigger
+              value="inventory"
+              className="rounded-lg px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm font-bold transition-all gap-2"
+            >
+              <Package className="w-4 h-4" />
+              Collection
+            </TabsTrigger>
+            <TabsTrigger
+              value="trust"
+              className="rounded-lg px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm font-bold transition-all gap-2"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Trust
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : (
         <>
           <Button variant="ghost" asChild className="hidden md:flex">
-            <Link href="/#mint">Mint</Link>
+            <Link href="/#devlog">Devlog</Link>
           </Button>
-          <Button variant="ghost" asChild className="hidden md:flex">
-            <Link href="/#inventory">My Items</Link>
-          </Button>
+          <div className="hidden md:flex">
+            <FaqModal />
+          </div>
         </>
       )}
-      <Button variant="ghost" asChild className="hidden md:flex">
-        <Link href="/#devlog">Devlog</Link>
-      </Button>
-      <div className="hidden md:flex">
-        <FaqModal />
-      </div>
     </>
   )
 
-  const MobileNav = () => (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Menu className="w-5 h-5" />
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right">
-        <SheetHeader>
-          <SheetTitle>Menu</SheetTitle>
-        </SheetHeader>
-        <div className="flex flex-col gap-4 mt-8">
-          {isAuthenticated && (
-            <>
-              <Link href="/#mint" className="text-lg font-medium">Mint</Link>
-              <Link href="/#inventory" className="text-lg font-medium">My Items</Link>
-            </>
-          )}
-          <Link href="/#devlog" className="text-lg font-medium">Devlog</Link>
-          <div className="flex justify-start">
-            <FaqModal />
+  const MobileNav = () => {
+    const [open, setOpen] = useState(false)
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="md:hidden">
+            <Menu className="w-5 h-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="right">
+          <SheetHeader>
+            <SheetTitle>Menu</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col gap-4 mt-8">
+            {isAuthenticated && activeTab && onTabChange ? (
+              <>
+                <button
+                  onClick={() => {
+                    onTabChange("mint")
+                    setOpen(false)
+                  }}
+                  className={`text-lg font-medium text-left ${activeTab === "mint" ? "text-primary" : ""}`}
+                >
+                  Mint
+                </button>
+                <button
+                  onClick={() => {
+                    onTabChange("inventory")
+                    setOpen(false)
+                  }}
+                  className={`text-lg font-medium text-left ${activeTab === "inventory" ? "text-primary" : ""}`}
+                >
+                  Collection
+                </button>
+                <button
+                  onClick={() => {
+                    onTabChange("trust")
+                    setOpen(false)
+                  }}
+                  className={`text-lg font-medium text-left ${activeTab === "trust" ? "text-primary" : ""}`}
+                >
+                  Trust
+                </button>
+              </>
+            ) : (
+              <>
+                {isAuthenticated && (
+                  <>
+                    <Link href="/#mint" className="text-lg font-medium" onClick={() => setOpen(false)}>Mint</Link>
+                    <Link href="/#inventory" className="text-lg font-medium" onClick={() => setOpen(false)}>My Items</Link>
+                  </>
+                )}
+              </>
+            )}
+            <Link href="/#devlog" className="text-lg font-medium" onClick={() => setOpen(false)}>Devlog</Link>
+            <div className="flex justify-start">
+              <FaqModal />
+            </div>
           </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  )
+        </SheetContent>
+      </Sheet>
+    )
+  }
 
 
   return (

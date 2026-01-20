@@ -13,6 +13,7 @@ import { useEffect, useState } from "react"
 export default function HomePage() {
   const { isAuthenticated, isLoading } = useAuth()
   const [configStatus, setConfigStatus] = useState<{ hasAppId: boolean; hasAppSecret: boolean; isConfigured: boolean } | null>(null)
+  const [activeTab, setActiveTab] = useState("mint")
 
   useEffect(() => {
     const checkConfig = async () => {
@@ -40,7 +41,7 @@ export default function HomePage() {
         and user menu. Keep this intact for authentication to work.
         ═══════════════════════════════════════════════════════════════
       */}
-      <HeaderBar />
+      <HeaderBar activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="flex-grow">
         {/* 
@@ -81,7 +82,7 @@ export default function HomePage() {
               user is logged out. Keep this intact.
               ═══════════════════════════════════════════════════════════
             */}
-            {!isLoading && <AuthenticatedContent />}
+            {!isLoading && <AuthenticatedContent activeTab={activeTab} onTabChange={setActiveTab} />}
           </div>
         )}
 

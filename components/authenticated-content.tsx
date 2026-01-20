@@ -5,7 +5,12 @@ import { AppFooter } from "@/components/app-footer"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ShoppingBag, Package, ShieldCheck } from "lucide-react"
 
-export function AuthenticatedContent() {
+interface AuthenticatedContentProps {
+  activeTab: string
+  onTabChange: (value: string) => void
+}
+
+export function AuthenticatedContent({ activeTab, onTabChange }: AuthenticatedContentProps) {
   return (
     <div className="flex flex-col min-h-screen relative overflow-hidden">
       {/* Dynamic Background Elements */}
@@ -25,33 +30,7 @@ export function AuthenticatedContent() {
         </div>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="mint" className="w-full">
-          <div className="flex justify-center mb-12">
-            <TabsList className="h-16 p-1.5 bg-muted/50 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl">
-              <TabsTrigger
-                value="mint"
-                className="rounded-xl px-8 h-full data-[state=active]:bg-background data-[state=active]:shadow-lg text-lg font-bold transition-all gap-2"
-              >
-                <ShoppingBag className="w-5 h-5" />
-                Mint
-              </TabsTrigger>
-              <TabsTrigger
-                value="inventory"
-                className="rounded-xl px-8 h-full data-[state=active]:bg-background data-[state=active]:shadow-lg text-lg font-bold transition-all gap-2"
-              >
-                <Package className="w-5 h-5" />
-                Collection
-              </TabsTrigger>
-              <TabsTrigger
-                value="trust"
-                className="rounded-xl px-8 h-full data-[state=active]:bg-background data-[state=active]:shadow-lg text-lg font-bold transition-all gap-2"
-              >
-                <ShieldCheck className="w-5 h-5" />
-                Trust
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
+        <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
           <TabsContent value="mint" className="animate-in fade-in zoom-in-95 duration-500 mt-0">
             <div className="flex flex-col items-center">
               <div className="w-full max-w-2xl">
