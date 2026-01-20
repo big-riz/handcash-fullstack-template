@@ -208,13 +208,9 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-all hover:translate-y-[-1px]">
-            <div className="p-3 bg-primary/10 rounded-2xl shadow-inner group overflow-hidden relative">
+            <div className="p-1.5 bg-primary/10 rounded-full shadow-sm group overflow-hidden relative">
               <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity animate-pulse" />
-              {isMounted && businessAvatar ? (
-                <img src={businessAvatar} alt="Logo" className="w-7 h-7 rounded-lg object-cover relative z-10" />
-              ) : (
-                <Rocket className="w-7 h-7 text-primary relative z-10" />
-              )}
+              <img src="/gopnik-logo.jpg" alt="Logo" className="w-10 h-10 rounded-full object-cover relative z-10" />
             </div>
             <div className="flex flex-col">
               <span className="font-black text-2xl uppercase italic tracking-tighter leading-none">Gopnik</span>

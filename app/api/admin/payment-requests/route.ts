@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     const adminHandle = process.env.ADMIN_HANDLE?.replace("@", "") || "admin"
     const receiverDestination = destination || `$${adminHandle}`
-    const productImage = imageUrl || "https://www.handcash.io/images/handcash-logo.png"
+    const productImage = imageUrl || "/gopnik-logo.jpg"
 
     const paymentRequestData: any = {
       product: {
