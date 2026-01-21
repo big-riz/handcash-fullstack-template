@@ -34,11 +34,6 @@ export function AuthenticatedContent({ activeTab, onTabChange }: AuthenticatedCo
           <TabsContent value="mint" className="animate-in fade-in zoom-in-95 duration-500 mt-0">
             <div className="flex flex-col items-center">
               <div className="w-full max-w-2xl">
-                <div className="mb-6 flex items-center justify-center gap-3">
-                  <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent to-border" />
-                  <span className="text-sm font-black uppercase tracking-widest text-muted-foreground">Main Action</span>
-                  <div className="h-[1px] flex-grow bg-gradient-to-l from-transparent to-border" />
-                </div>
                 <MintModule />
               </div>
             </div>

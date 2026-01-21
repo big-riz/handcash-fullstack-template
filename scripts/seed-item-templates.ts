@@ -50,6 +50,7 @@ async function seed() {
             name: "KV-2 Tank Model",
             description: "The fridge on tracks. Solid steel, peak engineering.",
             imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tank.png",
+            multimediaUrl: "https://res.cloudinary.com/handcash-io/raw/upload/v1710255990/items/kv2.glb",
             collectionId: targetCollectionId,
             rarity: "Rare",
             attributes: [
@@ -94,6 +95,7 @@ async function seed() {
                     name: template.name,
                     description: template.description,
                     imageUrl: template.imageUrl,
+                    multimediaUrl: (template as any).multimediaUrl,
                     rarity: template.rarity,
                     attributes: template.attributes,
                     updatedAt: new Date()

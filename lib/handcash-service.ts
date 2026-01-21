@@ -149,14 +149,27 @@ export class HandCashService {
 
   async getInventory(privateKey: string, limit = 100) {
     const client = this.getSDKClient(privateKey)
-    const { data: items, error } = await Connect.getItemsInventory({
+    const { data, error } = await Connect.getItemsInventory({
       client,
     })
 
     if (error) throw new Error(error.message || "Failed to get inventory")
 
-    // HandCash API returns {items: [...]} so we need to extract the array
-    return items?.items || []
+    // HandCash API returns {items: [...]} in data
+    const rawItems = (data as any)?.items || (Array.isArray(data) ? data : [])
+
+    return rawItems.map((item: any) => ({
+      id: item.id || item.origin,
+      origin: item.origin,
+      name: item.name,
+      description: item.description,
+      imageUrl: item.mediaDetails?.image?.url || item.imageUrl || item.image,
+      multimediaUrl: item.mediaDetails?.multimedia?.url || item.multimediaUrl,
+      rarity: item.rarity,
+      color: item.color,
+      attributes: item.attributes,
+      collection: item.collection,
+    }))
   }
 
   // Item operations (uses SDK v3)

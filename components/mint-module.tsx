@@ -93,22 +93,19 @@ export function MintModule() {
             <div className="p-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
             <div className="p-8 md:p-10">
-                {/* Header / Price Display */}
+                {/* Header Area */}
                 <div className="flex items-center justify-between mb-10">
                     <div>
-                        <h2 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Available Now</h2>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-5xl font-black tracking-tighter">${PRICE_USD.toFixed(2)}</span>
-                            <span className="text-lg text-muted-foreground font-bold italic uppercase tracking-wider">USD</span>
+                        <h2 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Limited Edition</h2>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-xl font-black uppercase italic tracking-tighter">Collection Live</span>
                         </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                        <Badge className="h-10 px-4 rounded-2xl gap-2 bg-primary text-primary-foreground border-none font-bold text-sm shadow-lg shadow-primary/20">
-                            <Zap className="w-4 h-4 fill-current" />
-                            INSTANT
-                        </Badge>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">No Waiting</span>
-                    </div>
+                    <Badge className="h-8 px-3 rounded-full gap-1.5 bg-primary/10 text-primary border-primary/20 font-bold text-[10px] tracking-widest">
+                        <Zap className="w-3 h-3 fill-current" />
+                        INSTANT MINT
+                    </Badge>
                 </div>
 
                 {/* Main Canvas Area */}
@@ -220,8 +217,17 @@ export function MintModule() {
                     )}
                 </div>
 
-                {/* Action Button */}
+                {/* Action Section */}
                 <div className="relative">
+                    {mintState === "IDLE" && (
+                        <div className="flex flex-col items-center mb-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Price per mint</span>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-6xl font-black tracking-tighter text-primary group-hover:scale-105 transition-transform duration-500">${PRICE_USD.toFixed(2)}</span>
+                                <span className="text-xl text-muted-foreground font-bold italic uppercase tracking-wider">USD</span>
+                            </div>
+                        </div>
+                    )}
                     {mintState === "SUCCESS" ? (
                         <div className="flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500">
                             <Button

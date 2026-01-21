@@ -82,6 +82,7 @@ export const mintedItems = pgTable("minted_items", {
     itemName: text("item_name").notNull(),
     rarity: text("rarity"),
     imageUrl: text("image_url"),
+    multimediaUrl: text("multimedia_url"),
     paymentId: text("payment_id").references(() => payments.id),
     mintedAt: timestamp("minted_at").defaultNow(),
     metadata: jsonb("metadata"),

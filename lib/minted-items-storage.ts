@@ -12,6 +12,7 @@ export interface MintedItemData {
     itemName: string
     rarity?: string
     imageUrl?: string
+    multimediaUrl?: string
     paymentId?: string
     metadata?: Record<string, any>
 }
@@ -32,6 +33,7 @@ export async function recordMintedItem(itemData: MintedItemData): Promise<void> 
             itemName: itemData.itemName,
             rarity: itemData.rarity,
             imageUrl: itemData.imageUrl,
+            multimediaUrl: itemData.multimediaUrl,
             paymentId: itemData.paymentId,
             metadata: itemData.metadata,
         })
@@ -62,6 +64,7 @@ export async function getMintedItemsByUserId(userId: string): Promise<MintedItem
             itemName: item.itemName,
             rarity: item.rarity || undefined,
             imageUrl: item.imageUrl || undefined,
+            multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
             metadata: item.metadata as Record<string, any> | undefined,
         }))
@@ -92,6 +95,7 @@ export async function getMintedItemsByCollectionId(collectionId: string): Promis
             itemName: item.itemName,
             rarity: item.rarity || undefined,
             imageUrl: item.imageUrl || undefined,
+            multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
             metadata: item.metadata as Record<string, any> | undefined,
         }))
@@ -125,6 +129,7 @@ export async function getMintedItemByOrigin(origin: string): Promise<MintedItemD
             itemName: item.itemName,
             rarity: item.rarity || undefined,
             imageUrl: item.imageUrl || undefined,
+            multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
             metadata: item.metadata as Record<string, any> | undefined,
         }
@@ -154,6 +159,7 @@ export async function getAllMintedItems(): Promise<MintedItemData[]> {
             itemName: item.itemName,
             rarity: item.rarity || undefined,
             imageUrl: item.imageUrl || undefined,
+            multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
             metadata: item.metadata as Record<string, any> | undefined,
         }))

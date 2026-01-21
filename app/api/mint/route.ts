@@ -153,18 +153,28 @@ export async function POST(request: NextRequest) {
 
             const minter = getMinter()
 
+            // Build mediaDetails based on what's available
+            const mediaDetails: any = {}
+            if ((randomItem as any).multimediaUrl) {
+                mediaDetails.multimedia = {
+                    url: (randomItem as any).multimediaUrl,
+                    contentType: "model/gltf-binary",
+                }
+            }
+            if ((randomItem as any).imageUrl || (randomItem as any).image) {
+                mediaDetails.image = {
+                    url: (randomItem as any).imageUrl || (randomItem as any).image,
+                    contentType: "image/png",
+                }
+            }
+
             // Construct the item definition for minting (always include metadata to avoid validation errors)
             const itemToMint: any = {
                 user: destinationUserId,
                 quantity: 1,
                 name: randomItem.name,
                 rarity: (randomItem as any).rarity,
-                mediaDetails: {
-                    image: {
-                        url: (randomItem as any).imageUrl || (randomItem as any).image,
-                        contentType: "image/png"
-                    }
-                },
+                mediaDetails,
                 attributes: (randomItem as any).attributes || [
                     { name: "Type", value: "Gear", displayType: "string" },
                     { name: "Rarity", value: (randomItem as any).rarity, displayType: "string" }
@@ -199,6 +209,7 @@ export async function POST(request: NextRequest) {
                     itemName: mintedItem.name,
                     rarity: mintedItem.rarity,
                     imageUrl: mintedItem.mediaDetails?.image?.url || (randomItem as any).imageUrl || (randomItem as any).image,
+                    multimediaUrl: mintedItem.mediaDetails?.multimedia?.url || (randomItem as any).multimediaUrl,
                     paymentId: paymentId,
                     metadata: {
                         mintedAt: new Date().toISOString(),
@@ -258,6 +269,7 @@ export async function POST(request: NextRequest) {
                 itemName: randomItem.name,
                 rarity: (randomItem as any).rarity,
                 imageUrl: imageUrl,
+                multimediaUrl: (randomItem as any).multimediaUrl,
                 paymentId: paymentId,
                 metadata: {
                     mockMode: true,
