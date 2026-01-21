@@ -63,7 +63,7 @@ export function FaqModal() {
                     <section>
                         <h3 className="font-bold text-lg mb-2">Where do the funds go?</h3>
                         <p className="text-muted-foreground">
-                            100% of the proceeds go towards the "Squat Zone Deuce" game development milestones, specifically art assets and server costs.
+                            100% of the proceeds go towards the "Squat Zone Deux" game development milestones, specifically art assets and server costs.
                         </p>
                     </section>
                 </div>

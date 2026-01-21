@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, description, imageUrl, multimediaUrl, collectionId, attributes, rarity, color } = body
+    const { name, description, imageUrl, multimediaUrl, collectionId, attributes, rarity, color, pool, spawnWeight } = body
 
     if (!name || !collectionId) {
       return NextResponse.json({ error: "Missing required fields: name and collectionId are required" }, { status: 400 })
@@ -65,6 +65,8 @@ export async function POST(request: NextRequest) {
       attributes: attributes || [],
       rarity: rarity || "Common",
       color: color || undefined,
+      pool: pool || "default",
+      spawnWeight: typeof spawnWeight === "number" ? spawnWeight : 1,
       createdAt: new Date().toISOString(),
     }
 
@@ -92,7 +94,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { id, name, description, imageUrl, multimediaUrl, collectionId, attributes, rarity, color } = body
+    const { id, name, description, imageUrl, multimediaUrl, collectionId, attributes, rarity, color, pool, spawnWeight } = body
 
     if (!id || !name || !collectionId) {
       return NextResponse.json({ error: "Missing required fields: id, name and collectionId are required" }, { status: 400 })
@@ -115,6 +117,8 @@ export async function PUT(request: NextRequest) {
       attributes: attributes || [],
       rarity: rarity || "Common",
       color: color || undefined,
+      pool: pool || "default",
+      spawnWeight: typeof spawnWeight === "number" ? spawnWeight : 1,
     }
 
     await saveTemplate(template)

@@ -18,7 +18,7 @@ export function AppFooter() {
                 </div>
 
                 <p className="text-xs text-muted-foreground/50">
-                    © {new Date().getFullYear()} Squat Zone Deuce. Powered by HandCash.
+                    © {new Date().getFullYear()} Squat Zone Deux. Powered by HandCash.
                 </p>
             </div>
         </footer>

@@ -36,6 +36,8 @@ export const itemTemplates = pgTable("item_templates", {
     attributes: jsonb("attributes"),
     rarity: text("rarity"),
     color: text("color"),
+    pool: text("pool").default("default"),
+    spawnWeight: integer("spawn_weight").default(1),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at"),
 })

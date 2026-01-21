@@ -37,6 +37,8 @@ interface ItemTemplate {
   }>
   rarity?: string
   color?: string
+  pool?: string
+  spawnWeight?: number
 }
 
 interface ItemTemplateCreateDialogProps {
@@ -55,6 +57,8 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
   const [collectionId, setCollectionId] = useState("")
   const [rarity, setRarity] = useState("Common")
   const [color, setColor] = useState("")
+  const [pool, setPool] = useState("default")
+  const [spawnWeight, setSpawnWeight] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingCollections, setIsLoadingCollections] = useState(false)
   const [collections, setCollections] = useState<Collection[]>([])
@@ -72,6 +76,8 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
         setCollectionId(template.collectionId || "")
         setRarity(template.rarity || "Common")
         setColor(template.color || "")
+        setPool(template.pool || "default")
+        setSpawnWeight(template.spawnWeight || 1)
       } else {
         // Reset form for new template
         setName("")
@@ -81,6 +87,8 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
         setCollectionId("")
         setRarity("Common")
         setColor("")
+        setPool("default")
+        setSpawnWeight(1)
       }
     }
   }, [open, template])
@@ -125,24 +133,28 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
       const method = isEditMode ? "PUT" : "POST"
       const body = isEditMode
         ? {
-            id: template!.id,
-            name: name.trim(),
-            description: description.trim() || undefined,
-            imageUrl: imageUrl.trim() || undefined,
-            multimediaUrl: multimediaUrl.trim() || undefined,
-            collectionId,
-            rarity: rarity || "Common",
-            color: color.trim() || undefined,
-          }
+          id: template!.id,
+          name: name.trim(),
+          description: description.trim() || undefined,
+          imageUrl: imageUrl.trim() || undefined,
+          multimediaUrl: multimediaUrl.trim() || undefined,
+          collectionId,
+          rarity: rarity || "Common",
+          color: color.trim() || undefined,
+          pool: pool.trim() || "default",
+          spawnWeight: Number(spawnWeight) || 1,
+        }
         : {
-            name: name.trim(),
-            description: description.trim() || undefined,
-            imageUrl: imageUrl.trim() || undefined,
-            multimediaUrl: multimediaUrl.trim() || undefined,
-            collectionId,
-            rarity: rarity || "Common",
-            color: color.trim() || undefined,
-          }
+          name: name.trim(),
+          description: description.trim() || undefined,
+          imageUrl: imageUrl.trim() || undefined,
+          multimediaUrl: multimediaUrl.trim() || undefined,
+          collectionId,
+          rarity: rarity || "Common",
+          color: color.trim() || undefined,
+          pool: pool.trim() || "default",
+          spawnWeight: Number(spawnWeight) || 1,
+        }
 
       const response = await fetch(url, {
         method,
@@ -165,6 +177,8 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
       setCollectionId("")
       setRarity("Common")
       setColor("")
+      setPool("default")
+      setSpawnWeight(1)
       onSuccess()
       onOpenChange(false)
     } catch (err: any) {
@@ -309,6 +323,34 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
                   className="flex-1"
                 />
               </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 border-t pt-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="templatePool">Template Pool</Label>
+              <Input
+                id="templatePool"
+                placeholder="e.g. starter, elite, holiday"
+                value={pool}
+                onChange={(e) => setPool(e.target.value)}
+                disabled={isLoading}
+              />
+              <p className="text-xs text-muted-foreground">Group items into different mintable pools</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="templateSpawnWeight">Spawn Weight (Chance)</Label>
+              <Input
+                id="templateSpawnWeight"
+                type="number"
+                min="1"
+                placeholder="1"
+                value={spawnWeight}
+                onChange={(e) => setSpawnWeight(parseInt(e.target.value) || 1)}
+                disabled={isLoading}
+              />
+              <p className="text-xs text-muted-foreground">Higher weight = higher chance within pool</p>
             </div>
           </div>
 

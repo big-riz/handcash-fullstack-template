@@ -16,7 +16,9 @@ export interface ItemTemplate {
   }>
   rarity?: string
   color?: string
-  createdAt: string
+  pool?: string
+  spawnWeight?: number
+  createdAt?: string
   updatedAt?: string
 }
 
@@ -42,6 +44,8 @@ export async function saveTemplate(template: ItemTemplate): Promise<void> {
           attributes: template.attributes,
           rarity: template.rarity,
           color: template.color,
+          pool: template.pool || "default",
+          spawnWeight: template.spawnWeight || 1,
           updatedAt: new Date(),
         })
         .where(eq(itemTemplates.id, template.id))
@@ -57,6 +61,8 @@ export async function saveTemplate(template: ItemTemplate): Promise<void> {
         attributes: template.attributes,
         rarity: template.rarity,
         color: template.color,
+        pool: template.pool || "default",
+        spawnWeight: template.spawnWeight || 1,
         createdAt: template.createdAt ? new Date(template.createdAt) : new Date(),
       })
     }
@@ -80,6 +86,8 @@ export async function getTemplates(): Promise<ItemTemplate[]> {
       attributes: t.attributes as ItemTemplate["attributes"],
       rarity: t.rarity || undefined,
       color: t.color || undefined,
+      pool: t.pool || undefined,
+      spawnWeight: t.spawnWeight || undefined,
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt?.toISOString(),
     }))
@@ -110,6 +118,8 @@ export async function getTemplateById(id: string): Promise<ItemTemplate | null> 
       attributes: t.attributes as ItemTemplate["attributes"],
       rarity: t.rarity || undefined,
       color: t.color || undefined,
+      pool: t.pool || undefined,
+      spawnWeight: t.spawnWeight || undefined,
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt?.toISOString(),
     }

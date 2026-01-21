@@ -14,6 +14,7 @@ interface MintedItem {
     id: string
     name: string
     imageUrl: string
+    multimediaUrl?: string
     rarity: string
     origin: string
 }
@@ -146,27 +147,57 @@ export function MintModule() {
                     )}
 
                     {mintState === "SUCCESS" && mintedItem && (
-                        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background flex flex-col items-center justify-center p-8 animate-in zoom-in-95 duration-700">
+                        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background flex flex-col items-center justify-center animate-in zoom-in-95 duration-700">
                             {/* Rare Glow Effect */}
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--primary)_0%,_transparent_70%)] opacity-20 animate-pulse-slow" />
 
-                            <div className="relative mb-6">
-                                <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full animate-pulse" />
-                                <img
-                                    src={mintedItem.imageUrl}
-                                    alt={mintedItem.name}
-                                    className="w-48 h-48 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] object-cover border-2 border-white/20 relative z-10"
-                                />
-                            </div>
+                            <div className="relative w-full h-full flex flex-col items-center justify-center p-8">
+                                <div className="relative mb-6 w-full flex-grow flex items-center justify-center min-h-0">
+                                    <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full animate-pulse" />
+                                    {mintedItem.multimediaUrl ? (
+                                        <div className="w-full h-full relative z-10 min-h-[300px]">
+                                            {/* @ts-ignore */}
+                                            <model-viewer
+                                                src={mintedItem.multimediaUrl}
+                                                poster={mintedItem.imageUrl}
+                                                alt={mintedItem.name}
+                                                auto-rotate
+                                                camera-controls
+                                                touch-action="pan-y"
+                                                shadow-intensity="1"
+                                                class="w-full h-full"
+                                                style={{ width: '100%', height: '100%', '--poster-color': 'transparent' }}
+                                            >
+                                                <div slot="poster" className="w-full h-full flex items-center justify-center">
+                                                    <img
+                                                        src={mintedItem.imageUrl}
+                                                        alt={mintedItem.name}
+                                                        className="w-48 h-48 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] object-cover border-2 border-white/20"
+                                                    />
+                                                </div>
+                                                {/* @ts-ignore */}
+                                            </model-viewer>
+                                        </div>
+                                    ) : (
+                                        <img
+                                            src={mintedItem.imageUrl}
+                                            alt={mintedItem.name}
+                                            className="w-48 h-48 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] object-cover border-2 border-white/20 relative z-10"
+                                        />
+                                    )}
+                                </div>
 
-                            <Badge className="mb-3 px-6 py-1.5 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 dark:from-yellow-400 dark:to-amber-500 border-none rounded-full font-black text-xs tracking-[0.2em] shadow-xl text-black">
-                                {mintedItem.rarity.toUpperCase()}
-                            </Badge>
+                                <div className="z-20 flex flex-col items-center">
+                                    <Badge className="mb-3 px-6 py-1.5 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 dark:from-yellow-400 dark:to-amber-500 border-none rounded-full font-black text-xs tracking-[0.2em] shadow-xl text-black">
+                                        {mintedItem.rarity.toUpperCase()}
+                                    </Badge>
 
-                            <h3 className="text-3xl font-black text-center tracking-tight mb-2 uppercase italic">{mintedItem.name}</h3>
-                            <div className="flex items-center gap-2 bg-muted/50 px-3 py-1 rounded-full border border-border/50">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <p className="text-[10px] font-mono text-muted-foreground font-bold tracking-widest">{mintedItem.origin.slice(0, 12).toUpperCase()}</p>
+                                    <h3 className="text-3xl font-black text-center tracking-tight mb-2 uppercase italic">{mintedItem.name}</h3>
+                                    <div className="flex items-center gap-2 bg-muted/50 px-3 py-1 rounded-full border border-border/50">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <p className="text-[10px] font-mono text-muted-foreground font-bold tracking-widest">{mintedItem.origin.slice(0, 12).toUpperCase()}</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

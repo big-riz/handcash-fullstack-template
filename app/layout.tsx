@@ -39,6 +39,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+      </head>
       <body className={`font-sans antialiased`} suppressHydrationWarning>
         <AuthProvider>
           {children}

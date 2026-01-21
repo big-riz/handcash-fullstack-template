@@ -6,6 +6,8 @@ import { requireAuth } from "@/lib/auth-middleware"
 import { rateLimit, RateLimitPresets } from "@/lib/rate-limit"
 import { recordMintedItem } from "@/lib/minted-items-storage"
 import { getTemplates } from "@/lib/item-templates-storage"
+import { savePayment } from "@/lib/payments-storage"
+import { randomUUID } from "crypto"
 
 export async function POST(request: NextRequest) {
     // Rate Limit: Using standard mint preset (allows more requests for testing/usage)
@@ -35,20 +37,55 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Get Templates from DB
-        const dbTemplates = await getTemplates()
+        const dbTemplates = await getTemplates() as any[]
 
         // Hardcoded fallbacks if DB is empty
         const fallbackItemTypes = [
-            { name: "Adidas Tracksuit", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tracksuit_blue.png" },
-            { name: "Sunflower Seeds", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/seeds.png" },
-            { name: "KV-2 Tank Model", rarity: "Rare", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tank.png" },
-            { name: "Gold Chain", rarity: "Epic", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/gold_chain.png" },
-            { name: "Golden Ushanka", rarity: "Legendary", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/ushanka.png" }
+            { name: "Adidas Tracksuit", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tracksuit_blue.png", pool: "default", spawnWeight: 100 },
+            { name: "Sunflower Seeds", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/seeds.png", pool: "default", spawnWeight: 100 },
+            { name: "KV-2 Tank Model", rarity: "Rare", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tank.png", pool: "default", spawnWeight: 20 },
+            { name: "Gold Chain", rarity: "Epic", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/gold_chain.png", pool: "default", spawnWeight: 5 },
+            { name: "Golden Ushanka", rarity: "Legendary", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/ushanka.png", pool: "default", spawnWeight: 1 }
         ]
 
-        // Choose template at random
-        const itemPool = dbTemplates.length > 0 ? dbTemplates : fallbackItemTypes;
-        const randomItem = itemPool[Math.floor(Math.random() * itemPool.length)]
+        // 3a. Pool Selection Logic
+        const allTemplates = dbTemplates.length > 0 ? dbTemplates : fallbackItemTypes;
+
+        // Try to get pool from body or query params
+        let requestedPool = "default";
+        try {
+            const body = await request.clone().json();
+            requestedPool = body.pool || "default";
+        } catch (e) {
+            const { searchParams } = new URL(request.url);
+            requestedPool = searchParams.get("pool") || "default";
+        }
+
+        let poolItems = allTemplates.filter(t => t.pool === requestedPool);
+
+        // Fallback if pool is empty
+        if (poolItems.length === 0) {
+            console.log(`[Mint API] Pool '${requestedPool}' not found or empty, falling back to 'default'`);
+            poolItems = allTemplates.filter(t => t.pool === "default");
+        }
+        if (poolItems.length === 0) {
+            poolItems = allTemplates;
+        }
+
+        // Weighted random selection
+        const totalWeight = poolItems.reduce((acc, item) => acc + (item.spawnWeight || 1), 0);
+        let randomNum = Math.random() * totalWeight;
+        let randomItem = poolItems[0];
+
+        for (const item of poolItems) {
+            randomNum -= (item.spawnWeight || 1);
+            if (randomNum <= 0) {
+                randomItem = item;
+                break;
+            }
+        }
+
+        console.log(`[Mint API] Selected ${randomItem.name} from pool '${randomItem.pool || 'default'}' (Weight: ${randomItem.spawnWeight || 1}/${totalWeight})`)
 
         // 4. Determine if we can do real minting
         const collections = await getCollections()
@@ -62,6 +99,8 @@ export async function POST(request: NextRequest) {
         const collectionId = (randomItem as any).collectionId || (collections.length > 0 ? collections[0].id : null);
 
         const isMockMode = !businessAuthToken || !collectionId || !businessHandle;
+
+        let paymentId: string | undefined;
 
         if (!isMockMode) {
             console.log(`[Mint API] Real Mode: Minting ${randomItem.name} to ${userHandle} using collection ${collectionId}`)
@@ -81,11 +120,29 @@ export async function POST(request: NextRequest) {
 
             console.log(`[Mint API] Processing payment of ${roundedBsvAmount} BSV to ${businessHandle}`)
 
-            await handcashService.sendPayment(privateKey, {
+            const paymentResponse = await handcashService.sendPayment(privateKey, {
                 destination: businessHandle!,
                 amount: roundedBsvAmount,
                 currency: "BSV",
                 description: `Mint Item: ${randomItem.name}`
+            }) as any
+
+            // Log Payment to DB
+            paymentId = randomUUID();
+            await savePayment({
+                id: paymentId,
+                paymentRequestId: `mint-${randomItem.id || 'random'}-${Date.now()}`,
+                transactionId: paymentResponse.transactionId,
+                amount: roundedBsvAmount,
+                currency: "BSV",
+                paidBy: userHandle,
+                paidAt: new Date().toISOString(),
+                status: "completed",
+                metadata: {
+                    type: "mint_payment",
+                    templateId: randomItem.id,
+                    pool: randomItem.pool
+                }
             })
 
             // 6. Mint Item (Business -> User)
@@ -142,6 +199,7 @@ export async function POST(request: NextRequest) {
                     itemName: mintedItem.name,
                     rarity: mintedItem.rarity,
                     imageUrl: mintedItem.mediaDetails?.image?.url || (randomItem as any).imageUrl || (randomItem as any).image,
+                    paymentId: paymentId,
                     metadata: {
                         mintedAt: new Date().toISOString(),
                     }
@@ -154,6 +212,7 @@ export async function POST(request: NextRequest) {
                         origin: mintedItem.origin,
                         name: mintedItem.name,
                         imageUrl: mintedItem.mediaDetails?.image?.url || (randomItem as any).imageUrl || (randomItem as any).image,
+                        multimediaUrl: (randomItem as any).multimediaUrl,
                         rarity: mintedItem.rarity
                     }
                 })
@@ -170,6 +229,25 @@ export async function POST(request: NextRequest) {
             const mintedItemOrigin = `mock-origin-${Date.now()}`;
             const imageUrl = (randomItem as any).imageUrl || (randomItem as any).image;
 
+            // Log Mock Payment to DB
+            paymentId = randomUUID();
+            const mockPriceUsd = 0.25;
+            await savePayment({
+                id: paymentId,
+                paymentRequestId: `mock-mint-${randomItem.id || 'random'}-${Date.now()}`,
+                transactionId: `mock-tx-${Date.now()}`,
+                amount: mockPriceUsd,
+                currency: "USD",
+                paidBy: userHandle,
+                paidAt: new Date().toISOString(),
+                status: "completed",
+                metadata: {
+                    type: "mint_payment_mock",
+                    templateId: randomItem.id,
+                    pool: randomItem.pool
+                }
+            })
+
             await recordMintedItem({
                 id: mintedItemId,
                 origin: mintedItemOrigin,
@@ -180,6 +258,7 @@ export async function POST(request: NextRequest) {
                 itemName: randomItem.name,
                 rarity: (randomItem as any).rarity,
                 imageUrl: imageUrl,
+                paymentId: paymentId,
                 metadata: {
                     mockMode: true,
                     mintedAt: new Date().toISOString(),
@@ -193,6 +272,7 @@ export async function POST(request: NextRequest) {
                     origin: mintedItemOrigin,
                     name: randomItem.name,
                     imageUrl: imageUrl,
+                    multimediaUrl: (randomItem as any).multimediaUrl,
                     rarity: (randomItem as any).rarity
                 }
             })

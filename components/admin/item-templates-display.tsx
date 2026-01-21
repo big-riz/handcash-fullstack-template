@@ -36,6 +36,8 @@ interface ItemTemplate {
   }>
   rarity?: string
   color?: string
+  pool?: string
+  spawnWeight?: number
 }
 
 export function ItemTemplatesDisplay() {
@@ -55,6 +57,26 @@ export function ItemTemplatesDisplay() {
     await navigator.clipboard.writeText(templateId)
     setCopiedId(templateId)
     setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  // Calculate probabilities per pool
+  const poolStats = templates.reduce((acc, t) => {
+    const pool = t.pool || "default"
+    const weight = t.spawnWeight || 1
+    if (!acc[pool]) {
+      acc[pool] = { totalWeight: 0, items: [] }
+    }
+    acc[pool].totalWeight += weight
+    acc[pool].items.push({ id: t.id, weight })
+    return acc
+  }, {} as Record<string, { totalWeight: number, items: { id: string, weight: number }[] }>)
+
+  const getItemProbability = (id: string, pool?: string) => {
+    const p = pool || "default"
+    const stats = poolStats[p]
+    if (!stats || stats.totalWeight === 0) return 0
+    const item = stats.items.find(i => i.id === id)
+    return item ? (item.weight / stats.totalWeight) * 100 : 0
   }
 
   const fetchTemplates = async () => {
@@ -165,6 +187,36 @@ export function ItemTemplatesDisplay() {
           </div>
         </div>
 
+        {!isLoading && !error && templates.length > 0 && (
+          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(poolStats).map(([poolName, stats]) => (
+              <div key={poolName} className="p-4 rounded-2xl bg-muted/50 border border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    Pool: {poolName}
+                  </h4>
+                  <Badge variant="outline" className="rounded-full bg-background">
+                    {stats.items.length} Items
+                  </Badge>
+                </div>
+                <div className="space-y-1 mt-3">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Total Weight</span>
+                    <span className="font-mono font-bold text-foreground">{stats.totalWeight}</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-background rounded-full overflow-hidden mt-1">
+                    <div
+                      className="h-full bg-primary"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -238,15 +290,17 @@ export function ItemTemplatesDisplay() {
                       <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
-                  {template.attributes && template.attributes.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {template.attributes.slice(0, 3).map((attr, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs rounded-full">
-                          {attr.name}: {attr.value}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <Badge variant="outline" className="text-xs rounded-full bg-primary/5 border-primary/20">
+                      Pool: {template.pool || "default"}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs rounded-full bg-orange-500/5 border-orange-500/20">
+                      Weight: {template.spawnWeight || 1}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs rounded-full bg-green-500/5 border-green-500/20 text-green-600 font-bold">
+                      {getItemProbability(template.id, template.pool).toFixed(1)}% Rarity
+                    </Badge>
+                  </div>
                   <Button
                     variant="default"
                     size="sm"
