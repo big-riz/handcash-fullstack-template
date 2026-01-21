@@ -106,6 +106,52 @@ export const rateLimits = pgTable("rate_limits", {
     windowMs: integer("window_ms").notNull(),
 })
 
+// Drizzle Relations for easier querying
+import { relations } from "drizzle-orm"
+
+export const collectionsRelations = relations(collections, ({ many }) => ({
+    itemTemplates: many(itemTemplates),
+    mintedItems: many(mintedItems),
+}))
+
+export const itemTemplatesRelations = relations(itemTemplates, ({ one, many }) => ({
+    collection: one(collections, {
+        fields: [itemTemplates.collectionId],
+        references: [collections.id],
+    }),
+    mintedItems: many(mintedItems),
+}))
+
+export const mintedItemsRelations = relations(mintedItems, ({ one }) => ({
+    collection: one(collections, {
+        fields: [mintedItems.collectionId],
+        references: [collections.id],
+    }),
+    template: one(itemTemplates, {
+        fields: [mintedItems.templateId],
+        references: [itemTemplates.id],
+    }),
+    payment: one(payments, {
+        fields: [mintedItems.paymentId],
+        references: [payments.id],
+    }),
+}))
+
+export const paymentsRelations = relations(payments, ({ many }) => ({
+    mintedItems: many(mintedItems),
+}))
+
+export const usersRelations = relations(users, ({ many }) => ({
+    sessions: many(sessions),
+}))
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+    user: one(users, {
+        fields: [sessions.userId],
+        references: [users.id],
+    }),
+}))
+
 // Type exports for TypeScript
 export type Payment = typeof payments.$inferSelect
 export type NewPayment = typeof payments.$inferInsert

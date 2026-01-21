@@ -168,3 +168,90 @@ export async function getAllMintedItems(): Promise<MintedItemData[]> {
         return []
     }
 }
+
+/**
+ * Get minted items with their template information
+ * Uses Drizzle relations to join with itemTemplates
+ */
+export async function getMintedItemsWithTemplate(userId?: string) {
+    try {
+        const { itemTemplates } = await import("./schema")
+
+        const query = db
+            .select({
+                mintedItem: mintedItems,
+                template: itemTemplates,
+            })
+            .from(mintedItems)
+            .leftJoin(itemTemplates, eq(mintedItems.templateId, itemTemplates.id))
+            .orderBy(desc(mintedItems.mintedAt))
+
+        if (userId) {
+            const results = await query.where(eq(mintedItems.mintedToUserId, userId))
+            return results
+        }
+
+        return await query
+    } catch (error) {
+        console.error("[MintedItemsStorage] Error getting minted items with template:", error)
+        return []
+    }
+}
+
+/**
+ * Get statistics about how many times each template has been minted
+ */
+export async function getTemplateUsageStats() {
+    try {
+        const { sql } = await import("drizzle-orm")
+        const { itemTemplates } = await import("./schema")
+
+        const results = await db
+            .select({
+                templateId: mintedItems.templateId,
+                templateName: itemTemplates.name,
+                mintCount: sql<number>`count(*)::int`,
+            })
+            .from(mintedItems)
+            .leftJoin(itemTemplates, eq(mintedItems.templateId, itemTemplates.id))
+            .where(sql`${mintedItems.templateId} IS NOT NULL`)
+            .groupBy(mintedItems.templateId, itemTemplates.name)
+            .orderBy(sql`count(*) DESC`)
+
+        return results
+    } catch (error) {
+        console.error("[MintedItemsStorage] Error getting template usage stats:", error)
+        return []
+    }
+}
+
+/**
+ * Get all minted items for a specific template
+ */
+export async function getMintedItemsByTemplateId(templateId: string) {
+    try {
+        const results = await db
+            .select()
+            .from(mintedItems)
+            .where(eq(mintedItems.templateId, templateId))
+            .orderBy(desc(mintedItems.mintedAt))
+
+        return results.map((item) => ({
+            id: item.id,
+            origin: item.origin,
+            collectionId: item.collectionId || undefined,
+            templateId: item.templateId || undefined,
+            mintedToUserId: item.mintedToUserId || undefined,
+            mintedToHandle: item.mintedToHandle || undefined,
+            itemName: item.itemName,
+            rarity: item.rarity || undefined,
+            imageUrl: item.imageUrl || undefined,
+            multimediaUrl: item.multimediaUrl || undefined,
+            paymentId: item.paymentId || undefined,
+            metadata: item.metadata as Record<string, any> | undefined,
+        }))
+    } catch (error) {
+        console.error("[MintedItemsStorage] Error getting minted items by template:", error)
+        return []
+    }
+}

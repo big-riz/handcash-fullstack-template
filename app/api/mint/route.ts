@@ -182,11 +182,13 @@ export async function POST(request: NextRequest) {
                 actions: []
             }
 
-            // Only use templateId if it looks like a valid HandCash ID (24-char hex)
+            // Store the template ID for our database (regardless of format)
+            const sourceTemplateId = (randomItem as any).id;
+
+            // Only use templateId for HandCash if it looks like a valid HandCash ID (24-char hex)
             // Local debug templates often use UUIDs which would cause HandCash to error
-            const itemId = (randomItem as any).id;
-            if (itemId && /^[0-9a-fA-F]{24}$/.test(itemId)) {
-                itemToMint.templateId = itemId;
+            if (sourceTemplateId && /^[0-9a-fA-F]{24}$/.test(sourceTemplateId)) {
+                itemToMint.templateId = sourceTemplateId;
             }
 
             const creationOrder = await minter.createItemsOrder({
@@ -199,12 +201,12 @@ export async function POST(request: NextRequest) {
             if (items && items.length > 0) {
                 const mintedItem = items[0] as any;
 
-                // Record in DB
+                // Record in DB - use sourceTemplateId for our database tracking
                 await recordMintedItem({
                     id: mintedItem.id,
                     origin: mintedItem.origin,
                     collectionId: collectionId!,
-                    templateId: itemToMint.templateId,
+                    templateId: sourceTemplateId, // ← Use the original template ID here
                     mintedToUserId: userId,
                     mintedToHandle: userHandle,
                     itemName: mintedItem.name,

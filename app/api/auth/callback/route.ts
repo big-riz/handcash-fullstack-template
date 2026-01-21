@@ -94,7 +94,58 @@ export async function GET(request: NextRequest) {
     const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
     const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
+    // Fetch user profile from HandCash
+    let userProfile: any = null
+    let userId: string | undefined = undefined
+    try {
+      userProfile = await handcashService.getUserProfile(privateKey)
+
+      // Store/update user in database
+      if (userProfile?.publicProfile) {
+        const { upsertUser } = await import("@/lib/users-storage")
+
+        // Extract user ID - try multiple possible locations
+        userId = userProfile.userId || userProfile.publicProfile.userId || userProfile.publicProfile.handle
+
+        if (!userId) {
+          console.error("[Auth] Could not extract user ID from profile")
+          throw new Error("No user ID found in profile")
+        }
+
+        await upsertUser({
+          id: userId,
+          handle: userProfile.publicProfile.handle.toLowerCase(),
+          displayName: userProfile.publicProfile.displayName || userProfile.publicProfile.handle,
+          avatarUrl: userProfile.publicProfile.avatarUrl,
+          email: userProfile.privateProfile?.email,
+        })
+
+        console.log("[Auth] User upserted:", userId, userProfile.publicProfile.handle)
+      }
+    } catch (err) {
+      console.error("[Auth] Error fetching/storing user profile:", err)
+      // Continue with login even if profile fetch fails
+    }
+
     const session = createSession(ipAddress, userAgent)
+
+    // Store session in database
+    try {
+      const { upsertSession } = await import("@/lib/sessions-storage")
+      await upsertSession({
+        id: session.sessionId,
+        userId: userId, // Link to user if we have it
+        ipAddress: session.ipAddress || undefined,
+        userAgent: session.userAgent || undefined,
+        createdAt: new Date(session.createdAt),
+        lastActivityAt: new Date(session.lastActivity),
+        expiresAt: new Date(session.createdAt + 30 * 24 * 60 * 60 * 1000), // 30 days
+      })
+      console.log("[Auth] Session stored in database:", session.sessionId, "for user:", userId || "unknown")
+    } catch (err) {
+      console.error("[Auth] Error storing session in database:", err)
+      // Continue with login even if session storage fails
+    }
 
     const response = NextResponse.redirect(new URL("/", request.url))
 
@@ -121,6 +172,7 @@ export async function GET(request: NextRequest) {
       type: AuditEventType.LOGIN_SUCCESS,
       success: true,
       sessionId: session.sessionId,
+      userId: userProfile?.id,
       ipAddress,
       userAgent,
     })
