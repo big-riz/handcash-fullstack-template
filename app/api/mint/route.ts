@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         const fallbackItemTypes = [
             { name: "Adidas Tracksuit", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tracksuit_blue.png", pool: "default", spawnWeight: 100 },
             { name: "Sunflower Seeds", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/seeds.png", pool: "default", spawnWeight: 100 },
-            { name: "KV-2 Tank Model", rarity: "Rare", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tank.png", pool: "default", spawnWeight: 20 },
+            { name: "KV-2 Tank Model", rarity: "Rare", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tank.png", multimediaUrl: "https://res.cloudinary.com/handcash-io/raw/upload/v1710255990/items/kv2.glb", pool: "default", spawnWeight: 20 },
             { name: "Gold Chain", rarity: "Epic", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/gold_chain.png", pool: "default", spawnWeight: 5 },
             { name: "Golden Ushanka", rarity: "Legendary", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/ushanka.png", pool: "default", spawnWeight: 1 }
         ]
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
             if ((randomItem as any).multimediaUrl) {
                 mediaDetails.multimedia = {
                     url: (randomItem as any).multimediaUrl,
-                    contentType: "model/gltf-binary",
+                    contentType: "application/glb",
                 }
             }
             if ((randomItem as any).imageUrl || (randomItem as any).image) {
@@ -178,7 +178,8 @@ export async function POST(request: NextRequest) {
                 attributes: (randomItem as any).attributes || [
                     { name: "Type", value: "Gear", displayType: "string" },
                     { name: "Rarity", value: (randomItem as any).rarity, displayType: "string" }
-                ]
+                ],
+                actions: []
             }
 
             // Only use templateId if it looks like a valid HandCash ID (24-char hex)

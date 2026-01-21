@@ -75,13 +75,13 @@ export async function POST(request: NextRequest) {
 
     // Create items for each user
     const minter = getMinter()
-    
+
     // Build mediaDetails based on what's available
     const mediaDetails: any = {}
     if (template.multimediaUrl) {
       mediaDetails.multimedia = {
         url: template.multimediaUrl,
-        contentType: "model/gltf-binary",
+        contentType: "application/glb",
       }
     }
     if (template.imageUrl) {
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         contentType: "image/png",
       }
     }
-    
+
     // Add template ID as an attribute
     const attributes = [
       ...(template.attributes || []).map((attr) => ({

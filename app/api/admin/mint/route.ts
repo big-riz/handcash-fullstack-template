@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (multimediaUrl) {
       mediaDetails.multimedia = {
         url: multimediaUrl,
-        contentType: "model/gltf-binary",
+        contentType: "application/glb",
       }
     }
     if (imageUrl) {
