@@ -4,9 +4,21 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import { Loader2, Zap, CheckCircle2, AlertCircle, ShoppingBag, RotateCcw, ShieldCheck } from "lucide-react"
 import { usePayments } from "@/hooks/use-payments"
 import { toast } from "sonner"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 type MintState = "IDLE" | "PAYING" | "CONFIRMING" | "MINTING" | "SUCCESS" | "ERROR"
 
@@ -19,21 +31,55 @@ interface MintedItem {
     origin: string
 }
 
+// Cookie helper functions
+function getCookie(name: string): string | null {
+    if (typeof document === 'undefined') return null
+    const value = `; ${document.cookie}`
+    const parts = value.split(`; ${name}=`)
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null
+    return null
+}
+
+function setCookie(name: string, value: string, days: number = 365) {
+    if (typeof document === 'undefined') return
+    const expires = new Date(Date.now() + days * 864e5).toUTCString()
+    document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`
+}
+
 export function MintModule() {
     const { balance, fetchBalance } = usePayments()
     const [mintState, setMintState] = useState<MintState>("IDLE")
     const [statusText, setStatusText] = useState("")
     const [mintedItem, setMintedItem] = useState<MintedItem | null>(null)
     const [errorMsg, setErrorMsg] = useState("")
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [showConfirmationEnabled, setShowConfirmationEnabled] = useState(true)
 
-    const PRICE_USD = 0.25
-    const PRICE_BSV_EST = 0.000005 // This should ideally be calculated dynamically if possible, but static for display is okay with disclaimer
+    const PRICE_USD = 0.05
+    const PRICE_BSV_EST = 0.000001 // Updated estimate for 5 cents
 
-    const handleMint = async () => {
+    // Load confirmation preference from cookie on mount
+    useEffect(() => {
+        const savedPref = getCookie('mintConfirmation')
+        if (savedPref !== null) {
+            setShowConfirmationEnabled(savedPref === 'true')
+        }
+    }, [])
+
+    const handleMintClick = () => {
+        if (showConfirmationEnabled) {
+            setShowConfirmDialog(true)
+        } else {
+            performMint()
+        }
+    }
+
+    const performMint = async () => {
+        setShowConfirmDialog(false)
+
         // 1. Check Balance locally
         const bsvBalance = balance?.spendableBalances?.items?.find(i => i.currencyCode === "BSV")?.spendableBalance || 0
         // Rough check, strict check happens on backend or better pre-check
-        // Assuming 0.25 USD is roughly 0.005 BSV (actually much less, 0.25 is approx 0.00005 BSV at $100/BSV, wait $50/BSV => 0.005. At $50/BSV 1 BSV = $50. $0.25 = 0.005 BSV. At $100 BSV -> 0.0025. At $500k BSV -> ...)
         // Let's rely on the USD amount for UI and let backend fail if insufficient.
 
         setMintState("PAYING")
@@ -82,6 +128,11 @@ export function MintModule() {
         setMintState("IDLE")
         setMintedItem(null)
         setStatusText("")
+    }
+
+    const handleConfirmationToggle = (checked: boolean) => {
+        setShowConfirmationEnabled(checked)
+        setCookie('mintConfirmation', checked.toString())
     }
 
     return (
@@ -248,14 +299,32 @@ export function MintModule() {
                             </div>
                         </div>
                     ) : (
-                        <Button
-                            size="lg"
-                            className="w-full rounded-[1.5rem] font-black uppercase italic text-2xl h-20 shadow-[0_20px_40px_-10px_rgba(var(--primary),0.3)] hover:shadow-primary/40 hover:-translate-y-1 disabled:opacity-50 disabled:translate-y-0 transition-all active:scale-[0.98]"
-                            onClick={handleMint}
-                            disabled={mintState !== "IDLE" || !balance}
-                        >
-                            {mintState === "IDLE" ? "Confirm Mint" : "Processing..."}
-                        </Button>
+                        <div className="space-y-4">
+                            <Button
+                                size="lg"
+                                className="w-full rounded-[1.5rem] font-black uppercase italic text-2xl h-20 shadow-[0_20px_40px_-10px_rgba(var(--primary),0.3)] hover:shadow-primary/40 hover:-translate-y-1 disabled:opacity-50 disabled:translate-y-0 transition-all active:scale-[0.98]"
+                                onClick={handleMintClick}
+                                disabled={mintState !== "IDLE" || !balance}
+                            >
+                                {mintState === "IDLE" ? "Confirm Mint" : "Processing..."}
+                            </Button>
+
+                            {mintState === "IDLE" && (
+                                <div className="flex items-center justify-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
+                                    <Checkbox
+                                        id="show-confirmation"
+                                        checked={showConfirmationEnabled}
+                                        onCheckedChange={handleConfirmationToggle}
+                                    />
+                                    <Label
+                                        htmlFor="show-confirmation"
+                                        className="text-xs font-medium cursor-pointer select-none"
+                                    >
+                                        Show confirmation dialog
+                                    </Label>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
 
@@ -274,6 +343,32 @@ export function MintModule() {
                     </div>
                 </div>
             </div>
+
+            {/* Confirmation Dialog */}
+            <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                <AlertDialogContent className="rounded-3xl border-border/50">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-2xl font-black uppercase italic tracking-tight">
+                            Confirm Mint
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base">
+                            You're about to mint a random item for <span className="font-bold text-primary">${PRICE_USD.toFixed(2)} USD</span>.
+                            <br />
+                            <br />
+                            This payment will be deducted from your HandCash wallet balance.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="rounded-2xl">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={performMint}
+                            className="rounded-2xl bg-primary hover:bg-primary/90"
+                        >
+                            Confirm & Mint
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Card>
     )
 }

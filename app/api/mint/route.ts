@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
                 throw new Error("Could not fetch valid exchange rate")
             }
 
-            const priceUsd = 0.25;
+            const priceUsd = 0.05;
             const bsvAmount = priceUsd / rate;
             const roundedBsvAmount = Math.ceil(bsvAmount * 100000000) / 100000000;
 
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
 
             // Log Mock Payment to DB
             paymentId = randomUUID();
-            const mockPriceUsd = 0.25;
+            const mockPriceUsd = 0.05;
             await savePayment({
                 id: paymentId,
                 paymentRequestId: `mock-mint-${randomItem.id || 'random'}-${Date.now()}`,
