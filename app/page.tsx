@@ -1,7 +1,6 @@
 "use client"
 
 import { UserProfile } from "@/components/user-profile"
-import { TemplateInfo } from "@/components/template-info"
 import { LandingContent } from "@/components/landing-content"
 import { AuthenticatedContent } from "@/components/authenticated-content"
 import { useAuth } from "@/lib/auth-context"
@@ -83,12 +82,6 @@ export default function HomePage() {
               ═══════════════════════════════════════════════════════════
             */}
             {!isLoading && <AuthenticatedContent activeTab={activeTab} onTabChange={setActiveTab} />}
-          </div>
-        )}
-
-        {!isLoading && !isAuthenticated && (
-          <div className="container mx-auto px-6 max-w-2xl pb-20">
-            <TemplateInfo />
           </div>
         )}
       </div>
