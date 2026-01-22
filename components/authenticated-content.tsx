@@ -35,7 +35,7 @@ export function AuthenticatedContent({ activeTab, onTabChange }: AuthenticatedCo
           <TabsContent value="mint" className="animate-in fade-in zoom-in-95 duration-500 mt-0">
             <div className="flex flex-col items-center">
               <div className="w-full max-w-2xl px-2 sm:px-4">
-                <MintModule />
+                <MintModule onTabChange={onTabChange} />
               </div>
             </div>
           </TabsContent>

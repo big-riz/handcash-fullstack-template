@@ -4,12 +4,14 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Zap, CheckCircle2, AlertCircle, ShoppingBag, RotateCcw, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react"
+import { Loader2, Zap, CheckCircle2, AlertCircle, ShoppingBag, RotateCcw, ShieldCheck, ChevronLeft, ChevronRight, ExternalLink, Share2 } from "lucide-react"
 import { usePayments } from "@/hooks/use-payments"
 import useEmblaCarousel from "embla-carousel-react"
 import { useCallback, useRef } from "react"
 import { toast } from "sonner"
 import { getRarityClasses } from "@/lib/rarity-colors"
+import { usePoolProgress, notifyMintProgress } from "@/hooks/use-mint-progress"
+import { Sparkles } from "lucide-react"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -30,6 +32,7 @@ interface MintedItem {
     multimediaUrl?: string
     rarity: string
     origin: string
+    collectionId?: string
 }
 
 // Cookie helper functions
@@ -47,7 +50,11 @@ function setCookie(name: string, value: string, days: number = 365) {
     document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`
 }
 
-export function MintModule() {
+interface MintModuleProps {
+    onTabChange?: (tab: string) => void
+}
+
+export function MintModule({ onTabChange }: MintModuleProps = {}) {
     const { balance, fetchBalance } = usePayments()
     const [mintState, setMintState] = useState<MintState>("IDLE")
     const [statusText, setStatusText] = useState("")
@@ -56,6 +63,9 @@ export function MintModule() {
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [mintStats, setMintStats] = useState<any>(null)
     const [isLoadingStats, setIsLoadingStats] = useState(true)
+
+    // Live Pool Progress
+    const { totalMinted: liveMinted, totalSupplyLimit: liveLimit, isAnimating: isProgressAnimating } = usePoolProgress("default")
 
     const [shuffledItems, setShuffledItems] = useState<any[]>([])
     const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false, duration: 20 })
@@ -163,6 +173,12 @@ export function MintModule() {
                 setMintedItem(data.item)
                 setMintState("SUCCESS")
                 fetchBalance() // Refresh balance
+
+                // Notify progress listeners immediately
+                if (data.item.templateId) {
+                    notifyMintProgress(data.item.templateId, (liveMinted || 0) + 1, liveLimit)
+                }
+
                 toast.success("Item minted successfully!")
             } else {
                 throw new Error("Minting response invalid")
@@ -207,19 +223,45 @@ export function MintModule() {
                 </div>
 
                 {/* Supply Progress Bar */}
-                {mintStats && mintStats.totalSupplyLimit > 0 && (
-                    <div className="mb-6 md:mb-8 animate-in fade-in slide-in-from-top-2 duration-1000">
+                {liveLimit > 0 && (
+                    <div className={`mb-6 md:mb-8 animate-in fade-in slide-in-from-top-2 duration-1000 relative transition-all duration-500 ${isProgressAnimating ? "scale-[1.02]" : "scale-100"}`}>
                         <div className="flex justify-between items-end mb-2">
-                            <span className="text-fluid-xs font-black uppercase tracking-[0.2em] text-primary">Mint Progress</span>
-                            <span className="text-fluid-xs font-bold text-muted-foreground uppercase opacity-60">
-                                {mintStats.totalMinted} / {mintStats.totalSupplyLimit}
+                            <div className="flex items-center gap-2">
+                                <span className={`text-fluid-xs font-black uppercase tracking-[0.2em] transition-colors duration-300 ${isProgressAnimating ? "text-yellow-400" : "text-primary"}`}>Mint Progress</span>
+                                {isProgressAnimating && (
+                                    <Sparkles className="w-3 h-3 text-yellow-400 animate-pulse" />
+                                )}
+                            </div>
+                            <span className={`text-fluid-xs font-bold uppercase transition-all duration-300 ${isProgressAnimating ? "text-yellow-400 scale-110" : "text-muted-foreground opacity-60"}`}>
+                                {liveMinted} / {liveLimit}
                             </span>
                         </div>
-                        <div className="h-2 w-full bg-primary/10 rounded-full border border-primary/5 overflow-hidden p-0.5">
+                        <div className={`h-2 w-full bg-primary/10 rounded-full border border-primary/5 overflow-hidden p-0.5 relative ${isProgressAnimating ? "shadow-[0_0_15px_rgba(234,179,8,0.3)]" : ""}`}>
                             <div
-                                className="h-full bg-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]"
-                                style={{ width: `${Math.min(100, (mintStats.totalMinted / mintStats.totalSupplyLimit) * 100)}%` }}
-                            />
+                                className={`h-full rounded-full transition-all duration-1000 ease-out relative ${isProgressAnimating ? "bg-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.8)]" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"}`}
+                                style={{ width: `${Math.min(100, (liveMinted / liveLimit) * 100)}%` }}
+                            >
+                                {isProgressAnimating && (
+                                    <div className="absolute inset-0 bg-white/30 animate-pulse" />
+                                )}
+                            </div>
+
+                            {/* Particle effects during progress update */}
+                            {isProgressAnimating && (
+                                <div className="absolute top-1/2 left-0 w-full -translate-y-1/2 pointer-events-none">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className="absolute w-1 h-1 bg-yellow-400 rounded-full animate-sparkle"
+                                            style={{
+                                                left: `${(liveMinted / liveLimit) * 100}%`,
+                                                top: `${Math.random() * 20 - 10}px`,
+                                                animationDelay: `${i * 0.1}s`
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -378,12 +420,48 @@ export function MintModule() {
                                 <RotateCcw className="w-6 h-6 mr-3 transition-transform group-hover:rotate-180 duration-500" />
                                 Mint Another
                             </Button>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Button variant="secondary" className="h-14 rounded-2xl font-bold uppercase tracking-wider text-xs border border-border/50">
+                            <div className="grid grid-cols-3 gap-3">
+                                <Button
+                                    variant="secondary"
+                                    className="h-14 rounded-2xl font-bold uppercase tracking-wider text-xs border border-border/50 hover:bg-primary hover:text-primary-foreground transition-all"
+                                    onClick={() => {
+                                        // Navigate to inventory tab
+                                        if (onTabChange) {
+                                            onTabChange('inventory')
+                                        }
+                                    }}
+                                >
                                     Collection
                                 </Button>
-                                <Button variant="secondary" className="h-14 rounded-2xl font-bold uppercase tracking-wider text-xs border border-border/50">
-                                    Share Gear
+                                <Button
+                                    variant="secondary"
+                                    className="h-14 rounded-2xl font-bold uppercase tracking-wider text-xs border border-border/50 hover:bg-primary hover:text-primary-foreground transition-all gap-1.5"
+                                    onClick={() => {
+                                        if (mintedItem?.origin) {
+                                            const url = `https://handcash.io/item?origin=${mintedItem.origin}&price=true`;
+                                            window.open(url, '_blank')
+                                        }
+                                    }}
+                                    disabled={!mintedItem?.origin}
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    Item Page
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    className="h-14 rounded-2xl font-bold uppercase tracking-wider text-xs border border-border/50 hover:bg-primary hover:text-primary-foreground transition-all gap-1.5"
+                                    onClick={() => {
+                                        if (mintedItem) {
+                                            const itemUrl = `https://handcash.io/item?origin=${mintedItem.origin}&price=true`;
+                                            const tweetText = `Just minted a ${mintedItem.rarity} ${mintedItem.name}! 🎉\n\nCheck it out: ${itemUrl}`
+                                            const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`
+                                            window.open(tweetUrl, '_blank', 'width=550,height=420')
+                                        }
+                                    }}
+                                    disabled={!mintedItem}
+                                >
+                                    <Share2 className="w-3.5 h-3.5" />
+                                    Share on X
                                 </Button>
                             </div>
                         </div>

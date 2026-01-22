@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { TrendingUp, Package, Loader2, Info, Crown, Star, Gem, Award, Shield } from "lucide-react"
+import { TrendingUp, Package, Loader2, Info, Crown, Star, Gem, Award, Shield, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getRarityClasses, RARITY_COLORS } from "@/lib/rarity-colors"
+import { usePoolProgress } from "@/hooks/use-mint-progress"
 
 interface MintItem {
     id: string;
@@ -63,6 +64,9 @@ export function StatsSection() {
     const [pools, setPools] = useState<MintStats[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Live Pool Progress for the default pool
+    const { poolItems: liveItems, totalMinted: liveMinted, totalSupplyLimit: liveLimit, isAnimating: isProgressAnimating } = usePoolProgress("default")
+
     useEffect(() => {
         const fetchStats = async () => {
             try {
@@ -100,8 +104,14 @@ export function StatsSection() {
             </div>
 
             {pools.map((pool) => {
+                // Use live data if this is the default pool and we have live data
+                const isDefaultPool = pool.poolName === 'default'
+                const displayItems = (isDefaultPool && liveItems && liveItems.length > 0) ? liveItems : pool.items
+                const displayMinted = (isDefaultPool && liveMinted) ? liveMinted : pool.totalMinted
+                const displayLimit = (isDefaultPool && liveLimit) ? liveLimit : pool.totalSupplyLimit
+
                 // Sort items by rarity (rarest first)
-                const sortedItems = [...pool.items].sort((a, b) => {
+                const sortedItems = [...displayItems].sort((a, b) => {
                     const orderA = RARITY_ORDER[a.rarity.toLowerCase()] || 999
                     const orderB = RARITY_ORDER[b.rarity.toLowerCase()] || 999
                     return orderA - orderB
@@ -128,260 +138,145 @@ export function StatsSection() {
                                 </div>
                                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
                                     <div className="flex flex-col">
-                                        <span className="text-fluid-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">Total Minted</span>
-                                        <span className="text-fluid-2xl md:text-fluid-3xl font-black">{pool.totalMinted.toLocaleString()}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-fluid-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">Total Minted</span>
+                                            {isProgressAnimating && isDefaultPool && <Sparkles className="w-3 h-3 text-yellow-400 animate-pulse" />}
+                                        </div>
+                                        <span className={`text-fluid-2xl md:text-fluid-3xl font-black transition-all duration-300 ${isProgressAnimating && isDefaultPool ? "text-yellow-400 scale-110" : ""}`}>
+                                            {displayMinted.toLocaleString()}
+                                        </span>
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-fluid-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">Collection Cap</span>
-                                        <span className="text-fluid-2xl md:text-fluid-3xl font-black">{pool.totalSupplyLimit > 0 ? pool.totalSupplyLimit.toLocaleString() : "∞"}</span>
+                                        <span className="text-fluid-2xl md:text-fluid-3xl font-black">{displayLimit > 0 ? displayLimit.toLocaleString() : "∞"}</span>
                                     </div>
                                     <div className="flex flex-col col-span-2 lg:col-span-1">
                                         <span className="text-fluid-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">Depletion</span>
-                                        <span className="text-fluid-2xl md:text-fluid-3xl font-black text-primary">
-                                            {pool.totalSupplyLimit > 0
-                                                ? `${((pool.totalMinted / pool.totalSupplyLimit) * 100).toFixed(1)}%`
-                                                : "N/A"}
+                                        <span className={`text-fluid-2xl md:text-fluid-3xl font-black transition-all duration-300 ${isProgressAnimating && isDefaultPool ? "text-yellow-400" : "text-primary"}`}>
+                                            {displayLimit > 0 ? Math.round((displayMinted / displayLimit) * 100) : 0}%
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
-                            {pool.totalSupplyLimit > 0 && (
-                                <div className="mt-6 md:mt-8">
-                                    <Progress value={(pool.totalMinted / pool.totalSupplyLimit) * 100} className="h-2 md:h-3 rounded-full bg-primary/20" />
-                                </div>
-                            )}
+                            <div className="mt-8 md:mt-10 relative">
+                                <Progress
+                                    value={displayLimit > 0 ? (displayMinted / displayLimit) * 100 : 0}
+                                    className={`h-1.5 md:h-2 rounded-full bg-primary/10 transition-all duration-500 ${isProgressAnimating && isDefaultPool ? "shadow-[0_0_15px_rgba(234,179,8,0.5)]" : ""}`}
+                                />
+                                {isProgressAnimating && isDefaultPool && (
+                                    <div className="absolute top-0 right-0 h-full w-2 bg-yellow-400 blur-sm animate-pulse" style={{ left: `${(displayMinted / displayLimit) * 100}%` }} />
+                                )}
+                            </div>
                         </Card>
 
-                        {/* Premium Tier Items (Artifact, Legendary, Heirloom) - Full Detail */}
+                        {/* Premium Tiers (Grid 1x1 or 2x2) */}
                         {premiumItems.length > 0 && (
-                            <div className="mb-8 md:mb-12">
-                                <div className="flex items-center gap-3 mb-4 md:mb-6">
-                                    <Star className="w-5 h-5 md:w-6 md:h-6 text-[#ff8000]" />
-                                    <h4 className="text-fluid-xl md:text-fluid-2xl font-black uppercase italic tracking-tight">Premium Collection</h4>
-                                </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                                    {premiumItems.map((item) => {
-                                        const Icon = RARITY_ICONS[item.rarity.toLowerCase()] || Star
-                                        const rarityClasses = getRarityClasses(item.rarity)
-                                        const depletionPercent = item.supplyLimit > 0 ? (item.minted / item.supplyLimit) * 100 : 0
-
-                                        return (
-                                            <Card key={item.id} className={`p-6 md:p-8 card-responsive border-2 ${rarityClasses} flex flex-col group hover:scale-[1.02] transition-all duration-500 relative overflow-hidden`}>
-                                                {/* Animated background glow */}
-                                                <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500 bg-gradient-to-br from-current to-transparent pointer-events-none" />
-
-                                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6 mb-6 relative z-10">
-                                                    <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl md:rounded-3xl overflow-hidden bg-muted/50 group-hover:scale-110 transition-transform duration-500 shrink-0 border-2 border-current">
-                                                        {item.imageUrl ? (
-                                                            <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center">
-                                                                <Icon className="w-12 h-12 md:w-16 md:h-16 opacity-50" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <Icon className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
-                                                            <Badge className={`${rarityClasses} text-[9px] md:text-[10px] rounded-full uppercase font-black tracking-widest border-2`}>
-                                                                {item.rarity}
-                                                            </Badge>
-                                                        </div>
-                                                        <h4 className="text-fluid-xl md:text-fluid-2xl font-black italic uppercase leading-tight group-hover:scale-105 transition-transform origin-left">{item.name}</h4>
-                                                        {item.supplyLimit > 0 && (
-                                                            <p className="text-fluid-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
-                                                                Limited Edition • {item.supplyLimit.toLocaleString()} Total
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-4 md:space-y-6 relative z-10">
-                                                    <div className="grid grid-cols-3 gap-3 md:gap-4">
-                                                        <div className="flex flex-col p-3 md:p-4 bg-background/50 rounded-xl md:rounded-2xl border border-current/20">
-                                                            <span className="text-fluid-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Minted</span>
-                                                            <span className="text-fluid-xl md:text-fluid-2xl font-black">{item.minted.toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="flex flex-col p-3 md:p-4 bg-background/50 rounded-xl md:rounded-2xl border border-current/20">
-                                                            <span className="text-fluid-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Remaining</span>
-                                                            <span className={`text-fluid-xl md:text-fluid-2xl font-black ${item.remaining === 0 ? "text-red-500" : ""}`}>
-                                                                {item.remaining.toLocaleString()}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex flex-col p-3 md:p-4 bg-background/50 rounded-xl md:rounded-2xl border border-current/20">
-                                                            <span className="text-fluid-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Scarcity</span>
-                                                            <span className="text-fluid-xl md:text-fluid-2xl font-black">
-                                                                {item.supplyLimit > 0 ? `${depletionPercent.toFixed(0)}%` : "∞"}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {item.supplyLimit > 0 && (
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between text-fluid-xs font-black uppercase tracking-widest opacity-70">
-                                                                <span>Mint Progress</span>
-                                                                <span>{depletionPercent.toFixed(1)}%</span>
-                                                            </div>
-                                                            <div className="h-3 md:h-4 w-full bg-background/50 rounded-full overflow-hidden p-0.5 border-2 border-current/30">
-                                                                <div
-                                                                    className="h-full bg-current rounded-full transition-all duration-1000 shadow-[0_0_20px_currentColor]"
-                                                                    style={{ width: `${depletionPercent}%` }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </Card>
-                                        )
-                                    })}
-                                </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                                {premiumItems.map((item) => (
+                                    <ItemCard key={item.id} item={item} variant="premium" />
+                                ))}
                             </div>
                         )}
 
-                        {/* Enhanced Tier Items (Epic, Rare) - Medium Detail */}
+                        {/* Enhanced Tiers (Grid 2x2 or 3x3) */}
                         {enhancedItems.length > 0 && (
-                            <div className="mb-8 md:mb-12">
-                                <div className="flex items-center gap-3 mb-4 md:mb-6">
-                                    <Gem className="w-5 h-5 md:w-6 md:h-6 text-[#a335ee]" />
-                                    <h4 className="text-fluid-xl md:text-fluid-2xl font-black uppercase italic tracking-tight">Enhanced Collection</h4>
-                                </div>
-                                <div className="grid-responsive-3">
-                                    {enhancedItems.map((item) => {
-                                        const Icon = RARITY_ICONS[item.rarity.toLowerCase()] || Gem
-                                        const rarityClasses = getRarityClasses(item.rarity)
-
-                                        return (
-                                            <Card key={item.id} className={`p-4 md:p-6 card-responsive ${rarityClasses} flex flex-col group hover:border-current transition-all duration-500`}>
-                                                <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6">
-                                                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-muted/50 group-hover:scale-105 transition-transform duration-500 shrink-0 border border-current/50">
-                                                        {item.imageUrl ? (
-                                                            <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center">
-                                                                <Icon className="w-8 h-8 md:w-10 md:h-10 opacity-50" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="text-fluid-base md:text-fluid-lg font-black italic uppercase truncate group-hover:text-current transition-colors">{item.name}</h4>
-                                                        <Badge className={`${rarityClasses} text-[9px] md:text-[10px] rounded-full uppercase font-bold tracking-widest mt-1 border`}>
-                                                            {item.rarity}
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-3 md:space-y-4">
-                                                    <div className="flex justify-between items-end">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-fluid-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Minted</span>
-                                                            <span className="text-fluid-lg md:text-fluid-xl font-black">{item.minted.toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="flex flex-col text-right">
-                                                            <span className="text-fluid-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Remaining</span>
-                                                            <span className={`text-fluid-lg md:text-fluid-xl font-black ${item.remaining === 0 ? "text-red-500" : ""}`}>
-                                                                {item.remaining.toLocaleString()}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {item.supplyLimit > 0 ? (
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between text-fluid-xs font-black uppercase tracking-widest opacity-60">
-                                                                <span>Progress</span>
-                                                                <span>{Math.round((item.minted / item.supplyLimit) * 100)}%</span>
-                                                            </div>
-                                                            <div className="h-2 md:h-2.5 w-full bg-background/50 rounded-full overflow-hidden p-0.5 border border-current/20">
-                                                                <div
-                                                                    className="h-full bg-current rounded-full transition-all duration-1000"
-                                                                    style={{ width: `${(item.minted / item.supplyLimit) * 100}%` }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2 py-2 px-3 bg-current/10 rounded-lg md:rounded-xl border border-current/20">
-                                                            <Info className="w-3 h-3 shrink-0" />
-                                                            <span className="text-fluid-xs font-black uppercase tracking-widest">Unlimited</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </Card>
-                                        )
-                                    })}
-                                </div>
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
+                                {enhancedItems.map((item) => (
+                                    <ItemCard key={item.id} item={item} variant="enhanced" />
+                                ))}
                             </div>
                         )}
 
-                        {/* Standard Tier Items (Uncommon, Common) - Compact */}
+                        {/* Standard Tiers (Grid 3x3 or 4x4) */}
                         {standardItems.length > 0 && (
-                            <div>
-                                <div className="flex items-center gap-3 mb-4 md:mb-6">
-                                    <Package className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />
-                                    <h4 className="text-fluid-xl md:text-fluid-2xl font-black uppercase italic tracking-tight">Standard Collection</h4>
-                                </div>
-                                <div className="grid-responsive-4">
-                                    {standardItems.map((item) => {
-                                        const rarityClasses = getRarityClasses(item.rarity)
-
-                                        return (
-                                            <Card key={item.id} className={`p-3 md:p-4 rounded-xl md:rounded-2xl ${rarityClasses} flex flex-col group hover:border-current/50 transition-all duration-300`}>
-                                                <div className="flex items-center gap-2 md:gap-3 mb-3">
-                                                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-lg md:rounded-xl overflow-hidden bg-muted/50 shrink-0 border border-current/30">
-                                                        {item.imageUrl ? (
-                                                            <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-muted-foreground font-black text-xs uppercase">
-                                                                ?
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="text-fluid-sm md:text-fluid-base font-black italic uppercase truncate leading-tight">{item.name}</h4>
-                                                        <Badge variant="outline" className="text-[8px] md:text-[9px] rounded-full uppercase font-bold tracking-widest mt-1 opacity-60 border-current/30">
-                                                            {item.rarity}
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex justify-between items-center text-fluid-xs">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold uppercase tracking-wider text-muted-foreground opacity-60">Minted</span>
-                                                        <span className="text-fluid-sm md:text-fluid-base font-black">{item.minted.toLocaleString()}</span>
-                                                    </div>
-                                                    <div className="flex flex-col text-right">
-                                                        <span className="font-bold uppercase tracking-wider text-muted-foreground opacity-60">Left</span>
-                                                        <span className={`text-fluid-sm md:text-fluid-base font-black ${item.remaining === 0 ? "text-red-500" : ""}`}>
-                                                            {typeof item.remaining === 'number' ? item.remaining.toLocaleString() : item.remaining}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {item.supplyLimit > 0 && (
-                                                    <div className="mt-2 md:mt-3">
-                                                        <div className="h-1.5 md:h-2 w-full bg-background/50 rounded-full overflow-hidden border border-current/20">
-                                                            <div
-                                                                className="h-full bg-current rounded-full transition-all duration-700"
-                                                                style={{ width: `${(item.minted / item.supplyLimit) * 100}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </Card>
-                                        )
-                                    })}
-                                </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                                {standardItems.map((item) => (
+                                    <ItemCard key={item.id} item={item} variant="standard" />
+                                ))}
                             </div>
                         )}
                     </div>
                 )
             })}
-
-            {pools.length === 0 && (
-                <div className="text-center py-12 md:py-20 bg-muted/20 rounded-2xl md:rounded-[3rem] border border-dashed border-border">
-                    <Package className="w-12 h-12 md:w-16 md:h-16 mx-auto text-muted-foreground mb-4 opacity-20" />
-                    <p className="text-fluid-sm text-muted-foreground font-black uppercase tracking-widest italic px-4">No economics data available yet.</p>
-                </div>
-            )}
         </div>
+    )
+}
+
+function ItemCard({ item, variant }: { item: MintItem; variant: 'premium' | 'enhanced' | 'standard' }) {
+    const rarityColor = RARITY_COLORS[item.rarity.toLowerCase()] || '#ffffff'
+    const RarityIcon = RARITY_ICONS[item.rarity.toLowerCase()] || Package
+    const percentage = item.supplyLimit > 0 ? Math.round((item.minted / item.supplyLimit) * 100) : 0
+
+    if (variant === 'premium') {
+        return (
+            <Card className="relative overflow-hidden group hover:border-primary/40 transition-all duration-500 bg-card/40 backdrop-blur-xl border-primary/10 p-6 md:p-8">
+                <div className="absolute top-0 right-0 w-32 md:w-48 h-32 md:h-48 bg-primary/5 blur-3xl rounded-full -mr-16 md:-mr-24 -mt-16 md:-mt-24 group-hover:bg-primary/10 transition-colors" />
+
+                <div className="flex items-start justify-between relative z-10 gap-4">
+                    <div className="flex-1">
+                        <Badge className={`mb-3 md:mb-4 px-3 md:px-4 py-1 rounded-full text-[10px] md:text-xs font-black uppercase italic tracking-widest border-2 ${getRarityClasses(item.rarity)}`}>
+                            <RarityIcon className="w-3 h-3 md:w-3.5 md:h-3.5 mr-1.5 md:mr-2 inline" />
+                            {item.rarity}
+                        </Badge>
+                        <h4 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter mb-4 md:mb-6 leading-none">{item.name}</h4>
+
+                        <div className="grid grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-8">
+                            <div>
+                                <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Minted</p>
+                                <p className="text-xl md:text-3xl font-black">{item.minted}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Supply</p>
+                                <p className="text-xl md:text-3xl font-black">{item.supplyLimit}</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div className="flex justify-between items-end mb-2 md:mb-3">
+                                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest opacity-40">Saturation</span>
+                                <span className="text-sm md:text-lg font-black italic text-primary">{percentage}%</span>
+                            </div>
+                            <Progress value={percentage} className="h-2 md:h-3 bg-primary/10 rounded-full" />
+                        </div>
+                    </div>
+                </div>
+            </Card>
+        )
+    }
+
+    if (variant === 'enhanced') {
+        return (
+            <Card className="p-4 md:p-6 border-primary/10 hover:border-primary/30 transition-all duration-300 bg-card/30 group">
+                <div className="flex items-center justify-between mb-3 md:mb-4">
+                    <Badge className={`px-2 md:px-3 py-0.5 rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-wider border ${getRarityClasses(item.rarity)}`}>
+                        {item.rarity}
+                    </Badge>
+                    <span className="text-[10px] md:text-xs font-mono opacity-40">{item.minted}/{item.supplyLimit}</span>
+                </div>
+                <h4 className="text-lg md:text-xl font-black uppercase italic tracking-tight mb-4 md:mb-6 line-clamp-1">{item.name}</h4>
+                <div className="space-y-1.5 md:space-y-2">
+                    <div className="h-1 md:h-1.5 w-full bg-primary/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary/40 rounded-full" style={{ width: `${percentage}%` }} />
+                    </div>
+                    <div className="flex justify-between text-[8px] md:text-[9px] font-black uppercase tracking-widest opacity-40">
+                        <span>Depletion</span>
+                        <span>{percentage}%</span>
+                    </div>
+                </div>
+            </Card>
+        )
+    }
+
+    return (
+        <Card className="p-3 md:p-4 border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all group">
+            <div className="flex justify-between items-baseline mb-2 gap-2">
+                <h4 className="text-xs md:text-sm font-bold uppercase tracking-tight line-clamp-1 opacity-80">{item.name}</h4>
+                <span className="text-[8px] md:text-[9px] font-mono opacity-30 shrink-0">{item.minted}/{item.supplyLimit}</span>
+            </div>
+            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className={`h-full opacity-30 ${getRarityClasses(item.rarity).split(' ')[1]}`} style={{ width: `${percentage}%` }} />
+            </div>
+        </Card>
     )
 }

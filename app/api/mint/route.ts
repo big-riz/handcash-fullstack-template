@@ -149,14 +149,7 @@ export async function POST(request: NextRequest) {
             console.log(`[Mint API] Processing payment of ${roundedBsvAmount} BSV to ${businessHandle}`)
 
             // HandCash has a 25-character limit on the note field
-            // Format: "Mint: {ItemName}" with truncation if needed
-            const maxNoteLength = 25;
-            const prefix = "Mint: ";
-            const maxItemNameLength = maxNoteLength - prefix.length;
-            const truncatedName = randomItem.name.length > maxItemNameLength
-                ? randomItem.name.substring(0, maxItemNameLength - 1) + "…"
-                : randomItem.name;
-            const paymentNote = `${prefix}${truncatedName}`;
+            const paymentNote = "Slavic Survivors Mint";
 
             const paymentResponse = await handcashService.sendPayment(privateKey, {
                 destination: businessHandle!,
@@ -265,7 +258,8 @@ export async function POST(request: NextRequest) {
                         name: mintedItem.name,
                         imageUrl: mintedItem.mediaDetails?.image?.url || (randomItem as any).imageUrl || (randomItem as any).image,
                         multimediaUrl: (randomItem as any).multimediaUrl,
-                        rarity: mintedItem.rarity
+                        rarity: mintedItem.rarity,
+                        collectionId: collectionId!
                     }
                 })
             } else {
@@ -326,7 +320,8 @@ export async function POST(request: NextRequest) {
                     name: randomItem.name,
                     imageUrl: imageUrl,
                     multimediaUrl: (randomItem as any).multimediaUrl,
-                    rarity: (randomItem as any).rarity
+                    rarity: (randomItem as any).rarity,
+                    collectionId: collectionId || undefined
                 }
             })
         }
