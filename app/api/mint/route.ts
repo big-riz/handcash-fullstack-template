@@ -148,11 +148,21 @@ export async function POST(request: NextRequest) {
 
             console.log(`[Mint API] Processing payment of ${roundedBsvAmount} BSV to ${businessHandle}`)
 
+            // HandCash has a 25-character limit on the note field
+            // Format: "Mint: {ItemName}" with truncation if needed
+            const maxNoteLength = 25;
+            const prefix = "Mint: ";
+            const maxItemNameLength = maxNoteLength - prefix.length;
+            const truncatedName = randomItem.name.length > maxItemNameLength
+                ? randomItem.name.substring(0, maxItemNameLength - 1) + "…"
+                : randomItem.name;
+            const paymentNote = `${prefix}${truncatedName}`;
+
             const paymentResponse = await handcashService.sendPayment(privateKey, {
                 destination: businessHandle!,
                 amount: roundedBsvAmount,
                 currency: "BSV",
-                description: `Mint Item: ${randomItem.name}`
+                description: paymentNote
             }) as any
 
             // Log Payment to DB

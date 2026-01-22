@@ -102,33 +102,33 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
     <>
       {isAuthenticated && activeTab && onTabChange ? (
         <Tabs value={activeTab} onValueChange={onTabChange} className="hidden md:flex">
-          <TabsList className="h-12 p-1 bg-muted/50 backdrop-blur-md border border-border/50 rounded-xl shadow-sm">
+          <TabsList className="h-10 md:h-12 p-1 bg-muted/50 backdrop-blur-md border border-border/50 rounded-lg md:rounded-xl shadow-sm">
             <TabsTrigger
               value="mint"
-              className="rounded-lg px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm font-bold transition-all gap-2"
+              className="rounded-md md:rounded-lg px-3 md:px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm font-bold transition-all gap-1.5 md:gap-2"
             >
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" />
               Mint
             </TabsTrigger>
             <TabsTrigger
               value="inventory"
-              className="rounded-lg px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm font-bold transition-all gap-2"
+              className="rounded-md md:rounded-lg px-3 md:px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm font-bold transition-all gap-1.5 md:gap-2"
             >
-              <Package className="w-4 h-4" />
+              <Package className="w-3.5 h-3.5 md:w-4 md:h-4" />
               Collection
             </TabsTrigger>
             <TabsTrigger
               value="stats"
-              className="rounded-lg px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm font-bold transition-all gap-2"
+              className="rounded-md md:rounded-lg px-3 md:px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm font-bold transition-all gap-1.5 md:gap-2"
             >
-              <BarChart2 className="w-4 h-4" />
+              <BarChart2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
               Stats
             </TabsTrigger>
             <TabsTrigger
               value="game"
-              className="rounded-lg px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm font-bold transition-all gap-2"
+              className="rounded-md md:rounded-lg px-3 md:px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm font-bold transition-all gap-1.5 md:gap-2"
             >
-              <Gamepad2 className="w-4 h-4" />
+              <Gamepad2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
               Game
             </TabsTrigger>
           </TabsList>
@@ -222,17 +222,17 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
 
   return (
     <div className="border-b border-border/50 bg-background/60 backdrop-blur-xl sticky top-0 z-50">
-      <div className="container mx-auto px-6">
-        <div className="flex items-center justify-between h-20">
+      <div className="container-responsive">
+        <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-all hover:translate-y-[-1px]">
-            <div className="p-1.5 bg-primary/10 rounded-full shadow-sm group overflow-hidden relative">
+          <Link href="/" className="flex items-center gap-2 md:gap-4 hover:opacity-80 transition-all hover:translate-y-[-1px]">
+            <div className="p-1 md:p-1.5 bg-primary/10 rounded-full shadow-sm group overflow-hidden relative">
               <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity animate-pulse" />
-              <img src="/gopnik-logo.jpg" alt="Logo" className="w-10 h-10 rounded-full object-cover relative z-10" />
+              <img src="/gopnik-logo.jpg" alt="Logo" className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover relative z-10" />
             </div>
             <div className="flex flex-col">
-              <span className="font-black text-2xl uppercase italic tracking-tighter leading-none">Gopnik</span>
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-80 leading-none mt-1">Minting App</span>
+              <span className="font-black text-lg md:text-2xl uppercase italic tracking-tighter leading-none">Gopnik</span>
+              <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-primary opacity-80 leading-none mt-0.5 md:mt-1">Minting App</span>
             </div>
           </Link>
 

@@ -121,6 +121,99 @@
   .animate-pulse-slow {
     animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+
+  /* Responsive Container Utilities */
+  .container-responsive {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+
+  .container-narrow {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl;
+  }
+
+  /* Fluid Typography */
+  .text-fluid-xs {
+    font-size: clamp(0.625rem, 0.5rem + 0.5vw, 0.75rem);
+  }
+
+  .text-fluid-sm {
+    font-size: clamp(0.75rem, 0.65rem + 0.5vw, 0.875rem);
+  }
+
+  .text-fluid-base {
+    font-size: clamp(0.875rem, 0.8rem + 0.5vw, 1rem);
+  }
+
+  .text-fluid-lg {
+    font-size: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  }
+
+  .text-fluid-xl {
+    font-size: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
+  }
+
+  .text-fluid-2xl {
+    font-size: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+  }
+
+  .text-fluid-3xl {
+    font-size: clamp(1.5rem, 1.3rem + 1vw, 1.875rem);
+  }
+
+  .text-fluid-4xl {
+    font-size: clamp(1.875rem, 1.5rem + 1.5vw, 2.25rem);
+  }
+
+  .text-fluid-5xl {
+    font-size: clamp(2.25rem, 1.75rem + 2vw, 3rem);
+  }
+
+  .text-fluid-6xl {
+    font-size: clamp(2.5rem, 2rem + 2.5vw, 3.75rem);
+  }
+
+  .text-fluid-7xl {
+    font-size: clamp(3rem, 2.5rem + 3vw, 4.5rem);
+  }
+
+  /* Responsive Spacing */
+  .space-y-responsive {
+    @apply space-y-4 md:space-y-6 lg:space-y-8;
+  }
+
+  .gap-responsive {
+    @apply gap-3 md:gap-4 lg:gap-6;
+  }
+
+  .p-responsive {
+    @apply p-4 md:p-6 lg:p-8;
+  }
+
+  .px-responsive {
+    @apply px-4 md:px-6 lg:px-8;
+  }
+
+  .py-responsive {
+    @apply py-4 md:py-6 lg:py-8;
+  }
+
+  /* Responsive Card Sizing */
+  .card-responsive {
+    @apply rounded-2xl md:rounded-3xl lg:rounded-[2.5rem];
+  }
+
+  /* Responsive Grid */
+  .grid-responsive-2 {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6;
+  }
+
+  .grid-responsive-3 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6;
+  }
+
+  .grid-responsive-4 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6;
+  }
 }
 
 @keyframes float {
@@ -152,5 +245,15 @@
 
   to {
     transform: translateX(-50%);
+  }
+}
+
+@keyframes scroll-left {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-100%);
   }
 }

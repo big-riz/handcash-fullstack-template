@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, Zap, CheckCircle2, AlertCircle, ShoppingBag, RotateCcw, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react"
 import { usePayments } from "@/hooks/use-payments"
 import useEmblaCarousel from "embla-carousel-react"
-import { useCallback } from "react"
+import { useCallback, useRef } from "react"
 import { toast } from "sonner"
 import { getRarityClasses } from "@/lib/rarity-colors"
 import {
@@ -58,7 +58,7 @@ export function MintModule() {
     const [isLoadingStats, setIsLoadingStats] = useState(true)
 
     const [shuffledItems, setShuffledItems] = useState<any[]>([])
-    const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: true })
+    const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false, duration: 20 })
 
     const PRICE_USD = 0.05
     const PRICE_BSV_EST = 0.000001 // Updated estimate for 5 cents
@@ -85,16 +85,18 @@ export function MintModule() {
         }
     }
 
-    // Continuous slow auto-scroll
+    // Constant auto-scroll
     useEffect(() => {
         if (!emblaApi || (mintState !== "IDLE" && mintState !== "PAYING")) return
 
         const interval = setInterval(() => {
             emblaApi.scrollNext()
-        }, 3000) // Slow, steady scroll every 3 seconds
+        }, 2000) // Auto-scroll every 2 seconds
 
         return () => clearInterval(interval)
     }, [emblaApi, mintState])
+
+
 
     // Wheel of fortune animation during minting
     useEffect(() => {
@@ -115,7 +117,7 @@ export function MintModule() {
                 emblaApi.scrollNext()
             }
 
-            // Phase 3: Wait for the item to be set, then scroll to it
+            // Phase 3: Final stop
             await new Promise(resolve => setTimeout(resolve, 800))
         }
 
@@ -188,28 +190,28 @@ export function MintModule() {
 
             <div className="p-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
-            <div className="p-8 md:p-10">
+            <div className="p-responsive">
                 {/* Header Area */}
-                <div className="flex items-center justify-between mb-10">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 md:mb-10 gap-4">
                     <div>
-                        <h2 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Limited Edition</h2>
+                        <h2 className="text-fluid-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Limited Edition</h2>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-xl font-black uppercase italic tracking-tighter">Collection Live</span>
+                            <span className="text-fluid-lg md:text-fluid-xl font-black uppercase italic tracking-tighter">Collection Live</span>
                         </div>
                     </div>
-                    <Badge className="h-8 px-3 rounded-full gap-1.5 bg-primary/10 text-primary border-primary/20 font-bold text-[10px] tracking-widest">
-                        <Zap className="w-3 h-3 fill-current" />
+                    <Badge className="h-7 md:h-8 px-2.5 md:px-3 rounded-full gap-1.5 bg-primary/10 text-primary border-primary/20 font-bold text-[9px] md:text-[10px] tracking-widest">
+                        <Zap className="w-2.5 md:w-3 h-2.5 md:h-3 fill-current" />
                         INSTANT MINT
                     </Badge>
                 </div>
 
                 {/* Supply Progress Bar */}
                 {mintStats && mintStats.totalSupplyLimit > 0 && (
-                    <div className="mb-8 animate-in fade-in slide-in-from-top-2 duration-1000">
+                    <div className="mb-6 md:mb-8 animate-in fade-in slide-in-from-top-2 duration-1000">
                         <div className="flex justify-between items-end mb-2">
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Mint Progress</span>
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">
+                            <span className="text-fluid-xs font-black uppercase tracking-[0.2em] text-primary">Mint Progress</span>
+                            <span className="text-fluid-xs font-bold text-muted-foreground uppercase opacity-60">
                                 {mintStats.totalMinted} / {mintStats.totalSupplyLimit}
                             </span>
                         </div>
@@ -223,7 +225,7 @@ export function MintModule() {
                 )}
 
                 {/* Main Canvas Area */}
-                <div className="aspect-square rounded-[2rem] bg-muted/20 border border-border/50 mb-10 relative flex items-center justify-center overflow-hidden group/canvas">
+                <div className="aspect-square rounded-2xl md:rounded-[2rem] bg-muted/20 border border-border/50 mb-6 md:mb-10 relative flex items-center justify-center overflow-hidden group/canvas">
                     {/* Animated grid background for canvas */}
                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
                         style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
@@ -231,38 +233,51 @@ export function MintModule() {
                     {(mintState === "IDLE" || mintState === "PAYING" || mintState === "MINTING") && shuffledItems.length > 0 && (
                         <div className="absolute inset-0 group/carousel cursor-grab active:cursor-grabbing select-none">
                             <div className="w-full h-full overflow-hidden" ref={emblaRef}>
-                                <div className="flex h-full">
+                                <div className="flex h-full gap-3 md:gap-5">
                                     {/* Create enough duplicates for smooth animation (at least 20 items) */}
                                     {Array.from({ length: Math.max(20, shuffledItems.length * 3) }, (_, i) => shuffledItems[i % shuffledItems.length]).map((item: any, idx: number) => (
-                                        <div key={`${item.id}-${idx}`} className="flex-[0_0_100%] min-w-0 h-full flex flex-col items-center justify-center p-12 relative group/item bg-gradient-to-b from-primary/5 via-background to-background select-none">
+                                        <div key={`${item.id}-${idx}`} className="flex-[0_0_100%] min-w-0 h-full flex flex-col items-center justify-center px-2 relative group/item bg-gradient-to-b from-primary/5 via-background to-background select-none">
                                             {/* Accent Glow */}
                                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--primary)_0%,_transparent_70%)] opacity-0 group-hover/item:opacity-10 transition-opacity duration-1000" />
 
-                                            <div className="relative w-full flex-grow flex items-center justify-center min-h-0 mb-8">
-                                                <div className="absolute -inset-10 bg-primary/5 blur-[100px] rounded-full opacity-50" />
+                                            <div className="relative w-full flex-grow flex items-center justify-center min-h-0 mb-4 md:mb-8">
+                                                <div className="absolute -inset-6 md:-inset-10 bg-primary/5 blur-[60px] md:blur-[100px] rounded-full opacity-50" />
                                                 <img
                                                     src={item.imageUrl}
-                                                    alt={item.name}
-                                                    className="w-64 h-64 md:w-80 md:h-80 object-cover rounded-[2.5rem] relative z-10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border border-white/10 group-hover/item:scale-105 transition-transform duration-1000"
+                                                    alt="Mystery Item"
+                                                    className="w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-80 lg:h-80 object-cover rounded-2xl md:rounded-[2.5rem] relative z-10 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] md:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border border-white/10 transition-transform duration-1000"
+                                                    draggable={false}
                                                 />
                                             </div>
 
-                                            <div className="z-20 flex flex-col items-center w-full">
-                                                <Badge className={`mb-4 px-6 py-1 border rounded-full font-black text-[10px] tracking-[0.2em] uppercase ${getRarityClasses(item.rarity)}`}>
-                                                    {item.rarity.toUpperCase()}
-                                                </Badge>
-                                                <h3 className="text-3xl font-black text-center tracking-tight uppercase italic opacity-60 group-hover/item:opacity-100 transition-opacity">
-                                                    {item.name}
-                                                </h3>
-                                            </div>
+                                            {/* Only show details during MINTING state */}
+                                            {mintState === "MINTING" && (
+                                                <div className="z-20 flex flex-col items-center w-full">
+                                                    <Badge className={`mb-3 md:mb-4 px-4 md:px-6 py-1 border rounded-full font-black text-[9px] md:text-[10px] tracking-[0.2em] uppercase ${getRarityClasses(item.rarity)}`}>
+                                                        {item.rarity.toUpperCase()}
+                                                    </Badge>
+                                                    <h3 className="text-fluid-2xl md:text-fluid-3xl font-black text-center tracking-tight uppercase italic opacity-60 group-hover/item:opacity-100 transition-opacity px-4">
+                                                        {item.name}
+                                                    </h3>
+                                                </div>
+                                            )}
+
+                                            {/* Mystery placeholder for IDLE and PAYING states */}
+                                            {(mintState === "IDLE" || mintState === "PAYING") && (
+                                                <div className="z-40 flex flex-col items-center w-full">
+                                                    <div className="text-6xl md:text-9xl font-black text-primary/40 animate-pulse">
+                                                        ?
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
                             {/* Manual Navigation Hints (Gradients) */}
-                            <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-background to-transparent pointer-events-none opacity-0 group-hover/carousel:opacity-60 transition-opacity duration-500" />
-                            <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-background to-transparent pointer-events-none opacity-0 group-hover/carousel:opacity-60 transition-opacity duration-500" />
+                            <div className="absolute inset-y-0 left-0 w-16 md:w-32 bg-gradient-to-r from-background to-transparent pointer-events-none opacity-0 group-hover/carousel:opacity-60 transition-opacity duration-500" />
+                            <div className="absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-background to-transparent pointer-events-none opacity-0 group-hover/carousel:opacity-60 transition-opacity duration-500" />
                         </div>
                     )}
 
@@ -345,11 +360,11 @@ export function MintModule() {
                 {/* Action Section */}
                 <div className="relative">
                     {mintState === "IDLE" && (
-                        <div className="flex flex-col items-center mb-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Price per mint</span>
+                        <div className="flex flex-col items-center mb-4 md:mb-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                            <span className="text-fluid-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Price per mint</span>
                             <div className="flex items-baseline gap-2">
-                                <span className="text-6xl font-black tracking-tighter text-primary group-hover:scale-105 transition-transform duration-500">${PRICE_USD.toFixed(2)}</span>
-                                <span className="text-xl text-muted-foreground font-bold italic uppercase tracking-wider">USD</span>
+                                <span className="text-fluid-5xl md:text-6xl font-black tracking-tighter text-primary group-hover:scale-105 transition-transform duration-500">${PRICE_USD.toFixed(2)}</span>
+                                <span className="text-fluid-lg md:text-xl text-muted-foreground font-bold italic uppercase tracking-wider">USD</span>
                             </div>
                         </div>
                     )}
@@ -427,6 +442,6 @@ export function MintModule() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </Card>
+        </Card >
     )
 }

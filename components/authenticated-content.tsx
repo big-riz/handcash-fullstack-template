@@ -19,13 +19,13 @@ export function AuthenticatedContent({ activeTab, onTabChange }: AuthenticatedCo
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full -z-10 animate-pulse-slow" />
       <div className="absolute bottom-[10%] left-[-10%] w-[30%] h-[30%] bg-secondary/10 blur-[100px] rounded-full -z-10" />
 
-      <div className="container mx-auto px-4 flex-grow pt-12 pb-20">
+      <div className="container-responsive flex-grow pt-8 md:pt-12 pb-12 md:pb-20">
         {/* Brand Header */}
-        <div className="text-center mb-16 animate-in fade-in slide-in-from-top-4 duration-1000">
-          <h1 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter mb-4 bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/60">
+        <div className="text-center mb-8 md:mb-12 lg:mb-16 animate-in fade-in slide-in-from-top-4 duration-1000">
+          <h1 className="text-fluid-5xl md:text-fluid-7xl font-black uppercase italic tracking-tighter mb-3 md:mb-4 bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/60">
             Gopnik Mint
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground font-medium max-w-2xl mx-auto leading-tight">
+          <p className="text-fluid-lg md:text-fluid-2xl text-muted-foreground font-medium max-w-2xl mx-auto leading-tight px-4">
             Exclusive digital collectibles for the modern street legend.
           </p>
         </div>
@@ -34,26 +34,26 @@ export function AuthenticatedContent({ activeTab, onTabChange }: AuthenticatedCo
         <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
           <TabsContent value="mint" className="animate-in fade-in zoom-in-95 duration-500 mt-0">
             <div className="flex flex-col items-center">
-              <div className="w-full max-w-2xl">
+              <div className="w-full max-w-2xl px-2 sm:px-4">
                 <MintModule />
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="inventory" className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-0">
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-6xl mx-auto px-2 sm:px-4">
               <InventoryDisplay />
             </div>
           </TabsContent>
 
           <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-0">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto px-2 sm:px-4">
               <StatsSection />
             </div>
           </TabsContent>
 
           <TabsContent value="game" className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-0">
-            <div className="w-full max-w-7xl mx-auto">
+            <div className="w-full max-w-7xl mx-auto px-2 sm:px-4">
               <SlavicSurvivors />
             </div>
           </TabsContent>
