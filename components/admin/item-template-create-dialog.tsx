@@ -38,7 +38,7 @@ interface ItemTemplate {
   rarity?: string
   color?: string
   pool?: string
-  spawnWeight?: number
+  supplyLimit?: number
 }
 
 interface ItemTemplateCreateDialogProps {
@@ -58,7 +58,7 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
   const [rarity, setRarity] = useState("Common")
   const [color, setColor] = useState("")
   const [pool, setPool] = useState("default")
-  const [spawnWeight, setSpawnWeight] = useState(1)
+  const [supplyLimit, setSupplyLimit] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingCollections, setIsLoadingCollections] = useState(false)
   const [collections, setCollections] = useState<Collection[]>([])
@@ -77,7 +77,7 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
         setRarity(template.rarity || "Common")
         setColor(template.color || "")
         setPool(template.pool || "default")
-        setSpawnWeight(template.spawnWeight || 1)
+        setSupplyLimit(template.supplyLimit || 0)
       } else {
         // Reset form for new template
         setName("")
@@ -88,7 +88,7 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
         setRarity("Common")
         setColor("")
         setPool("default")
-        setSpawnWeight(1)
+        setSupplyLimit(0)
       }
     }
   }, [open, template])
@@ -142,7 +142,7 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
           rarity: rarity || "Common",
           color: color.trim() || undefined,
           pool: pool.trim() || "default",
-          spawnWeight: Number(spawnWeight) || 1,
+          supplyLimit: Number(supplyLimit) || 0,
         }
         : {
           name: name.trim(),
@@ -153,7 +153,7 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
           rarity: rarity || "Common",
           color: color.trim() || undefined,
           pool: pool.trim() || "default",
-          spawnWeight: Number(spawnWeight) || 1,
+          supplyLimit: Number(supplyLimit) || 0,
         }
 
       const response = await fetch(url, {
@@ -178,7 +178,7 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
       setRarity("Common")
       setColor("")
       setPool("default")
-      setSpawnWeight(1)
+      setSupplyLimit(0)
       onSuccess()
       onOpenChange(false)
     } catch (err: any) {
@@ -328,7 +328,7 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
 
           <div className="grid grid-cols-2 gap-4 border-t pt-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="templatePool">Template Pool</Label>
+              <Label htmlFor="templatePool">Mint Group</Label>
               <Input
                 id="templatePool"
                 placeholder="e.g. starter, elite, holiday"
@@ -336,21 +336,21 @@ export function ItemTemplateCreateDialog({ open, onOpenChange, onSuccess, templa
                 onChange={(e) => setPool(e.target.value)}
                 disabled={isLoading}
               />
-              <p className="text-xs text-muted-foreground">Group items into different mintable pools</p>
+              <p className="text-xs text-muted-foreground">Group items into different mintable sets</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="templateSpawnWeight">Spawn Weight (Chance)</Label>
+              <Label htmlFor="templateSupplyLimit">Supply Limit</Label>
               <Input
-                id="templateSpawnWeight"
+                id="templateSupplyLimit"
                 type="number"
-                min="1"
-                placeholder="1"
-                value={spawnWeight}
-                onChange={(e) => setSpawnWeight(parseInt(e.target.value) || 1)}
+                min="0"
+                placeholder="0"
+                value={supplyLimit}
+                onChange={(e) => setSupplyLimit(parseInt(e.target.value) || 0)}
                 disabled={isLoading}
               />
-              <p className="text-xs text-muted-foreground">Higher weight = higher chance within pool</p>
+              <p className="text-xs text-muted-foreground">Total items that can be minted (0 = unlimited)</p>
             </div>
           </div>
 

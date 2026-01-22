@@ -12,6 +12,9 @@ import { BusinessWalletInfo } from "@/components/admin/business-wallet-info"
 import { ItemTemplatesDisplay } from "@/components/admin/item-templates-display"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useEffect, useState } from "react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 export default function AdminDashboard() {
   const [hasBusinessAuthToken, setHasBusinessAuthToken] = useState<boolean | null>(null)
@@ -71,6 +74,8 @@ export default function AdminDashboard() {
 
           <ItemTemplatesDisplay />
 
+          <GameAccessSettings />
+
           <div id="mint-section">
             <MintInterface />
           </div>
@@ -79,6 +84,85 @@ export default function AdminDashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+function GameAccessSettings() {
+  const [collectionId, setCollectionId] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch("/api/admin/settings")
+        if (response.ok) {
+          const data = await response.json()
+          setCollectionId(data.settings?.access_collection_id || "")
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings:", err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchSettings()
+  }, [])
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_collection_id: collectionId }),
+      })
+      if (response.ok) {
+        toast.success("Settings saved successfully")
+      } else {
+        toast.error("Failed to save settings")
+      }
+    } catch (err) {
+      toast.error("An error occurred")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <Card className="p-8 rounded-3xl border-border">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-primary/10 rounded-lg">
+          <Shield className="w-5 h-5 text-primary" />
+        </div>
+        <h2 className="text-2xl font-bold">Game Access Controls</h2>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Required Collection ID</label>
+          <div className="flex gap-2">
+            <Input
+              value={collectionId}
+              onChange={(e) => setCollectionId(e.target.value)}
+              placeholder="Enter HandCash Collection ID"
+              disabled={isLoading}
+              className="rounded-xl border-border bg-background"
+            />
+            <Button
+              onClick={handleSave}
+              className="rounded-xl"
+              disabled={isLoading || isSaving}
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 italic px-1">
+            Users must own at least one item from this collection to enter the Slavic Survivors game. Leave empty to allow everyone.
+          </p>
+        </div>
+      </div>
+    </Card>
   )
 }
 

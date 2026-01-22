@@ -1,0 +1,1 @@
+ALTER TABLE "item_templates" ADD COLUMN "is_archived" boolean DEFAULT false;

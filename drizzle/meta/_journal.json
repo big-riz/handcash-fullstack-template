@@ -8,6 +8,27 @@
       "when": 1769013822650,
       "tag": "0000_white_thor_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769096777387,
+      "tag": "0001_windy_exodus",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769099050428,
+      "tag": "0002_productive_meltdown",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769120979069,
+      "tag": "0003_public_richard_fisk",
+      "breakpoints": true
     }
   ]
 }

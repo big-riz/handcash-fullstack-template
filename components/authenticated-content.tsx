@@ -1,9 +1,10 @@
 import { InventoryDisplay } from "@/components/widgets/inventory-display"
 import { MintModule } from "@/components/mint-module"
-import { TrustSection } from "@/components/trust-section"
+import { StatsSection } from "@/components/stats-section"
 import { AppFooter } from "@/components/app-footer"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ShoppingBag, Package, ShieldCheck } from "lucide-react"
+import { ShoppingBag, Package, BarChart2 } from "lucide-react"
+import { SlavicSurvivors } from "@/components/game/SlavicSurvivors"
 
 interface AuthenticatedContentProps {
   activeTab: string
@@ -45,9 +46,15 @@ export function AuthenticatedContent({ activeTab, onTabChange }: AuthenticatedCo
             </div>
           </TabsContent>
 
-          <TabsContent value="trust" className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-0">
-            <div className="max-w-4xl mx-auto">
-              <TrustSection />
+          <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-0">
+            <div className="max-w-7xl mx-auto">
+              <StatsSection />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="game" className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-0">
+            <div className="w-full max-w-7xl mx-auto">
+              <SlavicSurvivors />
             </div>
           </TabsContent>
         </Tabs>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2, RefreshCw, Sparkles, FileText, Copy } from "lucide-react"
+import { Loader2, RefreshCw, Sparkles, FileText, Copy, Archive, ArchiveRestore } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { ItemTemplateMintDialog } from "@/components/admin/item-template-mint-dialog"
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Trash2, Pencil } from "lucide-react"
 import { toast } from "sonner"
+import { getRarityClasses } from "@/lib/rarity-colors"
 
 interface ItemTemplate {
   id: string
@@ -37,7 +38,8 @@ interface ItemTemplate {
   rarity?: string
   color?: string
   pool?: string
-  spawnWeight?: number
+  supplyLimit?: number
+  isArchived?: boolean
 }
 
 export function ItemTemplatesDisplay() {
@@ -59,24 +61,10 @@ export function ItemTemplatesDisplay() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  // Calculate probabilities per pool
-  const poolStats = templates.reduce((acc, t) => {
-    const pool = t.pool || "default"
-    const weight = t.spawnWeight || 1
-    if (!acc[pool]) {
-      acc[pool] = { totalWeight: 0, items: [] }
-    }
-    acc[pool].totalWeight += weight
-    acc[pool].items.push({ id: t.id, weight })
-    return acc
-  }, {} as Record<string, { totalWeight: number, items: { id: string, weight: number }[] }>)
-
-  const getItemProbability = (id: string, pool?: string) => {
-    const p = pool || "default"
-    const stats = poolStats[p]
-    if (!stats || stats.totalWeight === 0) return 0
-    const item = stats.items.find(i => i.id === id)
-    return item ? (item.weight / stats.totalWeight) * 100 : 0
+  const getMintTotalSupply = (poolName: string) => {
+    return templates
+      .filter((t) => (t.pool || "default") === poolName)
+      .reduce((sum, t) => sum + (t.supplyLimit || 0), 0)
   }
 
   const fetchTemplates = async () => {
@@ -139,28 +127,30 @@ export function ItemTemplatesDisplay() {
     setIsDeleteDialogOpen(true)
   }
 
-  const handleDeleteConfirm = async () => {
+  const handleArchiveConfirm = async () => {
     if (!deletingTemplate) return
 
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/admin/item-templates?id=${deletingTemplate.id}`, {
-        method: "DELETE",
+      const action = deletingTemplate.isArchived ? "unarchive" : "archive"
+      const response = await fetch(`/api/admin/item-templates?id=${deletingTemplate.id}&action=${action}`, {
+        method: "PATCH",
         credentials: "include",
       })
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || "Failed to delete template")
+        console.error("Archive API error response:", data)
+        throw new Error(data.error || data.details || "Failed to update template")
       }
 
-      toast.success("Template deleted successfully")
+      toast.success(deletingTemplate.isArchived ? "Template unarchived successfully" : "Template archived successfully")
       setIsDeleteDialogOpen(false)
       setDeletingTemplate(null)
       fetchTemplates()
     } catch (err: any) {
-      console.error("Delete template error:", err)
-      toast.error(err.message || "Failed to delete template")
+      console.error("Archive template error:", err)
+      toast.error(err.message || "Failed to update template")
     } finally {
       setIsDeleting(false)
     }
@@ -189,27 +179,23 @@ export function ItemTemplatesDisplay() {
 
         {!isLoading && !error && templates.length > 0 && (
           <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(poolStats).map(([poolName, stats]) => (
+            {Array.from(new Set(templates.map(t => t.pool || "default"))).map(poolName => (
               <div key={poolName} className="p-4 rounded-2xl bg-muted/50 border border-border">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-primary" />
-                    Pool: {poolName}
+                    Mint: {poolName}
                   </h4>
-                  <Badge variant="outline" className="rounded-full bg-background">
-                    {stats.items.length} Items
+                  <Badge variant="outline" className="rounded-full bg-background text-xs">
+                    {templates.filter(t => (t.pool || "default") === poolName).length} Varieties
                   </Badge>
                 </div>
                 <div className="space-y-1 mt-3">
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Total Weight</span>
-                    <span className="font-mono font-bold text-foreground">{stats.totalWeight}</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-background rounded-full overflow-hidden mt-1">
-                    <div
-                      className="h-full bg-primary"
-                      style={{ width: '100%' }}
-                    />
+                    <span>Total Potential Supply</span>
+                    <span className="font-mono font-bold text-foreground">
+                      {getMintTotalSupply(poolName) || "Unlimited"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -249,11 +235,18 @@ export function ItemTemplatesDisplay() {
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <h4 className="font-bold text-lg truncate flex-1">{template.name}</h4>
-                    {template.rarity && (
-                      <Badge variant="secondary" className="ml-2 shrink-0 rounded-full text-xs">
-                        {template.rarity}
-                      </Badge>
-                    )}
+                    <div className="flex gap-1 ml-2 shrink-0">
+                      {template.isArchived && (
+                        <Badge variant="secondary" className="rounded-full text-xs bg-muted">
+                          Archived
+                        </Badge>
+                      )}
+                      {template.rarity && (
+                        <Badge className={`rounded-full text-xs border ${getRarityClasses(template.rarity)}`}>
+                          {template.rarity}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   {template.description && (
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{template.description}</p>
@@ -284,10 +277,15 @@ export function ItemTemplatesDisplay() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-5 w-5 p-0 shrink-0 text-destructive hover:text-destructive"
+                      className={`h-5 w-5 p-0 shrink-0 ${template.isArchived ? "" : "text-destructive hover:text-destructive"}`}
                       onClick={(e) => handleDeleteClick(template, e)}
+                      title={template.isArchived ? "Unarchive template" : "Archive template"}
                     >
-                      <Trash2 className="w-3 h-3" />
+                      {template.isArchived ? (
+                        <ArchiveRestore className="w-3 h-3" />
+                      ) : (
+                        <Archive className="w-3 h-3" />
+                      )}
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -295,10 +293,7 @@ export function ItemTemplatesDisplay() {
                       Pool: {template.pool || "default"}
                     </Badge>
                     <Badge variant="outline" className="text-xs rounded-full bg-orange-500/5 border-orange-500/20">
-                      Weight: {template.spawnWeight || 1}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs rounded-full bg-green-500/5 border-green-500/20 text-green-600 font-bold">
-                      {getItemProbability(template.id, template.pool).toFixed(1)}% Rarity
+                      Supply: {template.supplyLimit || "∞"}
                     </Badge>
                   </div>
                   <Button
@@ -339,25 +334,29 @@ export function ItemTemplatesDisplay() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deletingTemplate?.isArchived ? "Unarchive" : "Archive"} Template
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deletingTemplate?.name}"? This action cannot be undone.
+              {deletingTemplate?.isArchived
+                ? `Are you sure you want to unarchive "${deletingTemplate?.name}"? It will be available for minting again.`
+                : `Are you sure you want to archive "${deletingTemplate?.name}"? It will be hidden from the minting pool but can be unarchived later.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteConfirm}
+              onClick={handleArchiveConfirm}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={deletingTemplate?.isArchived ? "" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
             >
               {isDeleting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Deleting...
+                  {deletingTemplate?.isArchived ? "Unarchiving..." : "Archiving..."}
                 </>
               ) : (
-                "Delete"
+                deletingTemplate?.isArchived ? "Unarchive" : "Archive"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

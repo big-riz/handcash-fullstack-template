@@ -7,6 +7,9 @@ import { rateLimit, RateLimitPresets } from "@/lib/rate-limit"
 import { recordMintedItem } from "@/lib/minted-items-storage"
 import { getTemplates } from "@/lib/item-templates-storage"
 import { savePayment } from "@/lib/payments-storage"
+import { db } from "@/lib/db"
+import { mintedItems as mintedItemsTable } from "@/lib/schema"
+import { sql } from "drizzle-orm"
 import { randomUUID } from "crypto"
 
 export async function POST(request: NextRequest) {
@@ -41,11 +44,11 @@ export async function POST(request: NextRequest) {
 
         // Hardcoded fallbacks if DB is empty
         const fallbackItemTypes = [
-            { name: "Adidas Tracksuit", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tracksuit_blue.png", pool: "default", spawnWeight: 100 },
-            { name: "Sunflower Seeds", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/seeds.png", pool: "default", spawnWeight: 100 },
-            { name: "KV-2 Tank Model", rarity: "Rare", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tank.png", multimediaUrl: "https://res.cloudinary.com/handcash-io/raw/upload/v1710255990/items/kv2.glb", pool: "default", spawnWeight: 20 },
-            { name: "Gold Chain", rarity: "Epic", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/gold_chain.png", pool: "default", spawnWeight: 5 },
-            { name: "Golden Ushanka", rarity: "Legendary", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/ushanka.png", pool: "default", spawnWeight: 1 }
+            { name: "Adidas Tracksuit", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tracksuit_blue.png", pool: "default", supplyLimit: 1000 },
+            { name: "Sunflower Seeds", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/seeds.png", pool: "default", supplyLimit: 500 },
+            { name: "KV-2 Tank Model", rarity: "Rare", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tank.png", multimediaUrl: "https://res.cloudinary.com/handcash-io/raw/upload/v1710255990/items/kv2.glb", pool: "default", supplyLimit: 50 },
+            { name: "Gold Chain", rarity: "Epic", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/gold_chain.png", pool: "default", supplyLimit: 10 },
+            { name: "Golden Ushanka", rarity: "Legendary", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/ushanka.png", pool: "default", supplyLimit: 1 }
         ]
 
         // 3a. Pool Selection Logic
@@ -72,20 +75,45 @@ export async function POST(request: NextRequest) {
             poolItems = allTemplates;
         }
 
-        // Weighted random selection
-        const totalWeight = poolItems.reduce((acc, item) => acc + (item.spawnWeight || 1), 0);
-        let randomNum = Math.random() * totalWeight;
-        let randomItem = poolItems[0];
+        // Fetch current mint counts from DB to check supply limits
+        const mintCounts = await db
+            .select({
+                templateId: mintedItemsTable.templateId,
+                count: sql<number>`count(*)`.mapWith(Number),
+            })
+            .from(mintedItemsTable)
+            .groupBy(mintedItemsTable.templateId);
 
-        for (const item of poolItems) {
-            randomNum -= (item.spawnWeight || 1);
+        const mintCountMap = new Map(mintCounts.map(mc => [mc.templateId, mc.count]));
+
+        // Filter items that reached their supply limit
+        let availableItems = poolItems.filter(item => {
+            if (!item.id) return true; // Fallback items don't have IDs usually or aren't tracked firmly
+            const minted = mintCountMap.get(item.id) || 0;
+            return item.supplyLimit === 0 || minted < item.supplyLimit;
+        });
+
+        if (availableItems.length === 0) {
+            return NextResponse.json({ error: "Pool is sold out!" }, { status: 400 });
+        }
+
+        // Weighted random selection using supplyLimit as weight
+        // For unlimited items (supplyLimit: 0), we assign a default weight (e.g. 100)
+        const getItemWeight = (item: any) => item.supplyLimit > 0 ? item.supplyLimit : 100;
+
+        const totalWeight = availableItems.reduce((acc, item) => acc + getItemWeight(item), 0);
+        let randomNum = Math.random() * totalWeight;
+        let randomItem = availableItems[0];
+
+        for (const item of availableItems) {
+            randomNum -= getItemWeight(item);
             if (randomNum <= 0) {
                 randomItem = item;
                 break;
             }
         }
 
-        console.log(`[Mint API] Selected ${randomItem.name} from pool '${randomItem.pool || 'default'}' (Weight: ${randomItem.spawnWeight || 1}/${totalWeight})`)
+        console.log(`[Mint API] Selected ${randomItem.name} from pool '${randomItem.pool || 'default'}' (Supply: ${randomItem.supplyLimit || 'Unlimited'}, Weighted Score: ${getItemWeight(randomItem)}/${totalWeight})`)
 
         // 4. Determine if we can do real minting
         const collections = await getCollections()

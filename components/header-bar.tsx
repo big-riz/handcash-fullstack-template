@@ -4,7 +4,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Rocket, LogOut, Shield, Menu, ShoppingBag, Package, ShieldCheck } from "lucide-react"
+import { Rocket, LogOut, Shield, Menu, ShoppingBag, Package, BarChart2, Gamepad2, Wallet } from "lucide-react"
+import { usePayments } from "@/hooks/use-payments"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,7 @@ interface HeaderBarProps {
 export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuth()
+  const { balance } = usePayments()
   const [businessAvatar, setBusinessAvatar] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
@@ -116,11 +118,18 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
               Collection
             </TabsTrigger>
             <TabsTrigger
-              value="trust"
+              value="stats"
               className="rounded-lg px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm font-bold transition-all gap-2"
             >
-              <ShieldCheck className="w-4 h-4" />
-              Trust
+              <BarChart2 className="w-4 h-4" />
+              Stats
+            </TabsTrigger>
+            <TabsTrigger
+              value="game"
+              className="rounded-lg px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm font-bold transition-all gap-2"
+            >
+              <Gamepad2 className="w-4 h-4" />
+              Game
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -173,12 +182,21 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
                 </button>
                 <button
                   onClick={() => {
-                    onTabChange("trust")
+                    onTabChange("stats")
                     setOpen(false)
                   }}
-                  className={`text-lg font-medium text-left ${activeTab === "trust" ? "text-primary" : ""}`}
+                  className={`text-lg font-medium text-left ${activeTab === "stats" ? "text-primary" : ""}`}
                 >
-                  Trust
+                  Stats
+                </button>
+                <button
+                  onClick={() => {
+                    onTabChange("game")
+                    setOpen(false)
+                  }}
+                  className={`text-lg font-medium text-left ${activeTab === "game" ? "text-primary" : ""}`}
+                >
+                  Game
                 </button>
               </>
             ) : (
@@ -242,7 +260,15 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start text-left hidden sm:flex">
-                      <span className="text-sm font-bold leading-none">{user.publicProfile.displayName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold leading-none">{user.publicProfile.displayName}</span>
+                        {balance && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 rounded-full text-[10px] font-black text-primary border border-primary/20">
+                            <Wallet className="w-2.5 h-2.5" />
+                            <span>${balance.allBalances.items.find(i => i.currency.code === "BSV")?.fiatEquivalent.units.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
                       <span className="text-xs leading-none text-muted-foreground mt-1">${user.publicProfile.handle}</span>
                     </div>
                   </Button>

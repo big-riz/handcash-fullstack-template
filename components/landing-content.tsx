@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { LandingHero } from "@/components/landing-hero"
-import { TrustSection } from "@/components/trust-section"
+import { StatsSection } from "@/components/stats-section"
 import { AppFooter } from "@/components/app-footer"
 import { useAuth } from "@/lib/auth-context"
 import { Wallet } from "lucide-react"
@@ -44,11 +44,10 @@ export function LandingContent() {
 
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-border to-transparent mb-24" />
-          <TrustSection />
+          <StatsSection />
         </div>
       </div>
       <AppFooter />
     </div>
   )
 }
-

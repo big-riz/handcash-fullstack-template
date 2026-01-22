@@ -17,7 +17,8 @@ export interface ItemTemplate {
   rarity?: string
   color?: string
   pool?: string
-  spawnWeight?: number
+  supplyLimit?: number
+  isArchived?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -45,7 +46,8 @@ export async function saveTemplate(template: ItemTemplate): Promise<void> {
           rarity: template.rarity,
           color: template.color,
           pool: template.pool || "default",
-          spawnWeight: template.spawnWeight || 1,
+          supplyLimit: template.supplyLimit || 0,
+          isArchived: template.isArchived || false,
           updatedAt: new Date(),
         })
         .where(eq(itemTemplates.id, template.id))
@@ -62,7 +64,8 @@ export async function saveTemplate(template: ItemTemplate): Promise<void> {
         rarity: template.rarity,
         color: template.color,
         pool: template.pool || "default",
-        spawnWeight: template.spawnWeight || 1,
+        supplyLimit: template.supplyLimit || 0,
+        isArchived: template.isArchived || false,
         createdAt: template.createdAt ? new Date(template.createdAt) : new Date(),
       })
     }
@@ -87,7 +90,8 @@ export async function getTemplates(): Promise<ItemTemplate[]> {
       rarity: t.rarity || undefined,
       color: t.color || undefined,
       pool: t.pool || undefined,
-      spawnWeight: t.spawnWeight || undefined,
+      supplyLimit: t.supplyLimit || undefined,
+      isArchived: t.isArchived || false,
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt?.toISOString(),
     }))
@@ -119,7 +123,8 @@ export async function getTemplateById(id: string): Promise<ItemTemplate | null> 
       rarity: t.rarity || undefined,
       color: t.color || undefined,
       pool: t.pool || undefined,
-      spawnWeight: t.spawnWeight || undefined,
+      supplyLimit: t.supplyLimit || undefined,
+      isArchived: t.isArchived || false,
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt?.toISOString(),
     }
@@ -129,11 +134,41 @@ export async function getTemplateById(id: string): Promise<ItemTemplate | null> 
   }
 }
 
+export async function archiveTemplate(templateId: string): Promise<void> {
+  try {
+    await db
+      .update(itemTemplates)
+      .set({ isArchived: true, updatedAt: new Date() })
+      .where(eq(itemTemplates.id, templateId))
+  } catch (error: any) {
+    console.error("[ItemTemplatesStorage] Error archiving template:", error)
+    throw error
+  }
+}
+
+export async function unarchiveTemplate(templateId: string): Promise<void> {
+  try {
+    await db
+      .update(itemTemplates)
+      .set({ isArchived: false, updatedAt: new Date() })
+      .where(eq(itemTemplates.id, templateId))
+  } catch (error: any) {
+    console.error("[ItemTemplatesStorage] Error unarchiving template:", error)
+    throw error
+  }
+}
+
 export async function deleteTemplate(templateId: string): Promise<void> {
   try {
     await db.delete(itemTemplates).where(eq(itemTemplates.id, templateId))
-  } catch (error) {
+  } catch (error: any) {
     console.error("[ItemTemplatesStorage] Error deleting template:", error)
+
+    // Check if it's a foreign key constraint violation
+    if (error?.code === '23503' || error?.constraint?.includes('minted_items')) {
+      throw new Error("Cannot delete this template because it has been used to mint items. Templates with minted items cannot be deleted to preserve item history.")
+    }
+
     throw error
   }
 }

@@ -37,7 +37,8 @@ export const itemTemplates = pgTable("item_templates", {
     rarity: text("rarity"),
     color: text("color"),
     pool: text("pool").default("default"),
-    spawnWeight: integer("spawn_weight").default(1),
+    supplyLimit: integer("supply_limit").default(0),
+    isArchived: boolean("is_archived").default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at"),
 })
@@ -176,3 +177,35 @@ export type NewSession = typeof sessions.$inferInsert
 
 export type RateLimit = typeof rateLimits.$inferSelect
 export type NewRateLimit = typeof rateLimits.$inferInsert
+
+export const replays = pgTable("replays", {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").references(() => users.id),
+    playerName: text("player_name").notNull(),
+    handle: text("handle"),
+    avatarUrl: text("avatar_url"),
+    seed: text("seed").notNull(),
+    events: jsonb("events").notNull(),
+    finalLevel: integer("final_level").notNull(),
+    finalTime: integer("final_time").notNull(),
+    gameVersion: text("game_version").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+})
+
+export const replaysRelations = relations(replays, ({ one }) => ({
+    user: one(users, {
+        fields: [replays.userId],
+        references: [users.id],
+    }),
+}))
+
+export type Replay = typeof replays.$inferSelect
+export type NewReplay = typeof replays.$inferInsert
+export const settings = pgTable("settings", {
+    key: text("key").primaryKey(),
+    value: text("value").notNull(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+})
+
+export type Setting = typeof settings.$inferSelect
+export type NewSetting = typeof settings.$inferInsert

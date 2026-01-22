@@ -4,11 +4,12 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Loader2, Zap, CheckCircle2, AlertCircle, ShoppingBag, RotateCcw, ShieldCheck } from "lucide-react"
+import { Loader2, Zap, CheckCircle2, AlertCircle, ShoppingBag, RotateCcw, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react"
 import { usePayments } from "@/hooks/use-payments"
+import useEmblaCarousel from "embla-carousel-react"
+import { useCallback } from "react"
 import { toast } from "sonner"
+import { getRarityClasses } from "@/lib/rarity-colors"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -53,41 +54,90 @@ export function MintModule() {
     const [mintedItem, setMintedItem] = useState<MintedItem | null>(null)
     const [errorMsg, setErrorMsg] = useState("")
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-    const [showConfirmationEnabled, setShowConfirmationEnabled] = useState(true)
+    const [mintStats, setMintStats] = useState<any>(null)
+    const [isLoadingStats, setIsLoadingStats] = useState(true)
+
+    const [shuffledItems, setShuffledItems] = useState<any[]>([])
+    const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: true })
 
     const PRICE_USD = 0.05
     const PRICE_BSV_EST = 0.000001 // Updated estimate for 5 cents
 
-    // Load confirmation preference from cookie on mount
-    useEffect(() => {
-        const savedPref = getCookie('mintConfirmation')
-        if (savedPref !== null) {
-            setShowConfirmationEnabled(savedPref === 'true')
+    const fetchMintStats = async () => {
+        setIsLoadingStats(true)
+        try {
+            const response = await fetch("/api/pool-stats")
+            const data = await response.json()
+            if (data.success && data.pools) {
+                // Find default pool
+                const defaultPool = data.pools.find((p: any) => p.poolName === "default")
+                if (defaultPool && defaultPool.items) {
+                    // Shuffle items
+                    const shuffled = [...defaultPool.items].sort(() => Math.random() - 0.5)
+                    setShuffledItems(shuffled)
+                }
+                setMintStats(defaultPool)
+            }
+        } catch (error) {
+            console.error("Failed to fetch mint stats:", error)
+        } finally {
+            setIsLoadingStats(false)
         }
+    }
+
+    // Continuous slow auto-scroll
+    useEffect(() => {
+        if (!emblaApi || (mintState !== "IDLE" && mintState !== "PAYING")) return
+
+        const interval = setInterval(() => {
+            emblaApi.scrollNext()
+        }, 3000) // Slow, steady scroll every 3 seconds
+
+        return () => clearInterval(interval)
+    }, [emblaApi, mintState])
+
+    // Wheel of fortune animation during minting
+    useEffect(() => {
+        if (!emblaApi || mintState !== "MINTING") return
+
+        // Wheel of fortune animation: speed up then slow down
+        const spinAnimation = async () => {
+            // Phase 1: Speed up (fast scrolling)
+            for (let i = 0; i < 15; i++) {
+                await new Promise(resolve => setTimeout(resolve, 80))
+                emblaApi.scrollNext()
+            }
+
+            // Phase 2: Slow down gradually
+            const slowdownSteps = [120, 180, 250, 400, 600, 900]
+            for (const delay of slowdownSteps) {
+                await new Promise(resolve => setTimeout(resolve, delay))
+                emblaApi.scrollNext()
+            }
+
+            // Phase 3: Wait for the item to be set, then scroll to it
+            await new Promise(resolve => setTimeout(resolve, 800))
+        }
+
+        spinAnimation()
+    }, [emblaApi, mintState])
+
+    useEffect(() => {
+        fetchMintStats()
     }, [])
 
     const handleMintClick = () => {
-        if (showConfirmationEnabled) {
-            setShowConfirmDialog(true)
-        } else {
-            performMint()
-        }
+        setShowConfirmDialog(true)
     }
 
     const performMint = async () => {
         setShowConfirmDialog(false)
-
-        // 1. Check Balance locally
-        const bsvBalance = balance?.spendableBalances?.items?.find(i => i.currencyCode === "BSV")?.spendableBalance || 0
-        // Rough check, strict check happens on backend or better pre-check
-        // Let's rely on the USD amount for UI and let backend fail if insufficient.
 
         setMintState("PAYING")
         setStatusText("Creating payment request...")
         setErrorMsg("")
 
         try {
-            // 2. Call API
             setStatusText("Processing payment...")
 
             const response = await fetch("/api/mint", {
@@ -112,7 +162,6 @@ export function MintModule() {
                 setMintState("SUCCESS")
                 fetchBalance() // Refresh balance
                 toast.success("Item minted successfully!")
-                // Trigger generic confetti if available or just rely on the UI state
             } else {
                 throw new Error("Minting response invalid")
             }
@@ -128,11 +177,7 @@ export function MintModule() {
         setMintState("IDLE")
         setMintedItem(null)
         setStatusText("")
-    }
-
-    const handleConfirmationToggle = (checked: boolean) => {
-        setShowConfirmationEnabled(checked)
-        setCookie('mintConfirmation', checked.toString())
+        fetchMintStats() // Refresh stats after minting
     }
 
     return (
@@ -159,40 +204,69 @@ export function MintModule() {
                     </Badge>
                 </div>
 
+                {/* Supply Progress Bar */}
+                {mintStats && mintStats.totalSupplyLimit > 0 && (
+                    <div className="mb-8 animate-in fade-in slide-in-from-top-2 duration-1000">
+                        <div className="flex justify-between items-end mb-2">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Mint Progress</span>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">
+                                {mintStats.totalMinted} / {mintStats.totalSupplyLimit}
+                            </span>
+                        </div>
+                        <div className="h-2 w-full bg-primary/10 rounded-full border border-primary/5 overflow-hidden p-0.5">
+                            <div
+                                className="h-full bg-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                                style={{ width: `${Math.min(100, (mintStats.totalMinted / mintStats.totalSupplyLimit) * 100)}%` }}
+                            />
+                        </div>
+                    </div>
+                )}
+
                 {/* Main Canvas Area */}
                 <div className="aspect-square rounded-[2rem] bg-muted/20 border border-border/50 mb-10 relative flex items-center justify-center overflow-hidden group/canvas">
                     {/* Animated grid background for canvas */}
                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
                         style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
 
-                    {mintState === "IDLE" && (
-                        <div className="text-center p-6 transition-all duration-700 group-hover/canvas:scale-110">
-                            <div className="w-32 h-32 glass rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl relative overflow-hidden">
-                                <ShoppingBag className="w-12 h-12 text-primary animate-float" />
-                                <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent" />
+                    {(mintState === "IDLE" || mintState === "PAYING" || mintState === "MINTING") && shuffledItems.length > 0 && (
+                        <div className="absolute inset-0 group/carousel cursor-grab active:cursor-grabbing select-none">
+                            <div className="w-full h-full overflow-hidden" ref={emblaRef}>
+                                <div className="flex h-full">
+                                    {/* Create enough duplicates for smooth animation (at least 20 items) */}
+                                    {Array.from({ length: Math.max(20, shuffledItems.length * 3) }, (_, i) => shuffledItems[i % shuffledItems.length]).map((item: any, idx: number) => (
+                                        <div key={`${item.id}-${idx}`} className="flex-[0_0_100%] min-w-0 h-full flex flex-col items-center justify-center p-12 relative group/item bg-gradient-to-b from-primary/5 via-background to-background select-none">
+                                            {/* Accent Glow */}
+                                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--primary)_0%,_transparent_70%)] opacity-0 group-hover/item:opacity-10 transition-opacity duration-1000" />
+
+                                            <div className="relative w-full flex-grow flex items-center justify-center min-h-0 mb-8">
+                                                <div className="absolute -inset-10 bg-primary/5 blur-[100px] rounded-full opacity-50" />
+                                                <img
+                                                    src={item.imageUrl}
+                                                    alt={item.name}
+                                                    className="w-64 h-64 md:w-80 md:h-80 object-cover rounded-[2.5rem] relative z-10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border border-white/10 group-hover/item:scale-105 transition-transform duration-1000"
+                                                />
+                                            </div>
+
+                                            <div className="z-20 flex flex-col items-center w-full">
+                                                <Badge className={`mb-4 px-6 py-1 border rounded-full font-black text-[10px] tracking-[0.2em] uppercase ${getRarityClasses(item.rarity)}`}>
+                                                    {item.rarity.toUpperCase()}
+                                                </Badge>
+                                                <h3 className="text-3xl font-black text-center tracking-tight uppercase italic opacity-60 group-hover/item:opacity-100 transition-opacity">
+                                                    {item.name}
+                                                </h3>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <h3 className="text-xl font-black uppercase italic tracking-tighter mb-2">Mystery Gear</h3>
-                            <p className="text-sm font-medium text-muted-foreground max-w-[200px] mx-auto opacity-80">
-                                Rare & Legendary items
-                                waiting to be claimed.
-                            </p>
+
+                            {/* Manual Navigation Hints (Gradients) */}
+                            <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-background to-transparent pointer-events-none opacity-0 group-hover/carousel:opacity-60 transition-opacity duration-500" />
+                            <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-background to-transparent pointer-events-none opacity-0 group-hover/carousel:opacity-60 transition-opacity duration-500" />
                         </div>
                     )}
 
-                    {(mintState === "PAYING" || mintState === "MINTING") && (
-                        <div className="absolute inset-0 bg-background/60 backdrop-blur-xl flex flex-col items-center justify-center z-10 p-10 text-center animate-in fade-in duration-300">
-                            <div className="relative">
-                                <div className="w-24 h-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin mb-8" />
-                                <ShoppingBag className="w-8 h-8 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -mt-4" />
-                            </div>
-                            <p className="font-black text-2xl uppercase italic tracking-tighter animate-pulse">{statusText}</p>
-                            <div className="mt-8 flex gap-3">
-                                <div className={`w-3 h-3 rounded-full transition-all duration-300 ${["PAYING", "MINTING"].includes(mintState) ? "bg-primary scale-125 shadow-[0_0_12px_rgba(var(--primary),0.5)]" : "bg-muted"}`} />
-                                <div className={`w-3 h-3 rounded-full transition-all duration-300 ${mintState === "MINTING" ? "bg-primary scale-125 shadow-[0_0_12px_rgba(var(--primary),0.5)]" : "bg-muted"}`} />
-                                <div className="w-3 h-3 rounded-full bg-muted" />
-                            </div>
-                        </div>
-                    )}
+
 
                     {mintState === "SUCCESS" && mintedItem && (
                         <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background flex flex-col items-center justify-center animate-in zoom-in-95 duration-700">
@@ -308,22 +382,6 @@ export function MintModule() {
                             >
                                 {mintState === "IDLE" ? "Confirm Mint" : "Processing..."}
                             </Button>
-
-                            {mintState === "IDLE" && (
-                                <div className="flex items-center justify-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
-                                    <Checkbox
-                                        id="show-confirmation"
-                                        checked={showConfirmationEnabled}
-                                        onCheckedChange={handleConfirmationToggle}
-                                    />
-                                    <Label
-                                        htmlFor="show-confirmation"
-                                        className="text-xs font-medium cursor-pointer select-none"
-                                    >
-                                        Show confirmation dialog
-                                    </Label>
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>

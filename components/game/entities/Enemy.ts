@@ -1,0 +1,197 @@
+/**
+ * Enemy.ts
+ * 
+ * Base class for all enemies in Slavic Survivors.
+ * Handles movement, health, and basic AI (following player).
+ */
+
+import * as THREE from 'three'
+import { Player } from './Player'
+import { VFXManager } from '../systems/VFXManager'
+
+export interface EnemyStats {
+    maxHp: number
+    currentHp: number
+    moveSpeed: number
+    damage: number
+    xpValue: number
+}
+
+export type EnemyType = 'drifter' | 'screecher' | 'bruiser' | 'zmora' | 'domovoi' | 'kikimora' | 'leshy'
+
+export class Enemy {
+    position: THREE.Vector3
+    velocity: THREE.Vector3
+    radius: number
+    stats: EnemyStats
+    type: EnemyType
+
+    mesh: THREE.Mesh | null = null
+    isActive = false
+    onDie: ((x: number, z: number, xp: number) => void) | null = null
+
+    // Behaviors
+    private flickerTimer = 0
+    private isInvulnerable = false
+    public isElite = false
+
+    constructor(type: EnemyType = 'drifter') {
+        this.position = new THREE.Vector3()
+        this.velocity = new THREE.Vector3()
+        this.radius = 0.3
+        this.type = type
+
+        // Default Stats
+        this.stats = {
+            maxHp: 10,
+            currentHp: 10,
+            moveSpeed: 3.0,
+            damage: 5,
+            xpValue: 1
+        }
+
+        this.setStatsByType(type)
+    }
+
+    private setStatsByType(type: EnemyType) {
+        switch (type) {
+            case 'drifter':
+                this.stats = { maxHp: 15, currentHp: 15, moveSpeed: 3.5, damage: 10, xpValue: 1 }
+                this.radius = 0.3
+                break;
+            case 'screecher':
+                this.stats = { maxHp: 8, currentHp: 8, moveSpeed: 5.5, damage: 5, xpValue: 2 }
+                this.radius = 0.25
+                break;
+            case 'bruiser':
+                this.stats = { maxHp: 60, currentHp: 60, moveSpeed: 2.2, damage: 20, xpValue: 5 }
+                this.radius = 0.55
+                break;
+            case 'zmora': // Ghost - flickers invulnerability
+                this.stats = { maxHp: 12, currentHp: 12, moveSpeed: 4.0, damage: 12, xpValue: 3 }
+                this.radius = 0.3
+                break;
+            case 'domovoi': // Tiny swarm units
+                this.stats = { maxHp: 4, currentHp: 4, moveSpeed: 4.5, damage: 4, xpValue: 1 }
+                this.radius = 0.15
+                break;
+            case 'kikimora': // Dropping slow patches (logic to be added in EntityManager)
+                this.stats = { maxHp: 25, currentHp: 25, moveSpeed: 2.8, damage: 15, xpValue: 4 }
+                this.radius = 0.4
+                break;
+            case 'leshy': // BOSS - Forest Lord
+                this.stats = { maxHp: 500, currentHp: 500, moveSpeed: 1.8, damage: 40, xpValue: 50 }
+                this.radius = 1.2
+                break;
+        }
+    }
+
+    spawn(type: EnemyType, x: number, z: number, isElite: boolean = false) {
+        this.type = type
+        this.position.set(x, 0, z)
+        this.isActive = true
+        this.isInvulnerable = false
+        this.isElite = isElite
+        this.flickerTimer = 0
+
+        this.setStatsByType(type)
+
+        // Boost elite stats
+        if (isElite) {
+            this.stats.maxHp *= 4
+            this.stats.currentHp = this.stats.maxHp
+            this.stats.damage *= 2
+            this.stats.xpValue *= 1.5
+        }
+
+        if (this.mesh) {
+            this.mesh.position.copy(this.position)
+            this.mesh.visible = true
+            const mat = this.mesh.material as THREE.MeshStandardMaterial
+            mat.opacity = this.type === 'zmora' ? 0.6 : 1.0
+        }
+    }
+
+    update(deltaTime: number, player: Player) {
+        if (!this.isActive) return
+
+        // Behavior Logic
+        if (this.type === 'zmora') {
+            this.flickerTimer += deltaTime
+            if (this.flickerTimer >= 2.0) {
+                this.flickerTimer = 0
+                this.isInvulnerable = !this.isInvulnerable
+                if (this.mesh) {
+                    const mat = this.mesh.material as THREE.MeshStandardMaterial
+                    mat.opacity = this.isInvulnerable ? 0.2 : 0.6
+                }
+            }
+        }
+
+        // Simple Chaser AI
+        const direction = new THREE.Vector3()
+        direction.subVectors(player.position, this.position).normalize()
+
+        this.velocity.copy(direction).multiplyScalar(this.stats.moveSpeed)
+
+        this.position.x += this.velocity.x * deltaTime
+        this.position.z += this.velocity.z * deltaTime
+
+        if (this.mesh) {
+            this.mesh.position.copy(this.position)
+            this.mesh.position.y = this.radius
+        }
+    }
+
+    takeDamage(amount: number, vfx?: VFXManager): boolean {
+        if (this.isInvulnerable) return false
+
+        this.stats.currentHp -= amount
+
+        if (vfx) {
+            vfx.createDamageNumber(this.position.x, this.position.z, amount)
+        }
+
+        if (this.stats.currentHp <= 0) {
+            this.die()
+            return true
+        }
+        return false
+    }
+
+    die() {
+        if (!this.isActive) return
+        this.isActive = false
+        if (this.mesh) {
+            this.mesh.visible = false
+        }
+        if (this.onDie) {
+            this.onDie(this.position.x, this.position.z, this.stats.xpValue)
+        }
+    }
+
+    createMesh(scene: THREE.Scene, color = 0xff4444): THREE.Mesh {
+        // Use 3D geometry for shadows
+        let geometry: THREE.BufferGeometry
+        if (this.radius > 0.4) {
+            geometry = new THREE.CapsuleGeometry(this.radius, 0.8, 4, 8)
+        } else {
+            geometry = new THREE.SphereGeometry(this.radius, 16, 16)
+        }
+
+        const material = new THREE.MeshStandardMaterial({
+            color: color,
+            roughness: 0.7,
+            metalness: 0.3
+        })
+
+        this.mesh = new THREE.Mesh(geometry, material)
+        // Position mesh so bottom is at y=0 or center is at radius height
+        this.mesh.position.set(this.position.x, this.radius, this.position.z)
+        this.mesh.castShadow = true
+        this.mesh.receiveShadow = true
+        this.mesh.visible = this.isActive
+        scene.add(this.mesh)
+        return this.mesh
+    }
+}

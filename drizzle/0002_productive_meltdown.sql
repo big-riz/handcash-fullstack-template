@@ -1,0 +1,1 @@
+ALTER TABLE "item_templates" RENAME COLUMN "spawn_weight" TO "supply_limit";
