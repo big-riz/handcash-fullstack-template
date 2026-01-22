@@ -325,7 +325,7 @@ export function MintModule() {
                                 </div>
 
                                 <div className="z-20 flex flex-col items-center">
-                                    <Badge className="mb-3 px-6 py-1.5 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 dark:from-yellow-400 dark:to-amber-500 border-none rounded-full font-black text-xs tracking-[0.2em] shadow-xl text-black">
+                                    <Badge className={`mb-3 px-6 py-1.5 rounded-full font-black text-xs tracking-[0.2em] shadow-xl border-2 ${getRarityClasses(mintedItem.rarity)}`}>
                                         {mintedItem.rarity.toUpperCase()}
                                     </Badge>
 
