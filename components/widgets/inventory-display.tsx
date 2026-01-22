@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { ItemTransferDialog } from "@/components/widgets/item-transfer-dialog"
 import { ItemInspectDialog } from "@/components/widgets/item-inspect-dialog"
 import { toast } from "sonner"
+import { getRarityClasses } from "@/lib/rarity-colors"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -124,7 +125,7 @@ export function InventoryDisplay() {
 
                     {item.rarity && (
                       <div className="absolute top-3 right-3 md:top-4 md:right-4">
-                        <Badge className="bg-primary/90 text-primary-foreground backdrop-blur-md px-3 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl border-none font-black text-[9px] md:text-[10px] tracking-[0.2em] shadow-xl">
+                        <Badge className={`backdrop-blur-md px-3 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl border-2 font-black text-[9px] md:text-[10px] tracking-[0.2em] shadow-xl ${getRarityClasses(item.rarity)}`}>
                           {item.rarity.toUpperCase()}
                         </Badge>
                       </div>

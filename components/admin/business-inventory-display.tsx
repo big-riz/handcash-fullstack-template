@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { getRarityClasses } from "@/lib/rarity-colors"
 
 interface InventoryItem {
   id: string
@@ -119,7 +120,7 @@ export function BusinessInventoryDisplay() {
 
       setIsBurnDialogOpen(false)
       setBurnItem(null)
-      
+
       // Add a small delay to ensure the burn has propagated before refreshing
       await new Promise(resolve => setTimeout(resolve, 500))
       fetchInventory()
@@ -188,91 +189,91 @@ export function BusinessInventoryDisplay() {
           <>
             <div className="grid grid-cols-2 gap-4">
               {(isExpanded ? items : items.slice(0, 4)).map((item) => (
-              <div
-                key={item.id || item.origin}
-                className="group relative overflow-hidden rounded-2xl border border-border bg-card hover:shadow-lg transition-all"
-              >
-                <div className="aspect-square overflow-hidden bg-muted">
-                  <img
-                    src={item.imageUrl || "/placeholder.svg"}
-                    alt={item.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-bold text-lg truncate flex-1">{item.name}</h4>
-                    <div className="flex items-center gap-2 ml-2 shrink-0">
-                      {item.collection?.name && (
-                        <Badge variant="secondary" className="rounded-full text-xs">
-                          {item.collection.name}
-                        </Badge>
-                      )}
-                      {item.rarity && (
-                        <Badge variant="secondary" className="rounded-full text-xs">
-                          {item.rarity}
-                        </Badge>
-                      )}
-                    </div>
+                <div
+                  key={item.id || item.origin}
+                  className="group relative overflow-hidden rounded-2xl border border-border bg-card hover:shadow-lg transition-all"
+                >
+                  <div className="aspect-square overflow-hidden bg-muted">
+                    <img
+                      src={item.imageUrl || "/placeholder.svg"}
+                      alt={item.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                   </div>
-                  {item.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.description}</p>
-                  )}
-                  {item.attributes && item.attributes.length > 0 && (
-                    <div className="space-y-1 mb-3">
-                      {item.attributes.map((attr, idx) => (
-                        <div key={idx} className="flex items-center justify-between gap-2 text-xs">
-                          <span className="text-muted-foreground font-medium">{attr.name}:</span>
-                          <Badge variant="outline" className="text-xs rounded-full font-normal">
-                            {attr.value}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-bold text-lg truncate flex-1">{item.name}</h4>
+                      <div className="flex items-center gap-2 ml-2 shrink-0">
+                        {item.collection?.name && (
+                          <Badge variant="secondary" className="rounded-full text-xs">
+                            {item.collection.name}
                           </Badge>
-                        </div>
-                      ))}
+                        )}
+                        {item.rarity && (
+                          <Badge className={`rounded-full text-xs border-2 ${getRarityClasses(item.rarity)}`}>
+                            {item.rarity}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  {item.color && (
-                    <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-lg">
-                      <div
-                        className="w-4 h-4 rounded border border-border shrink-0"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-xs text-muted-foreground font-mono">{item.color}</span>
+                    {item.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.description}</p>
+                    )}
+                    {item.attributes && item.attributes.length > 0 && (
+                      <div className="space-y-1 mb-3">
+                        {item.attributes.map((attr, idx) => (
+                          <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                            <span className="text-muted-foreground font-medium">{attr.name}:</span>
+                            <Badge variant="outline" className="text-xs rounded-full font-normal">
+                              {attr.value}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {item.color && (
+                      <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-lg">
+                        <div
+                          className="w-4 h-4 rounded border border-border shrink-0"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-xs text-muted-foreground font-mono">{item.color}</span>
+                      </div>
+                    )}
+                    <div className="flex gap-2 min-w-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 min-w-0 rounded-full"
+                        onClick={() => {
+                          setInspectItem(item)
+                          setIsInspectOpen(true)
+                        }}
+                      >
+                        <Eye className="w-4 h-4 mr-1.5 shrink-0" />
+                        <span className="truncate">Inspect</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 min-w-0 rounded-full"
+                        onClick={() => handleTransfer(item)}
+                      >
+                        <Send className="w-4 h-4 mr-1.5 shrink-0" />
+                        <span className="truncate">Transfer</span>
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="rounded-full px-3 shrink-0"
+                        onClick={() => handleBurnClick(item)}
+                        disabled={!item.origin}
+                      >
+                        <Flame className="w-4 h-4" />
+                      </Button>
                     </div>
-                  )}
-                  <div className="flex gap-2 min-w-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 min-w-0 rounded-full"
-                      onClick={() => {
-                        setInspectItem(item)
-                        setIsInspectOpen(true)
-                      }}
-                    >
-                      <Eye className="w-4 h-4 mr-1.5 shrink-0" />
-                      <span className="truncate">Inspect</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 min-w-0 rounded-full"
-                      onClick={() => handleTransfer(item)}
-                    >
-                      <Send className="w-4 h-4 mr-1.5 shrink-0" />
-                      <span className="truncate">Transfer</span>
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="rounded-full px-3 shrink-0"
-                      onClick={() => handleBurnClick(item)}
-                      disabled={!item.origin}
-                    >
-                      <Flame className="w-4 h-4" />
-                    </Button>
                   </div>
                 </div>
-              </div>
               ))}
             </div>
             {items.length > 4 && (

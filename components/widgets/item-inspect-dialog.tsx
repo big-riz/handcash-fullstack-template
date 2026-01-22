@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Copy, Check } from "lucide-react"
 import { MediaPreview } from "@/components/admin/media-preview"
 import type { InventoryItem } from "@/hooks/use-inventory"
+import { getRarityClasses } from "@/lib/rarity-colors"
 
 interface ItemInspectDialogProps {
   item: InventoryItem
@@ -74,7 +75,7 @@ export function ItemInspectDialog({ item, open, onOpenChange, collections = [] }
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-2xl font-bold">{item.name}</h3>
               {item.rarity && (
-                <Badge variant="secondary" className="rounded-full text-sm font-semibold">
+                <Badge className={`rounded-full text-sm font-semibold border-2 ${getRarityClasses(item.rarity)}`}>
                   {item.rarity}
                 </Badge>
               )}
