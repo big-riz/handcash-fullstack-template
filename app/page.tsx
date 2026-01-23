@@ -40,7 +40,10 @@ export default function HomePage() {
         and user menu. Keep this intact for authentication to work.
         ═══════════════════════════════════════════════════════════════
       */}
-      <HeaderBar activeTab={activeTab} onTabChange={setActiveTab} />
+      <HeaderBar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
       <div className="flex-grow">
         {/* 
@@ -81,7 +84,12 @@ export default function HomePage() {
               user is logged out. Keep this intact.
               ═══════════════════════════════════════════════════════════
             */}
-            {!isLoading && <AuthenticatedContent activeTab={activeTab} onTabChange={setActiveTab} />}
+            {!isLoading && (
+              <AuthenticatedContent
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
+            )}
           </div>
         )}
       </div>

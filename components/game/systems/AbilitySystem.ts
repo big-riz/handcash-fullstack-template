@@ -25,9 +25,12 @@ import { VFXManager } from './VFXManager'
 
 export type AbilityType = 'garlic' | 'dagger' | 'holywater' | 'stake' | 'cross' | 'salt' | 'tt33' | 'propaganda_tower' |
     'ak_radioactive' | 'ak_ghzel' | 'ak_corrupted' | 'ak_mushroom' | 'nuclear_pigeon' | 'lada' |
+    'peppermill' | 'shank' | 'kabar' | 'knuckles' | 'stilleto' | 'grail' | 'soviet_stick' | 'skull_screen' | 'visors' |
+    'kvass_reactor' | 'vampire_rat' | 'pig_luggage' | 'big_biz_lada' | 'dadushka_chair' | 'gopnik_gondola' | 'tank_stroller' | 'haunted_lada' | 'gzhel_smg' |
     'soul_siphon' | 'silver_tt33' | 'melter'
 
-export type PassiveType = 'hp' | 'speed' | 'magnet' | 'armor' | 'area' | 'damage' | 'silver' | 'iron' | 'icon' | 'salt_passive' | 'garlic_ring' | 'regen'
+export type PassiveType = 'hp' | 'speed' | 'magnet' | 'armor' | 'area' | 'damage' | 'silver' | 'iron' | 'icon' | 'salt_passive' | 'garlic_ring' | 'regen' |
+    'dove_coin' | 'beer_coin' | 'holy_bread' | 'holy_cheese' | 'sunflower_pouch' | 'infinity_purse' | 'spy_hat' | 'pickled_gpu' | 'battle_scarf' | 'ruby_ushanka'
 
 export interface UpgradeInfo {
     id: string
@@ -60,10 +63,16 @@ export class AbilitySystem {
         private scene: THREE.Scene,
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any, // SeededRandom
+        startingWeapon: AbilityType = 'garlic'
     ) {
-        // Start with Czosnek Halo (Garlic)
-        this.addAbility('garlic')
+        // Safety check for RNG
+        if (!this.rng || typeof this.rng.next !== 'function') {
+            console.warn("AbilitySystem: Invalid RNG provided, falling back to Math.random wrapper");
+            this.rng = { next: () => Math.random() };
+        }
+        this.addAbility(startingWeapon)
     }
 
     addAbility(type: AbilityType) {
@@ -82,48 +91,92 @@ export class AbilitySystem {
 
     private createAbilityInstance(type: AbilityType) {
         let ability: any
-        if (type === 'garlic') {
-            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx)
-        } else if (type === 'dagger') {
-            ability = new DaggerWeapon(this.player, this.entityManager)
-        } else if (type === 'holywater') {
-            ability = new HolyWaterWeapon(this.scene, this.player, this.entityManager, this.vfx)
-        } else if (type === 'stake') {
-            ability = new AspenStakeWeapon(this.player, this.entityManager)
-        } else if (type === 'cross') {
-            ability = new CrossWeapon(this.scene, this.player, this.entityManager, this.vfx)
-        } else if (type === 'salt') {
-            ability = new SaltLineWeapon(this.scene, this.player, this.entityManager, this.vfx)
-        } else if (type === 'tt33') {
-            ability = new TT33Weapon(this.player, this.entityManager)
-        } else if (type === 'ak_radioactive') {
-            ability = new RadioactiveAKWeapon(this.player, this.entityManager, this.vfx)
-        } else if (type === 'ak_ghzel') {
-            ability = new GhzelAKWeapon(this.player, this.entityManager, this.vfx)
-        } else if (type === 'ak_corrupted') {
-            ability = new CorruptedAKWeapon(this.player, this.entityManager, this.vfx)
-        } else if (type === 'ak_mushroom') {
-            ability = new MushroomAKWeapon(this.scene, this.player, this.entityManager, this.vfx)
-        } else if (type === 'nuclear_pigeon') {
-            ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx)
-        } else if (type === 'lada') {
-            ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx)
-        } else if (type === 'propaganda_tower') {
-            ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx)
+
+        // Existing Mappings
+        if (type === 'garlic') ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'dagger') ability = new DaggerWeapon(this.player, this.entityManager, this.rng)
+        else if (type === 'holywater') ability = new HolyWaterWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'stake') ability = new AspenStakeWeapon(this.player, this.entityManager, this.rng)
+        else if (type === 'cross') ability = new CrossWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'salt') ability = new SaltLineWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'tt33') ability = new TT33Weapon(this.player, this.entityManager, this.rng)
+        else if (type === 'ak_radioactive') ability = new RadioactiveAKWeapon(this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'ak_ghzel') ability = new GhzelAKWeapon(this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'ak_corrupted') ability = new CorruptedAKWeapon(this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'ak_mushroom') ability = new MushroomAKWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'nuclear_pigeon') ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'lada') ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'propaganda_tower') ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+
+        // NEW WEAPONS (Mapped to existing classes for MVP)
+        else if (type === 'peppermill') {
+            ability = new TT33Weapon(this.player, this.entityManager, this.rng)
+            ability.cooldown *= 0.5 // Fast fire
+            ability.damage *= 0.6
         }
+        else if (type === 'gzhel_smg') {
+            ability = new GhzelAKWeapon(this.player, this.entityManager, this.vfx, this.rng)
+            ability.cooldown *= 0.7
+        }
+        else if (type === 'shank' || type === 'kabar' || type === 'knuckles' || type === 'soviet_stick') {
+            // Melee-ish (short range daggers)
+            ability = new DaggerWeapon(this.player, this.entityManager, this.rng)
+            ability.projectileSpeed *= 0.5
+            ability.projectileLife *= 0.4
+            ability.damage *= 2.0
+        }
+        else if (type === 'stilleto') {
+            ability = new DaggerWeapon(this.player, this.entityManager, this.rng)
+            ability.projectileSpeed *= 1.5
+            ability.cooldown *= 0.4
+        }
+        else if (type === 'grail' || type === 'skull_screen') {
+            // Aura-ish
+            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability.radius *= 0.8
+            ability.damage *= 1.5
+        }
+        else if (type === 'visors') {
+            // Laser eyes (fast projectiles)
+            ability = new TT33Weapon(this.player, this.entityManager, this.rng)
+            ability.damage *= 3.0
+            ability.projectileSpeed *= 2.0
+        }
+
+        // DEPLOYABLES
+        else if (type === 'kvass_reactor') {
+            ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            // Logic to make it heal/speed boost would go here in full impl, for now it's a tower derivative
+        }
+
+        // COMPANIONS
+        else if (type === 'vampire_rat' || type === 'pig_luggage') {
+            ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability.orbitSpeed *= 1.5
+            ability.orbitRadius *= 0.7
+        }
+
+        // VEHICLES
+        else if (['big_biz_lada', 'dadushka_chair', 'gopnik_gondola', 'tank_stroller', 'haunted_lada'].includes(type)) {
+            ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability.duration *= 1.2
+            if (type === 'haunted_lada') ability.speed *= 1.3
+            if (type === 'tank_stroller') ability.damage *= 2.0
+        }
+
         // Evolutions (Reuse existing classes with boosted stats or new effects)
         else if (type === 'soul_siphon') {
-            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx)
+            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng)
             ability.level = 8 // Special level for evo
             ability.damage *= 4
             ability.radius *= 1.6
         } else if (type === 'silver_tt33') {
-            ability = new TT33Weapon(this.player, this.entityManager)
+            ability = new TT33Weapon(this.player, this.entityManager, this.rng)
             ability.level = 8
             ability.damage *= 3
             ability.cooldown *= 0.5
         } else if (type === 'melter') {
-            ability = new RadioactiveAKWeapon(this.player, this.entityManager, this.vfx)
+            ability = new RadioactiveAKWeapon(this.player, this.entityManager, this.vfx, this.rng)
             ability.level = 8
             ability.damage *= 5
             ability.cooldown *= 0.4
@@ -179,8 +232,31 @@ export class AbilitySystem {
             p.stats.damageMultiplier *= 1.05
         } else if (type === 'garlic_ring') {
             p.stats.areaMultiplier *= 1.1
-        } else if (type === 'regen') {
-            p.stats.regen += 1.0 // +1 HP per second
+        } else if (type === 'regen' || type === 'holy_cheese') {
+            p.stats.regen += (type === 'holy_cheese' ? 2.0 : 1.0)
+        } else if (type === 'dove_coin') {
+            p.stats.luck += 0.2
+        } else if (type === 'holy_bread') {
+            p.stats.maxHp += 50
+            p.stats.currentHp += 50
+        } else if (type === 'beer_coin') {
+            p.stats.moveSpeed += 0.2
+            p.stats.armor += 1.0
+        } else if (type === 'sunflower_pouch') {
+            p.stats.amount += 1
+        } else if (type === 'infinity_purse') {
+            p.stats.greed += 0.5
+        } else if (type === 'spy_hat') {
+            p.stats.visionMultiplier += 0.2
+            p.stats.critRate += 0.2
+
+        } else if (type === 'pickled_gpu') {
+            p.stats.cooldownMultiplier *= 0.85
+        } else if (type === 'battle_scarf') {
+            p.stats.armor += 3.0
+        } else if (type === 'ruby_ushanka') {
+            p.stats.armor += 2.0
+            p.stats.damageMultiplier *= 1.1
         }
     }
 
@@ -222,7 +298,9 @@ export class AbilitySystem {
         if (type === 'iron') return nextLevel === 1 ? "Zhelezo: +1 Permanent Armor." : `+1 Armor (Total: ${nextLevel}).`
         if (type === 'area') return nextLevel === 1 ? "Vistula Reach: +15% Ability Area." : `+15% Area Multiplier.`
         if (type === 'damage') return nextLevel === 1 ? "Silver: +15% Total Damage." : `+15% Damage Multiplier.`
+        if (type === 'damage') return nextLevel === 1 ? "Silver: +15% Total Damage." : `+15% Damage Multiplier.`
         if (type === 'icon') return nextLevel === 1 ? "Holy Icon: -10% Ability Cooldown." : `-10% Cooldown Multiplier.`
+
 
         return "A powerful upgrade!"
     }

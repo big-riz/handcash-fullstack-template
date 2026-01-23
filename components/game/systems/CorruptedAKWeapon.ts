@@ -21,7 +21,8 @@ export class CorruptedAKWeapon {
     constructor(
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any // SeededRandom
     ) { }
 
     update(deltaTime: number) {
@@ -56,15 +57,15 @@ export class CorruptedAKWeapon {
             this.damage * this.player.stats.damageMultiplier
         )
 
-        // Life steal logic: 5% chance to heal 1 HP on fire for now (simulating hit)
-        if (Math.random() < this.lifeStealChance) {
+        // Life steal logic: 5% chance to heal 1 HP on fire for now (using seeded RNG)
+        if (this.rng.next() < this.lifeStealChance) {
             this.player.stats.currentHp = Math.min(this.player.stats.maxHp, this.player.stats.currentHp + 1)
             if (this.vfx) {
                 this.vfx.createEmoji(this.player.position.x, this.player.position.z, '💉', 0.6)
             }
         }
 
-        if (this.vfx && Math.random() < 0.2) {
+        if (this.vfx && this.rng.next() < 0.2) {
             this.vfx.createEmoji(this.player.position.x, this.player.position.z, '👿', 0.4)
         }
     }

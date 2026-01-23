@@ -12,11 +12,18 @@ import { XPGem } from './XPGem'
 import { Projectile } from './Projectile'
 import { VFXManager } from '../systems/VFXManager'
 
+export interface Obstacle {
+    x: number
+    z: number
+    radius: number
+}
+
 export class EntityManager {
     player: Player
     enemies: Enemy[] = []
     projectiles: Projectile[] = []
     gems: XPGem[] = []
+    obstacles: Obstacle[] = []
 
     private scene: THREE.Scene
     private vfx: VFXManager | null = null
@@ -24,19 +31,37 @@ export class EntityManager {
     private gemPool: XPGem[] = []
     private projectilePool: Projectile[] = []
 
+    private gemColor = 0x00cccc
+    private gemEmissive = 0x00ffff
+
     constructor(scene: THREE.Scene, player: Player, vfx: VFXManager) {
         this.scene = scene
         this.player = player
         this.vfx = vfx
     }
 
+    setObstacles(obstacles: Obstacle[]) {
+        this.obstacles = obstacles
+    }
+
+    setGemTheme(color: number, emissive: number) {
+        this.gemColor = color
+        this.gemEmissive = emissive
+        for (const gem of this.gems) {
+            gem.setColor(color, emissive)
+        }
+    }
+
     spawnGem(x: number, z: number, value: number) {
         let gem = this.gemPool.find(g => !g.isActive)
         if (!gem) {
             gem = new XPGem()
-            gem.createMesh(this.scene)
+            gem.createMesh(this.scene, this.gemColor, this.gemEmissive)
             this.gemPool.push(gem)
             this.gems.push(gem)
+        } else {
+            // Ensure color matches current theme in case it changed while in pool
+            gem.setColor(this.gemColor, this.gemEmissive)
         }
         gem.spawn(x, z, value)
     }
@@ -79,9 +104,14 @@ export class EntityManager {
                 enemy.mesh.scale.set(3, 3, 3)
             }
 
-            // Wire up drops
+            // Wire up drops and effects
             enemy.onDie = (x, z, xp) => {
                 this.spawnGem(x, z, xp)
+
+                if (type === 'kikimora' && this.vfx) {
+                    // Spawn "Slow Patch" visual
+                    this.vfx.createEmoji(x, z, '🕸️', 2.0) // 2s duration
+                }
             }
 
             pool.push(enemy)
@@ -113,16 +143,45 @@ export class EntityManager {
     update(deltaTime: number) {
         // Update Player
         // Note: Movement input is handled in SlavicSurvivors.tsx and passed to player.update
+        this.handlePlayerObstacleCollision()
 
         // Update Enemies
         for (const enemy of this.enemies) {
             if (enemy.isActive) {
-                enemy.update(deltaTime, this.player)
+                enemy.update(deltaTime, this.player,
+                    // Pass spawn callback for ranged enemies
+                    (x, z, vx, vz, dmg) => {
+                        this.spawnProjectile(x, z, vx, vz, dmg)
+                    }
+                )
 
                 // Simple collision check with player
                 const dist = enemy.position.distanceTo(this.player.position)
                 if (dist < (enemy.radius + this.player.radius)) {
                     this.handlePlayerEnemyCollision(enemy)
+                }
+
+                // Obstacle Collision (Environment)
+                for (const obs of this.obstacles) {
+                    const dx = enemy.position.x - obs.x
+                    const dz = enemy.position.z - obs.z
+                    const distSq = dx * dx + dz * dz
+                    const radii = enemy.radius + obs.radius
+
+                    if (distSq < radii * radii) {
+                        const dist = Math.sqrt(distSq)
+                        if (dist > 0) { // Avoid divide by zero
+                            // Push enemy out
+                            const overlap = radii - dist
+                            const nx = dx / dist
+                            const nz = dz / dist
+
+                            // Adjust position directly
+                            enemy.position.x += nx * overlap
+                            enemy.position.z += nz * overlap
+                            if (enemy.mesh) enemy.mesh.position.set(enemy.position.x, 0, enemy.position.z)
+                        }
+                    }
                 }
             }
         }
@@ -135,8 +194,13 @@ export class EntityManager {
                     // Check collision with any active enemy
                     for (const enemy of this.enemies) {
                         if (enemy.isActive) {
-                            const dist = projectile.position.distanceTo(enemy.position)
-                            if (dist < (projectile.radius + enemy.radius)) {
+                            // 2D Distance check (ignore Y axis to prevent misses on small enemies due to height difference)
+                            const dx = projectile.position.x - enemy.position.x
+                            const dz = projectile.position.z - enemy.position.z
+                            const distSq = dx * dx + dz * dz
+                            const radii = projectile.radius + enemy.radius
+
+                            if (distSq < radii * radii) {
                                 // Hit!
                                 enemy.takeDamage(projectile.damage, this.vfx || undefined)
                                 if (this.vfx) {
@@ -181,6 +245,34 @@ export class EntityManager {
         }
     }
 
+    private handlePlayerObstacleCollision() {
+        for (const obs of this.obstacles) {
+            const dx = this.player.position.x - obs.x
+            const dz = this.player.position.z - obs.z
+            const distSq = dx * dx + dz * dz
+            const radii = this.player.radius + obs.radius
+
+            if (distSq < radii * radii) {
+                const dist = Math.sqrt(distSq)
+                if (dist > 0) { // Avoid divide by zero
+                    // Push player out
+                    const overlap = radii - dist
+                    const nx = dx / dist
+                    const nz = dz / dist
+
+                    // Adjust position directly
+                    this.player.position.x += nx * overlap
+                    this.player.position.z += nz * overlap
+
+                    // Sync mesh immediately to prevent visual clipping
+                    if (this.player.mesh) {
+                        this.player.mesh.position.set(this.player.position.x, 0.5 + this.player.radius, this.player.position.z)
+                    }
+                }
+            }
+        }
+    }
+
     cleanup() {
         for (const enemy of this.enemies) {
             enemy.die()
@@ -203,6 +295,7 @@ export class EntityManager {
         this.enemies = []
         this.gems = []
         this.projectiles = []
+        this.obstacles = []
         this.enemyPools.clear()
         this.gemPool = []
         this.projectilePool = []

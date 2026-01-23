@@ -10,8 +10,8 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Handcash Demo - Connect Your Wallet",
-  description: "Demo app showcasing Handcash v3 SDK authentication and user profiles",
+  title: "Eastern Treasure | Digital Gopnik Artifacts",
+  description: "Collect ultra-rare digital gear from the Eastern Treasure archive. Secure your on-chain street gear via HandCash.",
   generator: "v0.app",
   icons: {
     icon: [

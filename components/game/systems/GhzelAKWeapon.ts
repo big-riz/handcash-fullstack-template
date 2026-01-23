@@ -21,7 +21,8 @@ export class GhzelAKWeapon {
     constructor(
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any // SeededRandom
     ) { }
 
     update(deltaTime: number) {
@@ -43,9 +44,9 @@ export class GhzelAKWeapon {
         const target = enemies[0]
         const dir = target.position.clone().sub(this.player.position).normalize()
 
-        // Crit check
+        // Crit check - using seeded RNG
         const totalCritRate = this.player.stats.critRate + this.critChanceBonus
-        const isCrit = Math.random() < totalCritRate
+        const isCrit = this.rng.next() < totalCritRate
         const finalDamage = isCrit
             ? this.damage * this.player.stats.damageMultiplier * this.player.stats.critDamage
             : this.damage * this.player.stats.damageMultiplier

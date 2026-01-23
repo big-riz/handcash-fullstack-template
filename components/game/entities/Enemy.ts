@@ -15,9 +15,10 @@ export interface EnemyStats {
     moveSpeed: number
     damage: number
     xpValue: number
+    isRanged?: boolean
 }
 
-export type EnemyType = 'drifter' | 'screecher' | 'bruiser' | 'zmora' | 'domovoi' | 'kikimora' | 'leshy'
+export type EnemyType = 'drifter' | 'screecher' | 'bruiser' | 'zmora' | 'domovoi' | 'kikimora' | 'leshy' | 'vodnik'
 
 export class Enemy {
     position: THREE.Vector3
@@ -60,28 +61,32 @@ export class Enemy {
                 this.radius = 0.3
                 break;
             case 'screecher':
-                this.stats = { maxHp: 8, currentHp: 8, moveSpeed: 5.5, damage: 5, xpValue: 2 }
+                this.stats = { maxHp: 8, currentHp: 8, moveSpeed: 5.5, damage: 5, xpValue: 1 }
                 this.radius = 0.25
                 break;
             case 'bruiser':
-                this.stats = { maxHp: 60, currentHp: 60, moveSpeed: 2.2, damage: 20, xpValue: 5 }
+                this.stats = { maxHp: 60, currentHp: 60, moveSpeed: 2.2, damage: 20, xpValue: 3 }
                 this.radius = 0.55
                 break;
             case 'zmora': // Ghost - flickers invulnerability
-                this.stats = { maxHp: 12, currentHp: 12, moveSpeed: 4.0, damage: 12, xpValue: 3 }
+                this.stats = { maxHp: 12, currentHp: 12, moveSpeed: 4.0, damage: 12, xpValue: 1 }
                 this.radius = 0.3
                 break;
             case 'domovoi': // Tiny swarm units
                 this.stats = { maxHp: 4, currentHp: 4, moveSpeed: 4.5, damage: 4, xpValue: 1 }
                 this.radius = 0.15
                 break;
-            case 'kikimora': // Dropping slow patches (logic to be added in EntityManager)
-                this.stats = { maxHp: 25, currentHp: 25, moveSpeed: 2.8, damage: 15, xpValue: 4 }
+            case 'kikimora': // Dropping slow patches (implemented in EntityManager)
+                this.stats = { maxHp: 25, currentHp: 25, moveSpeed: 2.8, damage: 15, xpValue: 2 }
                 this.radius = 0.4
                 break;
             case 'leshy': // BOSS - Forest Lord
-                this.stats = { maxHp: 500, currentHp: 500, moveSpeed: 1.8, damage: 40, xpValue: 50 }
+                this.stats = { maxHp: 500, currentHp: 500, moveSpeed: 1.8, damage: 40, xpValue: 10 }
                 this.radius = 1.2
+                break;
+            case 'vodnik': // Ranged Water Spirit
+                this.stats = { maxHp: 12, currentHp: 12, moveSpeed: 3.0, damage: 8, xpValue: 2, isRanged: true }
+                this.radius = 0.35
                 break;
         }
     }
@@ -101,7 +106,7 @@ export class Enemy {
             this.stats.maxHp *= 4
             this.stats.currentHp = this.stats.maxHp
             this.stats.damage *= 2
-            this.stats.xpValue *= 1.5
+            this.stats.xpValue *= 2.0 // Increased reward for elites
         }
 
         if (this.mesh) {
@@ -112,7 +117,7 @@ export class Enemy {
         }
     }
 
-    update(deltaTime: number, player: Player) {
+    update(deltaTime: number, player: Player, spawnProjectile?: (x: number, z: number, vx: number, vz: number, damage: number) => void) {
         if (!this.isActive) return
 
         // Behavior Logic
@@ -128,11 +133,32 @@ export class Enemy {
             }
         }
 
-        // Simple Chaser AI
-        const direction = new THREE.Vector3()
-        direction.subVectors(player.position, this.position).normalize()
+        // Ranged Logic (e.g., Archer)
+        if (this.stats.isRanged && spawnProjectile) {
+            const dist = this.position.distanceTo(player.position)
+            this.flickerTimer += deltaTime // Reuse timer for cooldown
 
-        this.velocity.copy(direction).multiplyScalar(this.stats.moveSpeed)
+            if (dist < 8.0) {
+                // In range, stop and shoot
+                this.velocity.set(0, 0, 0)
+
+                if (this.flickerTimer > 2.0) {
+                    this.flickerTimer = 0
+                    const dir = player.position.clone().sub(this.position).normalize()
+                    spawnProjectile(this.position.x, this.position.z, dir.x * 10, dir.z * 10, this.stats.damage)
+                }
+            } else {
+                // Chase
+                const direction = new THREE.Vector3()
+                direction.subVectors(player.position, this.position).normalize()
+                this.velocity.copy(direction).multiplyScalar(this.stats.moveSpeed)
+            }
+        } else {
+            // Standard Melee Chaser AI
+            const direction = new THREE.Vector3()
+            direction.subVectors(player.position, this.position).normalize()
+            this.velocity.copy(direction).multiplyScalar(this.stats.moveSpeed)
+        }
 
         this.position.x += this.velocity.x * deltaTime
         this.position.z += this.velocity.z * deltaTime

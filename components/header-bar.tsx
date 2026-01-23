@@ -129,7 +129,7 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
               className="rounded-md md:rounded-lg px-3 md:px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm font-bold transition-all gap-1.5 md:gap-2"
             >
               <Gamepad2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              Game
+              Survivor
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -196,7 +196,7 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
                   }}
                   className={`text-lg font-medium text-left ${activeTab === "game" ? "text-primary" : ""}`}
                 >
-                  Game
+                  Survivor Game
                 </button>
               </>
             ) : (

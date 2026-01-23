@@ -86,6 +86,7 @@ export const mintedItems = pgTable("minted_items", {
     multimediaUrl: text("multimedia_url"),
     paymentId: text("payment_id").references(() => payments.id),
     mintedAt: timestamp("minted_at").defaultNow(),
+    isArchived: boolean("is_archived").default(false),
     metadata: jsonb("metadata"),
 })
 
@@ -189,6 +190,8 @@ export const replays = pgTable("replays", {
     finalLevel: integer("final_level").notNull(),
     finalTime: integer("final_time").notNull(),
     gameVersion: text("game_version").notNull(),
+    characterId: text("character_id"),
+    worldId: text("world_id"),
     createdAt: timestamp("created_at").defaultNow(),
 })
 
@@ -209,3 +212,31 @@ export const settings = pgTable("settings", {
 
 export type Setting = typeof settings.$inferSelect
 export type NewSetting = typeof settings.$inferInsert
+
+export const comments = pgTable("comments", {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").references(() => users.id),
+    handle: text("handle").notNull(),
+    avatarUrl: text("avatar_url"),
+    content: text("content").notNull(),
+    parentId: integer("parent_id").references((): any => comments.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+export const commentsRelations = relations(comments, ({ one, many }) => ({
+    user: one(users, {
+        fields: [comments.userId],
+        references: [users.id],
+    }),
+    parent: one(comments, {
+        fields: [comments.parentId],
+        references: [comments.id],
+        relationName: "replies",
+    }),
+    replies: many(comments, {
+        relationName: "replies",
+    }),
+}))
+
+export type Comment = typeof comments.$inferSelect
+export type NewComment = typeof comments.$inferInsert

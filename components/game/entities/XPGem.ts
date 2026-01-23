@@ -56,14 +56,23 @@ export class XPGem {
         if (this.mesh) this.mesh.visible = false
     }
 
-    createMesh(scene: THREE.Scene): THREE.Mesh {
+    setColor(color: number, emissive: number = 0x00ffff) {
+        if (this.mesh && this.mesh.material instanceof THREE.MeshStandardMaterial) {
+            this.mesh.material.color.setHex(color)
+            this.mesh.material.emissive.setHex(emissive)
+        }
+    }
+
+    createMesh(scene: THREE.Scene, color: number = 0x00cccc, emissive: number = 0x00ffff): THREE.Mesh {
         const geometry = new THREE.IcosahedronGeometry(this.radius, 1)
         const material = new THREE.MeshStandardMaterial({
-            color: 0x00ffff,
-            emissive: 0x00ffff,
-            emissiveIntensity: 1,
+            color: color,
+            emissive: emissive,
+            emissiveIntensity: 0.8,
             transparent: true,
-            opacity: 0.8
+            opacity: 0.9,
+            roughness: 0.2,
+            metalness: 0.8
         })
         this.mesh = new THREE.Mesh(geometry, material)
         this.mesh.position.copy(this.position)

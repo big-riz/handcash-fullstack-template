@@ -29,6 +29,34 @@
       "when": 1769120979069,
       "tag": "0003_public_richard_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769195585221,
+      "tag": "0004_smart_bruce_banner",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769196261896,
+      "tag": "0005_past_red_shift",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1769196376112,
+      "tag": "0006_rare_shard",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1769197199546,
+      "tag": "0007_tense_sleepwalker",
+      "breakpoints": true
     }
   ]
 }

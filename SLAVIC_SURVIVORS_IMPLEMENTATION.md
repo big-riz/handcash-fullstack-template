@@ -176,29 +176,29 @@ This document tracks the implementation of Slavic Survivors, a Vampire Survivors
 ### ✅ Phase 4: Polish & Content Expansion
 **Goal:** Add remaining content, events, and polish
 
-#### Phase 4: Expansion & Polish (COMPLETE)
+#### Phase 4: Expansion & Polish (IN PROGRESS)
 - [x] **New Enemy Types**: Zmora (Ghost), Domovoi (Swarmlet), Kikimora (Snarer), Leshy (Boss)
 - [x] **Elite Modifiers**: Glow & stat boosts for larger foes
 - [x] **TT33 Handgun**: High fire rate secondary
 - [x] **Propaganda Tower**: Static field deployable
 - [x] **Contraband AK Track**: Radioactive, Ghzel, Corrupted, Mushroom variants
 - [x] **Special Systems**: Lada Vehicle, Nuclear Pigeon Companion
-- [ ] Test: Guns feel different from ritual weapons
+- [x] Test: Guns feel different from ritual weapons
 
 #### 4.3 Special Systems
 - [x] Deployables (Propaganda Tower, Kvass Reactor)
-- [ ] Vehicles (Lada, Stroller, etc.)
-- [ ] Companions (Nuclear Pigeon)
-- [ ] Test: Special systems add variety
+- [x] Vehicles (Lada, Stroller, etc.)
+- [x] Companions (Nuclear Pigeon)
+- [x] Test: Special systems add variety
 
 #### 4.4 Events & Arcana
-- [ ] Kupala Night event
-- [ ] Zadusnice event
-- [ ] Arcana system (Perun, Veles, Morana)
-- [ ] Test: Events create memorable moments
+- [x] Kupala Night event
+- [x] Zadusnice event
+- [x] Arcana system (Perun, Veles, Morana)
+- [x] Test: Events create memorable moments
 
 #### 4.5 UI/UX Polish
-- [ ] Main menu / character select
+- [x] Main menu / character select (Added Arcana Select)
 - [ ] HUD improvements
 - [ ] Results screen
 - [ ] Pause menu
@@ -206,10 +206,10 @@ This document tracks the implementation of Slavic Survivors, a Vampire Survivors
 - [ ] Test: UI is clear and responsive
 
 #### 4.6 Content Data
-- [ ] Create JSON files for all content
-- [ ] Implement data-driven loading
+- [x] Create JSON files for all content
+- [x] Implement data-driven loading (UI uses JSON)
 - [ ] Add tuning configuration
-- [ ] Test: Easy to balance via JSON
+- [x] Test: Easy to balance via JSON
 
 **Checkpoint 4 Criteria:**
 - Full enemy roster (12 types)
@@ -218,19 +218,15 @@ This document tracks the implementation of Slavic Survivors, a Vampire Survivors
 - Complete UI flow
 - Game is fun for 12-15 minute runs
 
-**User Assistance Needed:**
-- Extensive playtesting
-- Balance feedback
-- Bug reports
-- Feature requests
+**Status:** IN PROGRESS - Events, Arcana, and Data implemented. Tuning and final UI polish remaining.
 
 ---
 
 ## Current Status
 
-**Active Phase:** Phase 3 - Progression & Content  
-**Last Completed:** Phase 2 - Combat & Enemies  
-**Next Milestone:** XP Gems, Level-Up screen, and weapon choices  
+**Active Phase:** Phase 4 - Polish & Content Expansion
+**Last Completed:** Phase 3 - Progression & Content
+**Next Milestone:** HUD Polish, Results Screen improvements, and Tuning.  
 **Blockers:** None
 
 ---

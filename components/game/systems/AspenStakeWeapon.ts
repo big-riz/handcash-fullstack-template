@@ -19,7 +19,8 @@ export class AspenStakeWeapon {
 
     constructor(
         private player: Player,
-        private entityManager: EntityManager
+        private entityManager: EntityManager,
+        private rng: any // SeededRandom
     ) { }
 
     update(deltaTime: number) {

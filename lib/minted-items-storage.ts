@@ -1,6 +1,6 @@
 import { db } from "./db"
 import { mintedItems } from "./schema"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, and } from "drizzle-orm"
 
 export interface MintedItemData {
     id: string
@@ -14,6 +14,7 @@ export interface MintedItemData {
     imageUrl?: string
     multimediaUrl?: string
     paymentId?: string
+    isArchived?: boolean
     metadata?: Record<string, any>
 }
 
@@ -35,6 +36,7 @@ export async function recordMintedItem(itemData: MintedItemData): Promise<void> 
             imageUrl: itemData.imageUrl,
             multimediaUrl: itemData.multimediaUrl,
             paymentId: itemData.paymentId,
+            isArchived: itemData.isArchived || false,
             metadata: itemData.metadata,
         })
     } catch (error) {
@@ -46,12 +48,17 @@ export async function recordMintedItem(itemData: MintedItemData): Promise<void> 
 /**
  * Get minted items by user ID
  */
-export async function getMintedItemsByUserId(userId: string): Promise<MintedItemData[]> {
+export async function getMintedItemsByUserId(userId: string, includeArchived = false): Promise<MintedItemData[]> {
     try {
         const results = await db
             .select()
             .from(mintedItems)
-            .where(eq(mintedItems.mintedToUserId, userId))
+            .where(
+                and(
+                    eq(mintedItems.mintedToUserId, userId),
+                    includeArchived ? undefined : eq(mintedItems.isArchived, false)
+                )
+            )
             .orderBy(desc(mintedItems.mintedAt))
 
         return results.map((item) => ({
@@ -66,6 +73,7 @@ export async function getMintedItemsByUserId(userId: string): Promise<MintedItem
             imageUrl: item.imageUrl || undefined,
             multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
+            isArchived: item.isArchived || false,
             metadata: item.metadata as Record<string, any> | undefined,
         }))
     } catch (error) {
@@ -77,12 +85,17 @@ export async function getMintedItemsByUserId(userId: string): Promise<MintedItem
 /**
  * Get minted items by collection ID
  */
-export async function getMintedItemsByCollectionId(collectionId: string): Promise<MintedItemData[]> {
+export async function getMintedItemsByCollectionId(collectionId: string, includeArchived = false): Promise<MintedItemData[]> {
     try {
         const results = await db
             .select()
             .from(mintedItems)
-            .where(eq(mintedItems.collectionId, collectionId))
+            .where(
+                and(
+                    eq(mintedItems.collectionId, collectionId),
+                    includeArchived ? undefined : eq(mintedItems.isArchived, false)
+                )
+            )
             .orderBy(desc(mintedItems.mintedAt))
 
         return results.map((item) => ({
@@ -97,6 +110,7 @@ export async function getMintedItemsByCollectionId(collectionId: string): Promis
             imageUrl: item.imageUrl || undefined,
             multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
+            isArchived: item.isArchived || false,
             metadata: item.metadata as Record<string, any> | undefined,
         }))
     } catch (error) {
@@ -131,6 +145,7 @@ export async function getMintedItemByOrigin(origin: string): Promise<MintedItemD
             imageUrl: item.imageUrl || undefined,
             multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
+            isArchived: item.isArchived || false,
             metadata: item.metadata as Record<string, any> | undefined,
         }
     } catch (error) {
@@ -142,11 +157,12 @@ export async function getMintedItemByOrigin(origin: string): Promise<MintedItemD
 /**
  * Get all minted items
  */
-export async function getAllMintedItems(): Promise<MintedItemData[]> {
+export async function getAllMintedItems(includeArchived = false): Promise<MintedItemData[]> {
     try {
         const results = await db
             .select()
             .from(mintedItems)
+            .where(includeArchived ? undefined : eq(mintedItems.isArchived, false))
             .orderBy(desc(mintedItems.mintedAt))
 
         return results.map((item) => ({
@@ -161,6 +177,7 @@ export async function getAllMintedItems(): Promise<MintedItemData[]> {
             imageUrl: item.imageUrl || undefined,
             multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
+            isArchived: item.isArchived || false,
             metadata: item.metadata as Record<string, any> | undefined,
         }))
     } catch (error) {
@@ -173,7 +190,7 @@ export async function getAllMintedItems(): Promise<MintedItemData[]> {
  * Get minted items with their template information
  * Uses Drizzle relations to join with itemTemplates
  */
-export async function getMintedItemsWithTemplate(userId?: string) {
+export async function getMintedItemsWithTemplate(userId?: string, includeArchived = false) {
     try {
         const { itemTemplates } = await import("./schema")
 
@@ -184,10 +201,25 @@ export async function getMintedItemsWithTemplate(userId?: string) {
             })
             .from(mintedItems)
             .leftJoin(itemTemplates, eq(mintedItems.templateId, itemTemplates.id))
+            .where(includeArchived ? undefined : eq(mintedItems.isArchived, false))
             .orderBy(desc(mintedItems.mintedAt))
 
         if (userId) {
-            const results = await query.where(eq(mintedItems.mintedToUserId, userId))
+            // Re-apply where if userId is provided
+            const results = await db
+                .select({
+                    mintedItem: mintedItems,
+                    template: itemTemplates,
+                })
+                .from(mintedItems)
+                .leftJoin(itemTemplates, eq(mintedItems.templateId, itemTemplates.id))
+                .where(
+                    and(
+                        eq(mintedItems.mintedToUserId, userId),
+                        includeArchived ? undefined : eq(mintedItems.isArchived, false)
+                    )
+                )
+                .orderBy(desc(mintedItems.mintedAt))
             return results
         }
 
@@ -214,7 +246,12 @@ export async function getTemplateUsageStats() {
             })
             .from(mintedItems)
             .leftJoin(itemTemplates, eq(mintedItems.templateId, itemTemplates.id))
-            .where(sql`${mintedItems.templateId} IS NOT NULL`)
+            .where(
+                and(
+                    sql`${mintedItems.templateId} IS NOT NULL`,
+                    eq(mintedItems.isArchived, false)
+                )
+            )
             .groupBy(mintedItems.templateId, itemTemplates.name)
             .orderBy(sql`count(*) DESC`)
 
@@ -228,12 +265,17 @@ export async function getTemplateUsageStats() {
 /**
  * Get all minted items for a specific template
  */
-export async function getMintedItemsByTemplateId(templateId: string) {
+export async function getMintedItemsByTemplateId(templateId: string, includeArchived = false) {
     try {
         const results = await db
             .select()
             .from(mintedItems)
-            .where(eq(mintedItems.templateId, templateId))
+            .where(
+                and(
+                    eq(mintedItems.templateId, templateId),
+                    includeArchived ? undefined : eq(mintedItems.isArchived, false)
+                )
+            )
             .orderBy(desc(mintedItems.mintedAt))
 
         return results.map((item) => ({
@@ -248,6 +290,7 @@ export async function getMintedItemsByTemplateId(templateId: string) {
             imageUrl: item.imageUrl || undefined,
             multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
+            isArchived: item.isArchived || false,
             metadata: item.metadata as Record<string, any> | undefined,
         }))
     } catch (error) {

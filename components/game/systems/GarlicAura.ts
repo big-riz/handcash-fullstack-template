@@ -21,7 +21,8 @@ export class GarlicAura {
         private scene: THREE.Scene,
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any // SeededRandom
     ) {
         const geometry = new THREE.TorusGeometry(this.radius, 0.05, 16, 100)
         const material = new THREE.MeshStandardMaterial({

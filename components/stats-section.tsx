@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { TrendingUp, Package, Loader2, Info, Crown, Star, Gem, Award, Shield, Sparkles } from "lucide-react"
+import { TrendingUp, Package, Loader2, Info, Crown, Star, Gem, Award, Shield, Sparkles, PieChart as PieChartIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getRarityClasses, RARITY_COLORS, getRarityTextClass, RarityType } from "@/lib/rarity-colors"
 import { usePoolProgress } from "@/hooks/use-mint-progress"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
 
 interface MintItem {
     id: string;
@@ -165,6 +166,9 @@ export function StatsSection() {
                             </div>
                         </Card>
 
+                        {/* Economics Analysis Charts */}
+                        <EconomicsCharts items={displayItems} />
+
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                             {sortedItems.map((item, idx) => (
                                 <ItemCard key={item.id || (item as any).templateId || idx} item={item} />
@@ -173,6 +177,118 @@ export function StatsSection() {
                     </div>
                 )
             })}
+        </div>
+    )
+}
+
+function EconomicsCharts({ items }: { items: MintItem[] }) {
+    // Process Rarity Distribution (Number of templates per rarity)
+    const rarityDistribution = items.reduce((acc, item) => {
+        const rarity = item.rarity.toLowerCase()
+        acc[rarity] = (acc[rarity] || 0) + 1
+        return acc
+    }, {} as Record<string, number>)
+
+    const rarityData = Object.entries(rarityDistribution)
+        .map(([name, value]) => ({
+            name: name.charAt(0).toUpperCase() + name.slice(1),
+            value,
+            color: RARITY_COLORS[name as RarityType]?.bg.match(/\[(.*?)\]/)?.[1] || "#ffffff"
+        }))
+        .sort((a, b) => (RARITY_ORDER[b.name.toLowerCase()] || 0) - (RARITY_ORDER[a.name.toLowerCase()] || 0))
+
+    // Process Supply Distribution (Total supply per rarity)
+    const supplyDistribution = items.reduce((acc, item) => {
+        const rarity = item.rarity.toLowerCase()
+        acc[rarity] = (acc[rarity] || 0) + item.supplyLimit
+        return acc
+    }, {} as Record<string, number>)
+
+    const supplyData = Object.entries(supplyDistribution)
+        .map(([name, value]) => ({
+            name: name.charAt(0).toUpperCase() + name.slice(1),
+            value,
+            color: RARITY_COLORS[name as RarityType]?.bg.match(/\[(.*?)\]/)?.[1] || "#ffffff"
+        }))
+        .sort((a, b) => (RARITY_ORDER[b.name.toLowerCase()] || 0) - (RARITY_ORDER[a.name.toLowerCase()] || 0))
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 mb-12 md:mb-16">
+            <Card className="p-6 md:p-8 border-primary/10 bg-background/40 backdrop-blur-xl rounded-3xl overflow-hidden">
+                <h4 className="text-xl md:text-2xl font-black italic uppercase tracking-tight mb-6 flex items-center gap-2">
+                    <PieChartIcon className="w-5 h-5 text-primary" />
+                    Rarity Diversity
+                </h4>
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={rarityData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={100}
+                                paddingAngle={5}
+                                dataKey="value"
+                            >
+                                {rarityData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.8} stroke={entry.color} strokeWidth={2} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderColor: 'rgba(234, 179, 8, 0.2)', borderRadius: '12px' }}
+                                itemStyle={{ color: '#fff', fontWeight: '900', textTransform: 'uppercase' }}
+                            />
+                            <Legend
+                                verticalAlign="bottom"
+                                height={36}
+                                formatter={(value) => <span className="text-[10px] font-black uppercase italic tracking-widest text-muted-foreground">{value}</span>}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-4 opacity-40 text-center">
+                    Template variation by rarity tier
+                </p>
+            </Card>
+
+            <Card className="p-6 md:p-8 border-primary/10 bg-background/40 backdrop-blur-xl rounded-3xl overflow-hidden">
+                <h4 className="text-xl md:text-2xl font-black italic uppercase tracking-tight mb-6 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                    Supply Distribution
+                </h4>
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={supplyData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={100}
+                                paddingAngle={5}
+                                dataKey="value"
+                            >
+                                {supplyData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.8} stroke={entry.color} strokeWidth={2} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', borderColor: 'rgba(234, 179, 8, 0.2)', borderRadius: '12px' }}
+                                itemStyle={{ color: '#fff', fontWeight: '900', textTransform: 'uppercase' }}
+                            />
+                            <Legend
+                                verticalAlign="bottom"
+                                height={36}
+                                formatter={(value) => <span className="text-[10px] font-black uppercase italic tracking-widest text-muted-foreground">{value}</span>}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-4 opacity-40 text-center">
+                    Total minted capacity per rarity
+                </p>
+            </Card>
         </div>
     )
 }

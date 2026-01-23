@@ -4,6 +4,7 @@
  * Radioactive AK - High rate of fire handgun-style behavior but with faster projectiles and "Melting" debuff.
  */
 
+import * as THREE from 'three'
 import { Player } from '../entities/Player'
 import { EntityManager } from '../entities/EntityManager'
 import { VFXManager } from './VFXManager'
@@ -18,10 +19,13 @@ export class RadioactiveAKWeapon {
     private speed = 30
     private meltChance = 0.2 // Chance to deal bonus periodic damage or just visual for now
 
+    private burstQueue: { timer: number; dir: THREE.Vector3 }[] = []
+
     constructor(
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any // SeededRandom
     ) { }
 
     update(deltaTime: number) {
@@ -30,27 +34,15 @@ export class RadioactiveAKWeapon {
             this.fire()
             this.timer = 0
         }
-    }
 
-    fire() {
-        // Find nearest enemy
-        const enemies = this.entityManager.enemies
-            .filter(e => e.isActive)
-            .sort((a, b) => a.position.distanceTo(this.player.position) - b.position.distanceTo(this.player.position))
-
-        if (enemies.length === 0) return
-
-        const target = enemies[0]
-        const dir = target.position.clone().sub(this.player.position).normalize()
-
-        // AK fires 3-round small bursts at higher levels?
-        const burstCount = this.level >= 4 ? 3 : 1
-        const spread = 0.1
-
-        for (let i = 0; i < burstCount; i++) {
-            setTimeout(() => {
-                if (!this.player) return
-                const variance = (Math.random() - 0.5) * spread
+        // Process burst queue
+        for (let i = this.burstQueue.length - 1; i >= 0; i--) {
+            this.burstQueue[i].timer -= deltaTime
+            if (this.burstQueue[i].timer <= 0) {
+                const burstItem = this.burstQueue[i]
+                const dir = burstItem.dir
+                const spread = 0.1
+                const variance = (this.rng.next() - 0.5) * spread
                 const vx = (dir.x + (i > 0 ? variance : 0)) * this.speed
                 const vz = (dir.z + (i > 0 ? variance : 0)) * this.speed
 
@@ -62,11 +54,28 @@ export class RadioactiveAKWeapon {
                     this.damage * this.player.stats.damageMultiplier
                 )
 
-                // Visual green flash at player
-                if (Math.random() < 0.3) {
+                if (this.rng.next() < 0.3) {
                     this.vfx.createEmoji(this.player.position.x, this.player.position.z, '☢️', 0.5)
                 }
-            }, i * 100)
+
+                this.burstQueue.splice(i, 1)
+            }
+        }
+    }
+
+    fire() {
+        const enemies = this.entityManager.enemies
+            .filter(e => e.isActive)
+            .sort((a, b) => a.position.distanceTo(this.player.position) - b.position.distanceTo(this.player.position))
+
+        if (enemies.length === 0) return
+
+        const target = enemies[0]
+        const dir = target.position.clone().sub(this.player.position).normalize()
+
+        const burstCount = this.level >= 4 ? 3 : 1
+        for (let i = 0; i < burstCount; i++) {
+            this.burstQueue.push({ timer: i * 0.1, dir: dir.clone() })
         }
     }
 

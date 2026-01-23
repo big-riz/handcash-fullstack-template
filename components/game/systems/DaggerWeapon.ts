@@ -4,7 +4,6 @@
  * Shoots daggers in the direction of movement.
  */
 
-import * as THREE from 'three'
 import { Player } from '../entities/Player'
 import { EntityManager } from '../entities/EntityManager'
 
@@ -20,7 +19,8 @@ export class DaggerWeapon {
 
     constructor(
         private player: Player,
-        private entityManager: EntityManager
+        private entityManager: EntityManager,
+        private rng: any // SeededRandom
     ) { }
 
     update(deltaTime: number) {

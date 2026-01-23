@@ -29,14 +29,22 @@ export async function GET(request: NextRequest) {
     const userId = profile?.publicProfile?.id
 
     let localItems: any[] = []
+    let archivedOrigins = new Set<string>()
     if (userId) {
-      localItems = await getMintedItemsByUserId(userId)
+      // Get all items to identify archived ones
+      const allLocalItems = await getMintedItemsByUserId(userId, true)
+      localItems = allLocalItems.filter(item => !item.isArchived)
+      allLocalItems.forEach(item => {
+        if (item.isArchived && item.origin) {
+          archivedOrigins.add(item.origin)
+        }
+      })
     }
 
     // Combine items - prioritizing HandCash items (using origin to de-duplicate)
     const itemsByOrigin = new Map()
 
-    // Add local items first
+    // Add local items first (only non-archived ones)
     localItems.forEach((item: any) => {
       itemsByOrigin.set(item.origin, {
         id: item.id,
@@ -51,11 +59,15 @@ export async function GET(request: NextRequest) {
     })
 
     // Add/overwrite with HandCash items (they are the source of truth for on-chain)
+    // BUT only if they are not in the archived list
     handcashItems.forEach((item: any) => {
-      itemsByOrigin.set(item.origin || item.id, {
-        ...item,
-        isLocal: false
-      })
+      const origin = item.origin || item.id
+      if (!archivedOrigins.has(origin)) {
+        itemsByOrigin.set(origin, {
+          ...item,
+          isLocal: false
+        })
+      }
     })
 
     const finalItems = Array.from(itemsByOrigin.values())

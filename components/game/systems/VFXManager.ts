@@ -7,39 +7,54 @@
 import * as THREE from 'three'
 
 export class VFXManager {
-    private effects: { sprite: THREE.Sprite; velocity: THREE.Vector3; life: number; maxLife: number; rotation: number }[] = []
+    private effects: {
+        sprite: THREE.Sprite;
+        velocity: THREE.Vector3;
+        life: number;
+        maxLife: number;
+        rotation: number;
+        baseScale: THREE.Vector3;
+        fadeType: 'scale' | 'opacity';
+    }[] = []
 
     constructor(private scene: THREE.Scene) { }
 
     createDamageNumber(x: number, z: number, amount: number, color: string = 'white', scale: number = 1.0) {
+        this.createFloatingText(x, z, Math.round(amount).toString(), color, scale)
+    }
+
+    createFloatingText(x: number, z: number, text: string, color: string | number = 'white', scale: number = 1.0) {
         const canvas = document.createElement('canvas')
-        canvas.width = 128
+        canvas.width = 512
         canvas.height = 64
         const context = canvas.getContext('2d')
         if (!context) return
 
         context.font = 'Bold 40px Arial'
-        context.fillStyle = color
+        context.fillStyle = typeof color === 'number' ? '#' + color.toString(16).padStart(6, '0') : color
         context.textAlign = 'center'
         context.shadowColor = 'rgba(0,0,0,0.5)'
         context.shadowBlur = 4
-        context.fillText(Math.round(amount).toString(), 64, 40)
+        context.fillText(text, 256, 45) // Centered at 256, slightly lower y for descenders
 
         const texture = new THREE.CanvasTexture(canvas)
         const material = new THREE.SpriteMaterial({ map: texture, transparent: true })
         const sprite = new THREE.Sprite(material)
 
-        sprite.position.set(x, 1, z)
-        sprite.scale.set(1.5 * scale, 0.75 * scale, 1)
+        sprite.position.set(x, 2, z)
+        const baseScale = new THREE.Vector3(6.0 * scale, 0.75 * scale, 1)
+        sprite.scale.copy(baseScale)
 
         this.scene.add(sprite)
 
         this.effects.push({
             sprite,
-            velocity: new THREE.Vector3((Math.random() - 0.5) * 2, 2.5, (Math.random() - 0.5) * 2),
-            life: 1.0,
-            maxLife: 1.0,
-            rotation: (Math.random() - 0.5) * 2
+            velocity: new THREE.Vector3(0, 3.5, 0),
+            life: 2.0,
+            maxLife: 2.0,
+            rotation: 0,
+            baseScale,
+            fadeType: 'opacity'
         })
     }
 
@@ -60,7 +75,8 @@ export class VFXManager {
         const sprite = new THREE.Sprite(material)
 
         sprite.position.set(x, 0.5, z)
-        sprite.scale.set(1.2 * scale, 1.2 * scale, 1)
+        const baseScale = new THREE.Vector3(1.2 * scale, 1.2 * scale, 1)
+        sprite.scale.copy(baseScale)
 
         this.scene.add(sprite)
 
@@ -69,7 +85,9 @@ export class VFXManager {
             velocity: new THREE.Vector3((Math.random() - 0.5) * 4, 3 + Math.random() * 5, (Math.random() - 0.5) * 4),
             life: 0.8,
             maxLife: 0.8,
-            rotation: (Math.random() - 0.5) * 10
+            rotation: (Math.random() - 0.5) * 10,
+            baseScale,
+            fadeType: 'scale'
         })
     }
 
@@ -89,8 +107,24 @@ export class VFXManager {
             // Gravity 
             effect.velocity.y -= 12 * deltaTime
 
-            if (effect.sprite.material instanceof THREE.SpriteMaterial) {
-                effect.sprite.material.opacity = effect.life / effect.maxLife
+            // Life ratio (1.0 at birth, 0.0 at death)
+            const ratio = Math.max(0, effect.life / effect.maxLife)
+
+            if (effect.fadeType === 'scale') {
+                // Scale-based fade (for emojis)
+                // Stay large for the first 50% of life, then shrink quickly
+                const scaleMod = ratio > 0.5 ? 1.0 : ratio * 2.0
+                effect.sprite.scale.copy(effect.baseScale).multiplyScalar(scaleMod)
+
+                if (effect.sprite.material instanceof THREE.SpriteMaterial) {
+                    effect.sprite.material.opacity = 1.0
+                }
+            } else {
+                // Opacity-based fade (for text)
+                effect.sprite.scale.copy(effect.baseScale)
+                if (effect.sprite.material instanceof THREE.SpriteMaterial) {
+                    effect.sprite.material.opacity = ratio
+                }
             }
 
             if (effect.life <= 0) {

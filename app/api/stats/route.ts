@@ -6,10 +6,13 @@ import { handcashService } from "@/lib/handcash-service"
 
 export async function GET() {
     try {
-        // 1. Total minted items count (Excluding mock items)
+        // 1. Total minted items count (Excluding mock and archived items)
         const totalItemsResult = await db.select({ count: sql<number>`count(*)` })
             .from(mintedItems)
-            .where(not(ilike(mintedItems.id, 'mock-%')));
+            .where(and(
+                not(ilike(mintedItems.id, 'mock-%')),
+                eq(mintedItems.isArchived, false)
+            ));
         const totalItems = Number(totalItemsResult[0].count);
 
         // 2. Total money spent (Aggregated to USD)
@@ -40,13 +43,16 @@ export async function GET() {
         const totalUsdDirect = parseFloat(usdPayments[0].total || "0");
         const totalMoneySpent = totalBsvUsd + totalUsdDirect;
 
-        // 3. Unique minters count (Excluding mock items)
+        // 3. Unique minters count (Excluding mock and archived items)
         const uniqueMintersResult = await db.select({ count: sql<number>`count(distinct minted_to_user_id)` })
             .from(mintedItems)
-            .where(not(ilike(mintedItems.id, 'mock-%')));
+            .where(and(
+                not(ilike(mintedItems.id, 'mock-%')),
+                eq(mintedItems.isArchived, false)
+            ));
         const uniqueMinters = Number(uniqueMintersResult[0].count);
 
-        // 4. Per item stats (most popular items, excluding mock)
+        // 4. Per item stats (most popular items, excluding mock and archived)
         const itemsPerTemplate = await db.select({
             itemName: mintedItems.itemName,
             count: sql<number>`count(*)`,
@@ -54,7 +60,10 @@ export async function GET() {
             rarity: mintedItems.rarity
         })
             .from(mintedItems)
-            .where(not(ilike(mintedItems.id, 'mock-%')))
+            .where(and(
+                not(ilike(mintedItems.id, 'mock-%')),
+                eq(mintedItems.isArchived, false)
+            ))
             .groupBy(mintedItems.itemName, mintedItems.imageUrl, mintedItems.rarity)
             .orderBy(sql`count(*) desc`)
             .limit(6);

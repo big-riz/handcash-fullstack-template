@@ -7,15 +7,19 @@
 import { EntityManager } from '../entities/EntityManager'
 import { Player } from '../entities/Player'
 import { EnemyType } from '../entities/Enemy'
-
+import { WorldData } from '../data/worlds'
 import { SeededRandom } from '../../../lib/SeededRandom'
 
 export class SpawnSystem {
     private spawnTimer = 0
     private elapsedSeconds = 0
-    private spawnInterval = 1.25 // Base spawn interval (increased from 1.0 to reduce density)
-    private spawnRadius = 22 // Increased spawn radius for off-screen
-    private baseSpawnCount = 2
+    public spawnInterval = 1.25 // Base spawn interval (increased from 1.0 to reduce density)
+    public spawnRadius = 22 // Increased spawn radius for off-screen
+    public baseSpawnCount = 2
+    public spawnRateMultiplier = 1.0
+    public eliteChanceMultiplier = 1.0
+
+    private currentWorld: WorldData | null = null
 
     constructor(
         private entityManager: EntityManager,
@@ -23,12 +27,17 @@ export class SpawnSystem {
         private rng: SeededRandom
     ) { }
 
+    setWorld(world: WorldData) {
+        this.currentWorld = world
+    }
+
     update(deltaTime: number) {
         this.elapsedSeconds += deltaTime
         this.spawnTimer += deltaTime
 
-        // Scaling: spawn interval decreases slightly over time
-        const interval = Math.max(0.2, this.spawnInterval - (this.elapsedSeconds / 300))
+        // Scaling: spawn interval decreases over time and with Curse
+        const currentCurse = this.player.stats.curse || 1.0
+        const interval = Math.max(0.1, (this.spawnInterval - (this.elapsedSeconds / 300)) / (this.spawnRateMultiplier * currentCurse))
 
         if (this.spawnTimer >= interval) {
             this.spawnTimer = 0
@@ -49,6 +58,8 @@ export class SpawnSystem {
     }
 
     private spawnEnemyGroup() {
+        if (!this.currentWorld) return
+
         // Scaling: spawn count increases over time
         const count = Math.floor(this.baseSpawnCount + (this.elapsedSeconds / 60))
 
@@ -57,19 +68,13 @@ export class SpawnSystem {
             const x = this.player.position.x + Math.cos(angle) * this.spawnRadius
             const z = this.player.position.z + Math.sin(angle) * this.spawnRadius
 
-            // Decide type based on time
-            let type: EnemyType = 'drifter'
-            const roll = this.rng.next()
-
-            if (this.elapsedSeconds >= 180 && roll < 0.1) type = 'kikimora'
-            else if (this.elapsedSeconds >= 120 && roll < 0.15) type = 'zmora'
-            else if (this.elapsedSeconds > 60 && roll < 0.2) type = 'bruiser'
-            else if (this.elapsedSeconds > 30 && roll < 0.3) type = 'screecher'
-            else if (roll < 0.25) type = 'domovoi'
-            else type = 'drifter'
+            // Decide type based on World Pool
+            const pool = this.currentWorld.availableEnemies
+            const typeIndex = Math.floor(this.rng.next() * pool.length)
+            const type = pool[typeIndex] as EnemyType
 
             // Elite chance: 1% base, increases over time up to 10%
-            const eliteChance = Math.min(0.1, 0.01 + (this.elapsedSeconds / 1200))
+            const eliteChance = Math.min(0.1, (0.01 + (this.elapsedSeconds / 1200)) * this.eliteChanceMultiplier)
             const isElite = this.rng.next() < eliteChance
 
             this.entityManager.spawnEnemy(type, x, z, isElite)

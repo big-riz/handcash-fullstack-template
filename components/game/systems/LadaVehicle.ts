@@ -26,7 +26,8 @@ export class LadaVehicle {
         private scene: THREE.Scene,
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any // SeededRandom
     ) { }
 
     update(deltaTime: number) {
@@ -47,7 +48,7 @@ export class LadaVehicle {
                 for (const enemy of this.entityManager.enemies) {
                     if (enemy.isActive && enemy.position.distanceTo(this.mesh.position) < 2.5) {
                         enemy.takeDamage(this.damage, this.vfx)
-                        if (Math.random() < 0.1) {
+                        if (this.rng.next() < 0.1) {
                             this.vfx.createEmoji(enemy.position.x, enemy.position.z, '💥', 0.5)
                         }
                     }

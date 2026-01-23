@@ -31,7 +31,10 @@ export async function GET(request: NextRequest) {
                     count: sql<number>`count(*)`.mapWith(Number)
                 })
                 .from(mintedItems)
-                .where(eq(mintedItems.templateId, templateId))
+                .where(and(
+                    eq(mintedItems.templateId, templateId),
+                    eq(mintedItems.isArchived, false)
+                ))
 
             return NextResponse.json({
                 templateId: template.id,
@@ -59,6 +62,7 @@ export async function GET(request: NextRequest) {
                     count: sql<number>`count(*)`.mapWith(Number),
                 })
                 .from(mintedItems)
+                .where(eq(mintedItems.isArchived, false))
                 .groupBy(mintedItems.templateId)
 
             const mintCountMap = new Map(mintCounts.map(mc => [mc.templateId, mc.count]))
@@ -90,6 +94,7 @@ export async function GET(request: NextRequest) {
                 count: sql<number>`count(*)`.mapWith(Number),
             })
             .from(mintedItems)
+            .where(eq(mintedItems.isArchived, false))
             .groupBy(mintedItems.templateId)
 
         const mintCountMap = new Map(mintCounts.map(mc => [mc.templateId, mc.count]))

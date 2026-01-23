@@ -3,7 +3,7 @@ import { MintModule } from "@/components/mint-module"
 import { StatsSection } from "@/components/stats-section"
 import { AppFooter } from "@/components/app-footer"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ShoppingBag, Package, BarChart2 } from "lucide-react"
+import { ShoppingBag, Package, BarChart2, Gamepad2 } from "lucide-react"
 import { SlavicSurvivors } from "@/components/game/SlavicSurvivors"
 
 interface AuthenticatedContentProps {
@@ -20,16 +20,6 @@ export function AuthenticatedContent({ activeTab, onTabChange }: AuthenticatedCo
       <div className="absolute bottom-[10%] left-[-10%] w-[30%] h-[30%] bg-secondary/10 blur-[100px] rounded-full -z-10" />
 
       <div className="container-responsive flex-grow pt-8 md:pt-12 pb-12 md:pb-20">
-        {/* Brand Header */}
-        <div className="text-center mb-8 md:mb-12 lg:mb-16 animate-in fade-in slide-in-from-top-4 duration-1000">
-          <h1 className="text-fluid-5xl md:text-fluid-7xl font-black uppercase italic tracking-tighter mb-3 md:mb-4 bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/60">
-            Gopnik Mint
-          </h1>
-          <p className="text-fluid-lg md:text-fluid-2xl text-muted-foreground font-medium max-w-2xl mx-auto leading-tight px-4">
-            Exclusive digital collectibles for the modern street legend.
-          </p>
-        </div>
-
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
           <TabsContent value="mint" className="animate-in fade-in zoom-in-95 duration-500 mt-0">

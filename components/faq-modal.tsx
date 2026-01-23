@@ -43,22 +43,7 @@ export function FaqModal() {
                         </p>
                     </section>
 
-                    <section>
-                        <h3 className="font-bold text-lg mb-2 flex items-center gap-2 text-amber-600 dark:text-amber-500">
-                            <AlertTriangle className="w-5 h-5" />
-                            Why is my mint pending / not appearing?
-                        </h3>
-                        <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
-                            <p className="text-sm text-foreground font-medium mb-2">
-                                App Whitelisting Required
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                                HandCash item minting via the minter tooling requires this app to be <strong>whitelisted</strong> by HandCash.
-                                If you are the developer, please ensure your App ID is approved for minting operations.
-                                For users: if an error occurs, please contact support with your payment usage order ID.
-                            </p>
-                        </div>
-                    </section>
+
 
                     <section>
                         <h3 className="font-bold text-lg mb-2">Where do the funds go?</h3>

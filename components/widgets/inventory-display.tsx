@@ -1,36 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2, Package, RefreshCw, Send, Eye, ChevronDown, ChevronUp, Flame } from "lucide-react"
+import { Package, RefreshCw, Send, Eye, ChevronDown, ChevronUp } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { ItemTransferDialog } from "@/components/widgets/item-transfer-dialog"
 import { ItemInspectDialog } from "@/components/widgets/item-inspect-dialog"
-import { toast } from "sonner"
 import { getRarityClasses } from "@/lib/rarity-colors"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { useInventory, type InventoryItem } from "@/hooks/use-inventory"
 
 export function InventoryDisplay() {
-  const { items, collections, isLoading, error, isBurning, fetchInventory, burnItem } = useInventory()
+  const { items, collections, isLoading, error, fetchInventory } = useInventory()
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
   const [isTransferOpen, setIsTransferOpen] = useState(false)
   const [inspectItem, setInspectItem] = useState<InventoryItem | null>(null)
   const [isInspectOpen, setIsInspectOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
-  const [burnItemState, setBurnItemState] = useState<InventoryItem | null>(null)
-  const [isBurnDialogOpen, setIsBurnDialogOpen] = useState(false)
 
   const handleTransfer = (item: InventoryItem) => {
     setSelectedItem(item)
@@ -41,26 +27,6 @@ export function InventoryDisplay() {
     fetchInventory()
     setIsTransferOpen(false)
     setSelectedItem(null)
-  }
-
-  const handleBurnClick = (item: InventoryItem) => {
-    setBurnItemState(item)
-    setIsBurnDialogOpen(true)
-  }
-
-  const handleBurnConfirm = async () => {
-    if (!burnItemState || !burnItemState.origin) {
-      return
-    }
-
-    try {
-      await burnItem(burnItemState.origin)
-      setIsBurnDialogOpen(false)
-      setBurnItemState(null)
-      toast.success("Item burned successfully")
-    } catch (err: any) {
-      toast.error(err.message || "Failed to burn item")
-    }
   }
 
   return (
@@ -175,16 +141,6 @@ export function InventoryDisplay() {
                         Send
                       </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="w-full mt-2 md:mt-3 rounded-lg md:rounded-xl font-bold h-9 md:h-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100 duration-300 gap-1.5 md:gap-2"
-                      onClick={() => handleBurnClick(item)}
-                      disabled={!item.origin}
-                    >
-                      <Flame className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                      <span className="text-[9px] md:text-[10px] uppercase tracking-widest font-black">Destroy Item</span>
-                    </Button>
                   </div>
                 </div>
               ))}
@@ -232,33 +188,6 @@ export function InventoryDisplay() {
           collections={collections}
         />
       )}
-
-      <AlertDialog open={isBurnDialogOpen} onOpenChange={setIsBurnDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to burn this item?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. The item "{burnItemState?.name}" will be permanently destroyed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isBurning}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBurnConfirm} disabled={isBurning} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {isBurning ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Burning...
-                </>
-              ) : (
-                <>
-                  <Flame className="w-4 h-4 mr-2" />
-                  Burn Item
-                </>
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }

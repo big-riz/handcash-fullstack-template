@@ -21,6 +21,18 @@ export interface PlayerStats {
     critRate: number
     critDamage: number
     regen: number // HP per second
+    luck: number
+    amount: number // Additional projectiles
+    projectileSpeedMultiplier: number
+    durationMultiplier: number
+    growth: number // XP Gain
+    greed: number // Gold Gain
+    curse: number // Enemy difficulty
+    revivals: number
+    rerolls: number
+    skips: number
+    banishes: number
+    visionMultiplier: number
 }
 
 export class Player {
@@ -57,7 +69,7 @@ export class Player {
             moveSpeed: 8.0,
             level: 1,
             xp: 0,
-            xpToNextLevel: 10,
+            xpToNextLevel: 25,
             magnet: 2.5,
             armor: 0,
             areaMultiplier: 1.0,
@@ -65,7 +77,19 @@ export class Player {
             damageMultiplier: 1.0,
             critRate: 0.05,
             critDamage: 2.0,
-            regen: 0
+            regen: 0,
+            luck: 1.0,
+            amount: 0,
+            projectileSpeedMultiplier: 1.0,
+            durationMultiplier: 1.0,
+            growth: 1.0,
+            greed: 1.0,
+            curse: 1.0,
+            revivals: 0,
+            rerolls: 0,
+            skips: 0,
+            banishes: 0,
+            visionMultiplier: 1.0
         }
     }
 
@@ -180,7 +204,7 @@ export class Player {
     private levelUp() {
         this.stats.level++
         this.stats.xp -= this.stats.xpToNextLevel
-        this.stats.xpToNextLevel = Math.floor(this.stats.xpToNextLevel * 1.5)
+        this.stats.xpToNextLevel = Math.floor(this.stats.xpToNextLevel * 1.4)
     }
 
 

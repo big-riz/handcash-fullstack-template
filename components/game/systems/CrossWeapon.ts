@@ -86,7 +86,8 @@ export class CrossWeapon {
         private scene: THREE.Scene,
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any // SeededRandom
     ) { }
 
     update(deltaTime: number) {
@@ -123,7 +124,7 @@ export class CrossWeapon {
 
     fire() {
         for (let i = 0; i < this.count; i++) {
-            const angle = (i / this.count) * Math.PI * 2 + Math.random()
+            const angle = (i / this.count) * Math.PI * 2 + this.rng.next()
             const vx = Math.cos(angle) * this.speed
             const vz = Math.sin(angle) * this.speed
 

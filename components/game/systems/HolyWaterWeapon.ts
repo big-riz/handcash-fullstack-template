@@ -98,7 +98,8 @@ export class HolyWaterWeapon {
         private scene: THREE.Scene,
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any // SeededRandom
     ) { }
 
     update(deltaTime: number) {
@@ -128,12 +129,12 @@ export class HolyWaterWeapon {
             const enemies = this.entityManager.enemies.filter(e => e.isActive)
 
             if (enemies.length > 0) {
-                const target = enemies[Math.floor(Math.random() * enemies.length)]
-                tx = target.position.x + (Math.random() - 0.5) * 2
-                tz = target.position.z + (Math.random() - 0.5) * 2
+                const target = enemies[Math.floor(this.rng.next() * enemies.length)]
+                tx = target.position.x + (this.rng.next() - 0.5) * 2
+                tz = target.position.z + (this.rng.next() - 0.5) * 2
             } else {
-                const angle = Math.random() * Math.PI * 2
-                const dist = 5 + Math.random() * 5
+                const angle = this.rng.next() * Math.PI * 2
+                const dist = 5 + this.rng.next() * 5
                 tx = this.player.position.x + Math.cos(angle) * dist
                 tz = this.player.position.z + Math.sin(angle) * dist
             }

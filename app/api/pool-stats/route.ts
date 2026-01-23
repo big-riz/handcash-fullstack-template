@@ -14,13 +14,14 @@ export async function GET(request: NextRequest) {
         // 1. Fetch all templates
         const allTemplates = await db.select().from(itemTemplates)
 
-        // 2. Fetch mint counts per template from local DB
+        // 2. Fetch mint counts per template from local DB (excluding archived)
         const mintCounts = await db
             .select({
                 templateId: mintedItems.templateId,
                 count: sql<number>`count(*)`.mapWith(Number),
             })
             .from(mintedItems)
+            .where(eq(mintedItems.isArchived, false))
             .groupBy(mintedItems.templateId)
 
         const mintCountMap = new Map(mintCounts.map((mc) => [mc.templateId, mc.count]))

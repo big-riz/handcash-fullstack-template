@@ -131,6 +131,18 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  .cursor-pointer,
+  a {
+    cursor: pointer;
+  }
 }
 
 @layer utilities {

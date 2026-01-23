@@ -75,13 +75,14 @@ export async function POST(request: NextRequest) {
             poolItems = allTemplates;
         }
 
-        // Fetch current mint counts from DB to check supply limits
+        // Fetch current mint counts from DB to check supply limits (excluding archived)
         const mintCounts = await db
             .select({
                 templateId: mintedItemsTable.templateId,
                 count: sql<number>`count(*)`.mapWith(Number),
             })
             .from(mintedItemsTable)
+            .where(eq(mintedItemsTable.isArchived, false))
             .groupBy(mintedItemsTable.templateId);
 
         const mintCountMap = new Map(mintCounts.map(mc => [mc.templateId, mc.count]));

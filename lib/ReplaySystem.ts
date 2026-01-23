@@ -27,6 +27,8 @@ export interface ReplayData {
     finalLevel: number;
     finalTime: number;
     playerName: string;
+    characterId?: string;
+    worldId?: string;
 }
 
 export class ReplayRecorder {
@@ -34,7 +36,7 @@ export class ReplayRecorder {
     private currentFrame: number = 0;
     private lastInput: { x: number, z: number } = { x: 0, z: 0 };
 
-    constructor(seed: string, playerName: string) {
+    constructor(seed: string, playerName: string, characterId: string, worldId: string) {
         this.data = {
             seed,
             startTime: Date.now(),
@@ -42,7 +44,9 @@ export class ReplayRecorder {
             events: [],
             finalLevel: 1,
             finalTime: 0,
-            playerName
+            playerName,
+            characterId,
+            worldId
         };
     }
 
@@ -126,6 +130,14 @@ export class ReplayPlayer {
 
     getSeed(): string {
         return this.data.seed;
+    }
+
+    getCharacterId(): string | undefined {
+        return this.data.characterId;
+    }
+
+    getWorldId(): string | undefined {
+        return this.data.worldId;
     }
 
     isFinished(): boolean {

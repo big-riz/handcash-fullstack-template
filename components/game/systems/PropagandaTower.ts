@@ -14,6 +14,7 @@ export class PropagandaTower {
     private cooldown = 5.0
     private timer = 0
     private activeTowers: THREE.Group[] = []
+    private slowEffectQueue: { enemy: any; timer: number; amount: number }[] = []
 
     // Stats
     private damage = 15
@@ -25,7 +26,8 @@ export class PropagandaTower {
         private scene: THREE.Scene,
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any // SeededRandom
     ) { }
 
     update(deltaTime: number) {
@@ -54,10 +56,22 @@ export class PropagandaTower {
                 this.pulse(tower)
             }
 
-            // Visual rotation or scale pulse
+            // Visual rotation or scale pulse - using age instead of Date.now()
             tower.rotation.y += deltaTime * 2
-            const s = 1 + Math.sin(Date.now() * 0.01) * 0.1
+            const s = 1 + Math.sin(data.age * 5) * 0.1
             tower.scale.set(s, s, s)
+        }
+
+        // Process slow effect removals
+        for (let i = this.slowEffectQueue.length - 1; i >= 0; i--) {
+            const effect = this.slowEffectQueue[i]
+            effect.timer -= deltaTime
+            if (effect.timer <= 0) {
+                if (effect.enemy.isActive) {
+                    effect.enemy.stats.moveSpeed /= (1 - effect.amount)
+                }
+                this.slowEffectQueue.splice(i, 1)
+            }
         }
     }
 
@@ -89,22 +103,21 @@ export class PropagandaTower {
     }
 
     private pulse(tower: THREE.Group) {
-        // Visual pulse ring
-        if (this.vfx) {
-            // Suggesting a ring VFX or just temporary mesh
-        }
-
         const effectiveRange = this.range * this.player.stats.areaMultiplier
         const effectiveDamage = this.damage * this.player.stats.damageMultiplier
 
         for (const enemy of this.entityManager.enemies) {
             if (enemy.isActive && enemy.position.distanceTo(tower.position) < effectiveRange) {
                 enemy.takeDamage(effectiveDamage, this.vfx)
-                // Apply slow
-                enemy.stats.moveSpeed *= (1 - this.slowAmount)
-                setTimeout(() => {
-                    if (enemy.isActive) enemy.stats.moveSpeed /= (1 - this.slowAmount)
-                }, 800)
+
+                // Deterministic Slow using a queue instead of setTimeout
+                const slowVal = this.slowAmount
+                enemy.stats.moveSpeed *= (1 - slowVal)
+                this.slowEffectQueue.push({
+                    enemy: enemy,
+                    timer: 0.8,
+                    amount: slowVal
+                })
             }
         }
     }
