@@ -71,7 +71,7 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
     const [shuffledItems, setShuffledItems] = useState<any[]>([])
     const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false, duration: 20 })
 
-    const PRICE_BSV = 1
+    const PRICE_BSV = 1.23
     const usdPrice = bsvUsdRate !== null ? bsvUsdRate * PRICE_BSV : null
 
     const fetchUsdRate = useCallback(async () => {
@@ -436,7 +436,7 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
                             <div className="flex flex-wrap items-baseline justify-center gap-3">
                                 <div className="flex items-baseline gap-2">
                                     <span className="text-fluid-5xl md:text-6xl font-black tracking-tighter text-primary group-hover:scale-105 transition-transform duration-500">
-                                        {PRICE_BSV.toFixed(0)}
+                                        {PRICE_BSV.toFixed(2)}
                                     </span>
                                     <span className="text-fluid-lg md:text-xl text-muted-foreground font-bold italic uppercase tracking-wider">BSV</span>
                                 </div>
@@ -543,7 +543,7 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
                             Confirm Mint
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-base">
-                            You're about to mint a random item for <span className="font-bold text-primary">{PRICE_BSV.toFixed(0)} BSV</span>
+                            You're about to mint a random item for <span className="font-bold text-primary">{PRICE_BSV.toFixed(2)} BSV</span>
                             {usdPrice !== null ? (
                                 <span className="font-semibold text-muted-foreground"> (≈ ${usdPrice.toFixed(2)} USD)</span>
                             ) : isRateLoading ? (

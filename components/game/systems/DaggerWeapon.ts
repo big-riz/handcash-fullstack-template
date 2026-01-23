@@ -8,12 +8,12 @@ import { Player } from '../entities/Player'
 import { EntityManager } from '../entities/EntityManager'
 
 export class DaggerWeapon {
-    private cooldown = 1.0 // Attacks per second
+    private cooldown = 0.8 // Attacks per second
     private timer = 0
     private level = 1
 
     // Stats
-    private damage = 15
+    private damage = 18
     private speed = 15
     private count = 1
 

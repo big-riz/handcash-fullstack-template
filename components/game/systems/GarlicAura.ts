@@ -12,8 +12,8 @@ import { VFXManager } from './VFXManager'
 export class GarlicAura {
     private mesh: THREE.Mesh
     private radius = 3.5
-    private damage = 5
-    private tickRate = 0.5 // Damage every 0.5 seconds
+    private damage = 7
+    private tickRate = 0.4 // Damage every 0.4 seconds
     private tickTimer = 0
     private level = 1
 

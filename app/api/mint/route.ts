@@ -12,6 +12,56 @@ import { mintedItems as mintedItemsTable } from "@/lib/schema"
 import { eq, sql } from "drizzle-orm"
 import { randomUUID } from "crypto"
 
+type MintPaymentDestination = {
+    destination: string
+    weight: number
+}
+
+const parseMintDestinations = (raw: string | undefined): MintPaymentDestination[] => {
+    const entries = (raw || "")
+        .split(",")
+        .map(entry => entry.trim())
+        .filter(Boolean)
+
+    const destinations: MintPaymentDestination[] = []
+    for (const entry of entries) {
+        const [destinationRaw, weightRaw] = entry.split(":")
+        const destination = destinationRaw?.trim()
+        if (!destination) continue
+
+        const parsedWeight = weightRaw ? Number(weightRaw.trim()) : 1
+        const weight = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight : 1
+
+        destinations.push({ destination, weight })
+    }
+
+    return destinations
+}
+
+const buildMintSplits = (totalBsv: number, destinations: MintPaymentDestination[]) => {
+    if (!destinations.length) return []
+
+    const totalSats = Math.round(totalBsv * 100000000)
+    const totalWeight = destinations.reduce((acc, dest) => acc + dest.weight, 0)
+    if (totalSats <= 0 || totalWeight <= 0) return []
+
+    let remainingSats = totalSats
+    return destinations.map((dest, index) => {
+        const isLast = index === destinations.length - 1
+        const sats = isLast
+            ? remainingSats
+            : Math.floor((totalSats * dest.weight) / totalWeight)
+
+        remainingSats -= sats
+
+        return {
+            destination: dest.destination,
+            amountBsv: sats / 100000000,
+            amountSats: sats,
+        }
+    })
+}
+
 export async function POST(request: NextRequest) {
     // Rate Limit: Using standard mint preset (allows more requests for testing/usage)
     const rateLimitResponse = rateLimit(request, RateLimitPresets.mint)
@@ -56,13 +106,22 @@ export async function POST(request: NextRequest) {
 
         // Try to get pool from body or query params
         let requestedPool = "default";
+        let requestedCollectionId: string | null = null;
+        let requestBody: any = null;
         try {
-            const body = await request.clone().json();
-            requestedPool = body.pool || "default";
+            requestBody = await request.clone().json();
+            if (typeof requestBody.pool === "string" && requestBody.pool.trim()) {
+                requestedPool = requestBody.pool.trim();
+            }
+            if (typeof requestBody.collectionId === "string" && requestBody.collectionId.trim()) {
+                requestedCollectionId = requestBody.collectionId.trim();
+            }
         } catch (e) {
             const { searchParams } = new URL(request.url);
             requestedPool = searchParams.get("pool") || "default";
         }
+        const allowDebugDetails = process.env.NODE_ENV !== "production";
+        const includeSplitDetails = allowDebugDetails && (requestBody?.includeSplits === true || requestBody?.debug === true);
 
         let poolItems = allTemplates.filter(t => t.pool === requestedPool);
 
@@ -85,10 +144,14 @@ export async function POST(request: NextRequest) {
             .where(eq(mintedItemsTable.isArchived, false))
             .groupBy(mintedItemsTable.templateId);
 
-        const mintCountMap = new Map(mintCounts.map(mc => [mc.templateId, mc.count]));
+        const mintCountMap = new Map(
+            mintCounts
+                .filter(mc => mc.templateId)
+                .map(mc => [mc.templateId as string, mc.count])
+        );
 
         // Filter items that reached their supply limit
-        let availableItems = poolItems.filter(item => {
+        const availableItems = poolItems.filter(item => {
             if (!item.id) return true; // Fallback items don't have IDs usually or aren't tracked firmly
             const minted = mintCountMap.get(item.id) || 0;
             return item.supplyLimit === 0 || minted < item.supplyLimit;
@@ -124,53 +187,73 @@ export async function POST(request: NextRequest) {
         const collections = await getCollections()
         const businessAuthToken = process.env.BUSINESS_AUTH_TOKEN
         const businessHandle = process.env.NEXT_PUBLIC_BUSINESS_HANDLE || process.env.BUSINESS_HANDLE;
+        const defaultMintDestinations = businessHandle ? `lexssit:0.6,${businessHandle}:0.4` : ""
+        const mintDestinations = parseMintDestinations(process.env.MINT_DESTINATIONS || defaultMintDestinations)
+        const hasPaymentDestinations = mintDestinations.length > 0
 
         // We use mock mode if:
         // - No collection ID is available (and we can't find one in DB)
         // - Business Auth Token is missing
         // - Specific flag is set (optional, but for now we try to be real)
-        const collectionId = (randomItem as any).collectionId || (collections.length > 0 ? collections[0].id : null);
+        const allowCollectionOverride = process.env.NODE_ENV !== "production";
+        const collectionIdOverride = allowCollectionOverride ? requestedCollectionId : null;
+        if (requestedCollectionId && !allowCollectionOverride) {
+            console.warn("[Mint API] Collection override ignored outside development.");
+        }
+        const collectionId = collectionIdOverride || (randomItem as any).collectionId || (collections.length > 0 ? collections[0].id : null);
 
-        const isMockMode = !businessAuthToken || !collectionId || !businessHandle;
+        const isMockMode = !businessAuthToken || !collectionId || !hasPaymentDestinations;
 
-        let paymentId: string | undefined;
+        const paymentIds: string[] = [];
 
         if (!isMockMode) {
             console.log(`[Mint API] Real Mode: Minting ${randomItem.name} to ${userHandle} using collection ${collectionId}`)
 
             // 5. Process Payment (User -> Business)
-            const mintPriceBsv = 1;
-            const roundedBsvAmount = Math.ceil(mintPriceBsv * 100000000) / 100000000;
+            const mintPriceBsv = 1.23;
+            const paymentSplits = buildMintSplits(mintPriceBsv, mintDestinations);
 
-            console.log(`[Mint API] Processing payment of ${roundedBsvAmount} BSV to ${businessHandle}`)
+            console.log(`[Mint API] Processing payment of ${mintPriceBsv} BSV split across ${paymentSplits.length} destination(s)`)
 
             // HandCash has a 25-character limit on the note field
             const paymentNote = "Slavic Survivors Mint";
+            const paymentRequestBase = `mint-${randomItem.id || 'random'}-${Date.now()}`
 
-            const paymentResponse = await handcashService.sendPayment(privateKey, {
-                destination: businessHandle!,
-                amount: roundedBsvAmount,
-                currency: "BSV",
-                description: paymentNote
-            }) as any
+            for (let i = 0; i < paymentSplits.length; i++) {
+                const split = paymentSplits[i]
+                if (split.amountBsv <= 0) continue
 
-            // Log Payment to DB
-            paymentId = randomUUID();
-            await savePayment({
-                id: paymentId,
-                paymentRequestId: `mint-${randomItem.id || 'random'}-${Date.now()}`,
-                transactionId: paymentResponse.transactionId,
-                amount: roundedBsvAmount,
-                currency: "BSV",
-                paidBy: userHandle,
-                paidAt: new Date().toISOString(),
-                status: "completed",
-                metadata: {
-                    type: "mint_payment",
-                    templateId: randomItem.id,
-                    pool: randomItem.pool
-                }
-            })
+                const paymentResponse = await handcashService.sendPayment(privateKey, {
+                    destination: split.destination,
+                    amount: split.amountBsv,
+                    currency: "BSV",
+                    description: paymentNote
+                }) as any
+
+                const paymentId = randomUUID();
+                paymentIds.push(paymentId)
+
+                // Log Payment to DB
+                await savePayment({
+                    id: paymentId,
+                    paymentRequestId: `${paymentRequestBase}-${i + 1}`,
+                    transactionId: paymentResponse.transactionId,
+                    amount: split.amountBsv,
+                    currency: "BSV",
+                    paidBy: userHandle,
+                    paidAt: new Date().toISOString(),
+                    status: "completed",
+                    metadata: {
+                        type: "mint_payment",
+                        templateId: randomItem.id,
+                        pool: randomItem.pool,
+                        destination: split.destination,
+                        splitIndex: i + 1,
+                        splitCount: paymentSplits.length,
+                        paymentRequestBase
+                    }
+                })
+            }
 
             // 6. Mint Item (Business -> User)
             const handleMap = await resolveHandlesToUserIds([userHandle], businessAuthToken!)
@@ -208,6 +291,9 @@ export async function POST(request: NextRequest) {
                 ],
                 actions: []
             }
+            if ((randomItem as any).description) {
+                itemToMint.description = (randomItem as any).description;
+            }
 
             // Store the template ID for our database (regardless of format)
             const sourceTemplateId = (randomItem as any).id;
@@ -240,13 +326,14 @@ export async function POST(request: NextRequest) {
                     rarity: mintedItem.rarity,
                     imageUrl: mintedItem.mediaDetails?.image?.url || (randomItem as any).imageUrl || (randomItem as any).image,
                     multimediaUrl: mintedItem.mediaDetails?.multimedia?.url || (randomItem as any).multimediaUrl,
-                    paymentId: paymentId,
+                    paymentId: paymentIds[0],
                     metadata: {
                         mintedAt: new Date().toISOString(),
+                        paymentIds,
                     }
                 })
 
-                return NextResponse.json({
+                const responsePayload: any = {
                     success: true,
                     item: {
                         id: mintedItem.id,
@@ -257,12 +344,19 @@ export async function POST(request: NextRequest) {
                         rarity: mintedItem.rarity,
                         collectionId: collectionId!
                     }
-                })
+                }
+                if (includeSplitDetails) {
+                    responsePayload.paymentSplits = paymentSplits.map(split => ({
+                        destination: split.destination,
+                        amountBsv: split.amountBsv
+                    }))
+                }
+                return NextResponse.json(responsePayload)
             } else {
                 throw new Error("Minting succeeded but no items were returned in the order")
             }
         } else {
-            console.warn("[Mint API] MOCK MODE: Missing config. Business Token:", !!businessAuthToken, "Collection:", !!collectionId, "Business Handle:", !!businessHandle)
+            console.warn("[Mint API] MOCK MODE: Missing config. Business Token:", !!businessAuthToken, "Collection:", !!collectionId, "Payment Destinations:", hasPaymentDestinations)
 
             // Mock Mode Delay
             await new Promise(resolve => setTimeout(resolve, 1500));
@@ -272,23 +366,36 @@ export async function POST(request: NextRequest) {
             const imageUrl = (randomItem as any).imageUrl || (randomItem as any).image;
 
             // Log Mock Payment to DB
-            paymentId = randomUUID();
-            const mockPriceBsv = 1;
-            await savePayment({
-                id: paymentId,
-                paymentRequestId: `mock-mint-${randomItem.id || 'random'}-${Date.now()}`,
-                transactionId: `mock-tx-${Date.now()}`,
-                amount: mockPriceBsv,
-                currency: "BSV",
-                paidBy: userHandle,
-                paidAt: new Date().toISOString(),
-                status: "completed",
-                metadata: {
-                    type: "mint_payment_mock",
-                    templateId: randomItem.id,
-                    pool: randomItem.pool
-                }
-            })
+            const mockPriceBsv = 1.23;
+            const mockSplits = buildMintSplits(mockPriceBsv, mintDestinations);
+            const mockPaymentRequestBase = `mock-mint-${randomItem.id || 'random'}-${Date.now()}`;
+            for (let i = 0; i < mockSplits.length; i++) {
+                const split = mockSplits[i]
+                if (split.amountBsv <= 0) continue
+
+                const paymentId = randomUUID();
+                paymentIds.push(paymentId)
+
+                await savePayment({
+                    id: paymentId,
+                    paymentRequestId: `${mockPaymentRequestBase}-${i + 1}`,
+                    transactionId: `mock-tx-${Date.now()}-${i + 1}`,
+                    amount: split.amountBsv,
+                    currency: "BSV",
+                    paidBy: userHandle,
+                    paidAt: new Date().toISOString(),
+                    status: "completed",
+                    metadata: {
+                        type: "mint_payment_mock",
+                        templateId: randomItem.id,
+                        pool: randomItem.pool,
+                        destination: split.destination,
+                        splitIndex: i + 1,
+                        splitCount: mockSplits.length,
+                        paymentRequestBase: mockPaymentRequestBase
+                    }
+                })
+            }
 
             await recordMintedItem({
                 id: mintedItemId,
@@ -301,14 +408,15 @@ export async function POST(request: NextRequest) {
                 rarity: (randomItem as any).rarity,
                 imageUrl: imageUrl,
                 multimediaUrl: (randomItem as any).multimediaUrl,
-                paymentId: paymentId,
+                paymentId: paymentIds[0],
                 metadata: {
                     mockMode: true,
                     mintedAt: new Date().toISOString(),
+                    paymentIds,
                 }
             })
 
-            return NextResponse.json({
+            const responsePayload: any = {
                 success: true,
                 item: {
                     id: mintedItemId,
@@ -319,7 +427,14 @@ export async function POST(request: NextRequest) {
                     rarity: (randomItem as any).rarity,
                     collectionId: collectionId || undefined
                 }
-            })
+            }
+            if (includeSplitDetails) {
+                responsePayload.paymentSplits = mockSplits.map(split => ({
+                    destination: split.destination,
+                    amountBsv: split.amountBsv
+                }))
+            }
+            return NextResponse.json(responsePayload)
         }
 
     } catch (error: any) {

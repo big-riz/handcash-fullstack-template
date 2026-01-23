@@ -34,7 +34,7 @@ export function LandingContent() {
               onClick={handleConnect}
             >
               <Wallet className="w-5 h-5 mr-3 sm:w-7 sm:h-7 sm:mr-4 md:w-8 md:h-8" />
-              Join the Underground
+              Mint Now
             </Button>
           </div>
           <p className="mt-8 text-muted-foreground font-bold uppercase tracking-[0.2em] text-xs">

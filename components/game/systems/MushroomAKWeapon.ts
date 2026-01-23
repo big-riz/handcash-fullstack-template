@@ -11,13 +11,13 @@ import { VFXManager } from './VFXManager'
 
 export class MushroomAKWeapon {
     public level = 1
-    private cooldown = 0.8
+    private cooldown = 0.7
     private timer = 0
     private clouds: { mesh: THREE.Mesh; timer: number; life: number }[] = []
 
     // Stats
-    private damage = 8
-    private cloudDamage = 4
+    private damage = 10
+    private cloudDamage = 5
     private cloudRadius = 2
     private cloudDuration = 3
 

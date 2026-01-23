@@ -8,12 +8,12 @@ import { Player } from '../entities/Player'
 import { EntityManager } from '../entities/EntityManager'
 
 export class AspenStakeWeapon {
-    private cooldown = 2.0
+    private cooldown = 1.3
     private timer = 0
     private level = 1
 
     // Stats
-    private damage = 25
+    private damage = 30
     private speed = 20
     private count = 1
 

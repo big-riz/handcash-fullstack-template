@@ -16,10 +16,10 @@ export class NuclearPigeon {
     private orbitRadius = 2.5
     private orbitSpeed = 3
     private fireTimer = 0
-    private fireCooldown = 1.0
+    private fireCooldown = 0.8
 
     // Stats
-    private damage = 15
+    private damage = 18
     private range = 10
 
     constructor(
