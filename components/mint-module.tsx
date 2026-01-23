@@ -240,6 +240,10 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <span className="text-fluid-lg md:text-fluid-xl font-black uppercase italic tracking-tighter">Collection Live</span>
                         </div>
+                        <p className="mt-3 text-sm md:text-base text-muted-foreground max-w-xl">
+                            Mint a randomized collectible from the live pool. Each mint grants game access and adds the
+                            item to your HandCash collection.
+                        </p>
                     </div>
                     <Badge className="h-7 md:h-8 px-2.5 md:px-3 rounded-full gap-1.5 bg-primary/10 text-primary border-primary/20 font-bold text-[9px] md:text-[10px] tracking-widest">
                         <Zap className="w-2.5 md:w-3 h-2.5 md:h-3 fill-current" />
