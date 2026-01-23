@@ -32,7 +32,7 @@ export function FaqModal() {
                     <section>
                         <h3 className="font-bold text-lg mb-2">What happens when I mint?</h3>
                         <p className="text-muted-foreground">
-                            You send a small payment ($0.25) to the game development fund. In return, the system instantly mints a unique digital collectible item directly to your HandCash wallet.
+                            You send a 1 BSV payment to the game development fund. In return, the system instantly mints a unique digital collectible item directly to your HandCash wallet.
                         </p>
                     </section>
 
