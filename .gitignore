@@ -5,6 +5,8 @@
 
 # local data
 data/
+!components/game/data/
+!components/game/data/**
 
 # next.js
 /.next/
