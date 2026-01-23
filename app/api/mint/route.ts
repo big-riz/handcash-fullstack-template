@@ -9,7 +9,7 @@ import { getTemplates } from "@/lib/item-templates-storage"
 import { savePayment } from "@/lib/payments-storage"
 import { db } from "@/lib/db"
 import { mintedItems as mintedItemsTable } from "@/lib/schema"
-import { sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { randomUUID } from "crypto"
 
 export async function POST(request: NextRequest) {
