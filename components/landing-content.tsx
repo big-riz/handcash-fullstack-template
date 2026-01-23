@@ -30,10 +30,10 @@ export function LandingContent() {
             <div className="absolute -inset-1 bg-gradient-to-r from-primary via-primary/50 to-primary rounded-full blur opacity-40 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
             <Button
               size="lg"
-              className="relative rounded-full h-24 px-12 text-3xl font-black uppercase italic tracking-tighter shadow-2xl hover:scale-105 transition-all bg-foreground text-background"
+              className="relative rounded-full h-14 px-6 text-lg font-black uppercase italic tracking-tighter shadow-2xl transition-all bg-foreground text-background sm:h-20 sm:px-10 sm:text-2xl md:h-24 md:px-12 md:text-3xl md:hover:scale-105"
               onClick={handleConnect}
             >
-              <Wallet className="w-8 h-8 mr-4" />
+              <Wallet className="w-5 h-5 mr-3 sm:w-7 sm:h-7 sm:mr-4 md:w-8 md:h-8" />
               Join the Underground
             </Button>
           </div>
