@@ -139,17 +139,8 @@ export async function POST(request: NextRequest) {
             console.log(`[Mint API] Real Mode: Minting ${randomItem.name} to ${userHandle} using collection ${collectionId}`)
 
             // 5. Process Payment (User -> Business)
-            const rateData = await handcashService.getExchangeRate("USD")
-            const rate = typeof rateData === "number" ? rateData : ((rateData as any)?.rate || (rateData as any)?.exchangeRate);
-
-            if (!rate || typeof rate !== "number") {
-                console.error("[Mint API] Invalid rate data:", rateData)
-                throw new Error("Could not fetch valid exchange rate")
-            }
-
-            const priceUsd = 0.05;
-            const bsvAmount = priceUsd / rate;
-            const roundedBsvAmount = Math.ceil(bsvAmount * 100000000) / 100000000;
+            const mintPriceBsv = 1;
+            const roundedBsvAmount = Math.ceil(mintPriceBsv * 100000000) / 100000000;
 
             console.log(`[Mint API] Processing payment of ${roundedBsvAmount} BSV to ${businessHandle}`)
 
@@ -282,13 +273,13 @@ export async function POST(request: NextRequest) {
 
             // Log Mock Payment to DB
             paymentId = randomUUID();
-            const mockPriceUsd = 0.05;
+            const mockPriceBsv = 1;
             await savePayment({
                 id: paymentId,
                 paymentRequestId: `mock-mint-${randomItem.id || 'random'}-${Date.now()}`,
                 transactionId: `mock-tx-${Date.now()}`,
-                amount: mockPriceUsd,
-                currency: "USD",
+                amount: mockPriceBsv,
+                currency: "BSV",
                 paidBy: userHandle,
                 paidAt: new Date().toISOString(),
                 status: "completed",

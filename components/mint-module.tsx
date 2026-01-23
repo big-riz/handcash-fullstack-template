@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Zap, CheckCircle2, AlertCircle, ShoppingBag, RotateCcw, ShieldCheck, ChevronLeft, ChevronRight, ExternalLink, Share2 } from "lucide-react"
 import { usePayments } from "@/hooks/use-payments"
 import useEmblaCarousel from "embla-carousel-react"
-import { useCallback, useRef } from "react"
 import { toast } from "sonner"
 import { getRarityClasses } from "@/lib/rarity-colors"
 import { usePoolProgress, notifyMintProgress } from "@/hooks/use-mint-progress"
@@ -63,6 +62,8 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [mintStats, setMintStats] = useState<any>(null)
     const [isLoadingStats, setIsLoadingStats] = useState(true)
+    const [bsvUsdRate, setBsvUsdRate] = useState<number | null>(null)
+    const [isRateLoading, setIsRateLoading] = useState(true)
 
     // Live Pool Progress
     const { totalMinted: liveMinted, totalSupplyLimit: liveLimit, isAnimating: isProgressAnimating } = usePoolProgress("default")
@@ -70,8 +71,26 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
     const [shuffledItems, setShuffledItems] = useState<any[]>([])
     const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false, duration: 20 })
 
-    const PRICE_USD = 0.05
-    const PRICE_BSV_EST = 0.000001 // Updated estimate for 5 cents
+    const PRICE_BSV = 1
+    const usdPrice = bsvUsdRate !== null ? bsvUsdRate * PRICE_BSV : null
+
+    const fetchUsdRate = useCallback(async () => {
+        try {
+            const response = await fetch("/api/payments/rate?currency=USD", { cache: "no-store" })
+            if (!response.ok) {
+                throw new Error("Failed to fetch exchange rate")
+            }
+            const data = await response.json()
+            if (typeof data.rate !== "number") {
+                throw new Error("Invalid exchange rate data")
+            }
+            setBsvUsdRate(data.rate)
+        } catch (error) {
+            console.error("Failed to fetch BSV/USD rate:", error)
+        } finally {
+            setIsRateLoading(false)
+        }
+    }, [])
 
     const fetchMintStats = async () => {
         setIsLoadingStats(true)
@@ -137,6 +156,12 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
     useEffect(() => {
         fetchMintStats()
     }, [])
+
+    useEffect(() => {
+        fetchUsdRate()
+        const interval = setInterval(fetchUsdRate, 60000)
+        return () => clearInterval(interval)
+    }, [fetchUsdRate])
 
     const handleMintClick = () => {
         setShowConfirmDialog(true)
@@ -404,9 +429,20 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
                     {mintState === "IDLE" && (
                         <div className="flex flex-col items-center mb-4 md:mb-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
                             <span className="text-fluid-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Price per mint</span>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-fluid-5xl md:text-6xl font-black tracking-tighter text-primary group-hover:scale-105 transition-transform duration-500">${PRICE_USD.toFixed(2)}</span>
-                                <span className="text-fluid-lg md:text-xl text-muted-foreground font-bold italic uppercase tracking-wider">USD</span>
+                            <div className="flex flex-wrap items-baseline justify-center gap-3">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-fluid-5xl md:text-6xl font-black tracking-tighter text-primary group-hover:scale-105 transition-transform duration-500">
+                                        {PRICE_BSV.toFixed(0)}
+                                    </span>
+                                    <span className="text-fluid-lg md:text-xl text-muted-foreground font-bold italic uppercase tracking-wider">BSV</span>
+                                </div>
+                                <span className="text-fluid-sm md:text-base text-muted-foreground font-semibold">
+                                    {usdPrice !== null
+                                        ? `≈ $${usdPrice.toFixed(2)} USD`
+                                        : isRateLoading
+                                            ? "Loading USD price..."
+                                            : "USD price unavailable"}
+                                </span>
                             </div>
                         </div>
                     )}
@@ -503,7 +539,15 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
                             Confirm Mint
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-base">
-                            You're about to mint a random item for <span className="font-bold text-primary">${PRICE_USD.toFixed(2)} USD</span>.
+                            You're about to mint a random item for <span className="font-bold text-primary">{PRICE_BSV.toFixed(0)} BSV</span>
+                            {usdPrice !== null ? (
+                                <span className="font-semibold text-muted-foreground"> (≈ ${usdPrice.toFixed(2)} USD)</span>
+                            ) : isRateLoading ? (
+                                <span className="text-muted-foreground"> (fetching USD price...)</span>
+                            ) : (
+                                <span className="text-muted-foreground"> (USD price unavailable)</span>
+                            )}
+                            .
                             <br />
                             <br />
                             This payment will be deducted from your HandCash wallet balance.
