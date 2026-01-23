@@ -64,9 +64,12 @@ export async function GET(request: NextRequest) {
             const mintCountMap = new Map(mintCounts.map(mc => [mc.templateId, mc.count]))
 
             const progress = templates.map(template => ({
+                id: template.id,
                 templateId: template.id,
                 name: template.name,
                 rarity: template.rarity,
+                imageUrl: template.imageUrl,
+                multimediaUrl: template.multimediaUrl,
                 minted: mintCountMap.get(template.id) || 0,
                 supplyLimit: template.supplyLimit || 0,
                 lastUpdate: Date.now()
@@ -92,9 +95,12 @@ export async function GET(request: NextRequest) {
         const mintCountMap = new Map(mintCounts.map(mc => [mc.templateId, mc.count]))
 
         const progress = templates.map(template => ({
+            id: template.id,
             templateId: template.id,
             name: template.name,
             rarity: template.rarity,
+            imageUrl: template.imageUrl,
+            multimediaUrl: template.multimediaUrl,
             minted: mintCountMap.get(template.id) || 0,
             supplyLimit: template.supplyLimit || 0,
             lastUpdate: Date.now()

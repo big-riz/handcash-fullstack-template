@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { TrendingUp, Package, Loader2, Info, Crown, Star, Gem, Award, Shield, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getRarityClasses, RARITY_COLORS } from "@/lib/rarity-colors"
+import { getRarityClasses, RARITY_COLORS, getRarityTextClass, RarityType } from "@/lib/rarity-colors"
 import { usePoolProgress } from "@/hooks/use-mint-progress"
 
 interface MintItem {
@@ -117,11 +117,6 @@ export function StatsSection() {
                     return orderA - orderB
                 })
 
-                // Group items by rarity tier
-                const premiumItems = sortedItems.filter(item => getRarityTier(item.rarity) === 'premium')
-                const enhancedItems = sortedItems.filter(item => getRarityTier(item.rarity) === 'enhanced')
-                const standardItems = sortedItems.filter(item => getRarityTier(item.rarity) === 'standard')
-
                 return (
                     <div key={pool.poolName} className="mb-12 md:mb-20">
                         {/* Pool Header Card */}
@@ -170,32 +165,11 @@ export function StatsSection() {
                             </div>
                         </Card>
 
-                        {/* Premium Tiers (Grid 1x1 or 2x2) */}
-                        {premiumItems.length > 0 && (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-                                {premiumItems.map((item) => (
-                                    <ItemCard key={item.id} item={item} variant="premium" />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Enhanced Tiers (Grid 2x2 or 3x3) */}
-                        {enhancedItems.length > 0 && (
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
-                                {enhancedItems.map((item) => (
-                                    <ItemCard key={item.id} item={item} variant="enhanced" />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Standard Tiers (Grid 3x3 or 4x4) */}
-                        {standardItems.length > 0 && (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                                {standardItems.map((item) => (
-                                    <ItemCard key={item.id} item={item} variant="standard" />
-                                ))}
-                            </div>
-                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                            {sortedItems.map((item, idx) => (
+                                <ItemCard key={item.id || (item as any).templateId || idx} item={item} />
+                            ))}
+                        </div>
                     </div>
                 )
             })}
@@ -203,80 +177,81 @@ export function StatsSection() {
     )
 }
 
-function ItemCard({ item, variant }: { item: MintItem; variant: 'premium' | 'enhanced' | 'standard' }) {
-    const rarityColor = RARITY_COLORS[item.rarity.toLowerCase()] || '#ffffff'
+function ItemCard({ item }: { item: MintItem }) {
+    const rarityColor = RARITY_COLORS[item.rarity.toLowerCase() as RarityType] || RARITY_COLORS.common
     const RarityIcon = RARITY_ICONS[item.rarity.toLowerCase()] || Package
     const percentage = item.supplyLimit > 0 ? Math.round((item.minted / item.supplyLimit) * 100) : 0
-
-    if (variant === 'premium') {
-        return (
-            <Card className="relative overflow-hidden group hover:border-primary/40 transition-all duration-500 bg-card/40 backdrop-blur-xl border-primary/10 p-6 md:p-8">
-                <div className="absolute top-0 right-0 w-32 md:w-48 h-32 md:h-48 bg-primary/5 blur-3xl rounded-full -mr-16 md:-mr-24 -mt-16 md:-mt-24 group-hover:bg-primary/10 transition-colors" />
-
-                <div className="flex items-start justify-between relative z-10 gap-4">
-                    <div className="flex-1">
-                        <Badge className={`mb-3 md:mb-4 px-3 md:px-4 py-1 rounded-full text-[10px] md:text-xs font-black uppercase italic tracking-widest border-2 ${getRarityClasses(item.rarity)}`}>
-                            <RarityIcon className="w-3 h-3 md:w-3.5 md:h-3.5 mr-1.5 md:mr-2 inline" />
-                            {item.rarity}
-                        </Badge>
-                        <h4 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter mb-4 md:mb-6 leading-none">{item.name}</h4>
-
-                        <div className="grid grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-8">
-                            <div>
-                                <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Minted</p>
-                                <p className="text-xl md:text-3xl font-black">{item.minted}</p>
-                            </div>
-                            <div>
-                                <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Supply</p>
-                                <p className="text-xl md:text-3xl font-black">{item.supplyLimit}</p>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="flex justify-between items-end mb-2 md:mb-3">
-                                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest opacity-40">Saturation</span>
-                                <span className="text-sm md:text-lg font-black italic text-primary">{percentage}%</span>
-                            </div>
-                            <Progress value={percentage} className="h-2 md:h-3 bg-primary/10 rounded-full" />
-                        </div>
-                    </div>
-                </div>
-            </Card>
-        )
-    }
-
-    if (variant === 'enhanced') {
-        return (
-            <Card className="p-4 md:p-6 border-primary/10 hover:border-primary/30 transition-all duration-300 bg-card/30 group">
-                <div className="flex items-center justify-between mb-3 md:mb-4">
-                    <Badge className={`px-2 md:px-3 py-0.5 rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-wider border ${getRarityClasses(item.rarity)}`}>
-                        {item.rarity}
-                    </Badge>
-                    <span className="text-[10px] md:text-xs font-mono opacity-40">{item.minted}/{item.supplyLimit}</span>
-                </div>
-                <h4 className="text-lg md:text-xl font-black uppercase italic tracking-tight mb-4 md:mb-6 line-clamp-1">{item.name}</h4>
-                <div className="space-y-1.5 md:space-y-2">
-                    <div className="h-1 md:h-1.5 w-full bg-primary/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary/40 rounded-full" style={{ width: `${percentage}%` }} />
-                    </div>
-                    <div className="flex justify-between text-[8px] md:text-[9px] font-black uppercase tracking-widest opacity-40">
-                        <span>Depletion</span>
-                        <span>{percentage}%</span>
-                    </div>
-                </div>
-            </Card>
-        )
-    }
+    const rarityClasses = getRarityClasses(item.rarity)
 
     return (
-        <Card className="p-3 md:p-4 border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all group">
-            <div className="flex justify-between items-baseline mb-2 gap-2">
-                <h4 className="text-xs md:text-sm font-bold uppercase tracking-tight line-clamp-1 opacity-80">{item.name}</h4>
-                <span className="text-[8px] md:text-[9px] font-mono opacity-30 shrink-0">{item.minted}/{item.supplyLimit}</span>
+        <Card className={`relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 bg-background/40 backdrop-blur-xl border-primary/10 flex flex-col h-[420px] md:h-[480px]`}>
+            {/* Background Glow based on rarity */}
+            <div className={`absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity ${rarityColor.bg}`} />
+
+            {/* Rarity Header */}
+            <div className="absolute top-4 left-4 z-20">
+                <Badge className={`px-4 py-1.5 rounded-full text-[10px] md:text-xs font-black uppercase italic tracking-[0.15em] border-2 shadow-lg ${rarityClasses}`}>
+                    <RarityIcon className="w-3.5 h-3.5 mr-2 inline" />
+                    {item.rarity}
+                </Badge>
             </div>
-            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                <div className={`h-full opacity-30 ${getRarityClasses(item.rarity).split(' ')[1]}`} style={{ width: `${percentage}%` }} />
+
+            {/* Image Section - The Main Focus */}
+            <div className="relative flex-1 flex items-center justify-center p-8 overflow-hidden">
+                {/* Image background aura */}
+                <div className={`absolute w-40 h-40 rounded-full blur-[80px] opacity-20 ${rarityColor.bg}`} />
+
+                {item.imageUrl ? (
+                    <div className="relative z-10 w-full h-full transform group-hover:scale-110 transition-transform duration-700 ease-out">
+                        <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="w-full h-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                        />
+                    </div>
+                ) : (
+                    <div className="relative z-10 w-32 h-32 text-primary/20 flex items-center justify-center border-2 border-dashed border-primary/10 rounded-3xl">
+                        <Package className="w-16 h-16" />
+                    </div>
+                )}
+            </div>
+
+            {/* Content Section */}
+            <div className="relative z-10 p-6 pt-0 mt-auto bg-gradient-to-t from-background/80 via-background/40 to-transparent">
+                <h4 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter mb-4 line-clamp-1 group-hover:text-primary transition-colors">
+                    {item.name}
+                </h4>
+
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1 opacity-60">Minted</p>
+                        <p className="text-xl md:text-2xl font-black">{item.minted.toLocaleString()}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1 opacity-60">Supply</p>
+                        <p className="text-xl md:text-2xl font-black">{item.supplyLimit > 0 ? item.supplyLimit.toLocaleString() : "∞"}</p>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <div className="flex justify-between items-end">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Saturation</span>
+                        <span className={`text-sm md:text-base font-black italic ${getRarityTextClass(item.rarity)}`}>{percentage}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-primary/5 rounded-full overflow-hidden p-[1px]">
+                        <div
+                            className={`h-full rounded-full transition-all duration-1000 ease-out ${rarityColor.bg} ${rarityColor.glow} ring-1 ring-white/10`}
+                            style={{ width: `${percentage}%` }}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Corner Decorative Element */}
+            <div className="absolute bottom-0 right-0 w-16 h-16 opacity-5 pointer-events-none overflow-hidden">
+                <div className="absolute bottom-[-20%] right-[-20%] w-full h-full rotate-45 bg-primary" />
             </div>
         </Card>
     )
 }
+
