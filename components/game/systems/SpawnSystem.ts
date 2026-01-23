@@ -7,7 +7,7 @@
 import { EntityManager } from '../entities/EntityManager'
 import { Player } from '../entities/Player'
 import { EnemyType } from '../entities/Enemy'
-import { WorldData } from '../data/worlds'
+import { WorldData } from '@/components/game/data/worlds'
 import { SeededRandom } from '../../../lib/SeededRandom'
 
 export class SpawnSystem {

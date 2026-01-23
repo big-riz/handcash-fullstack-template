@@ -10,7 +10,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Eastern Treasure | Digital Gopnik Artifacts",
+  title: "squat.zone",
   description: "Collect ultra-rare digital gear from the Eastern Treasure archive. Secure your on-chain street gear via HandCash.",
   generator: "v0.app",
   icons: {

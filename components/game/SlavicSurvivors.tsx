@@ -53,9 +53,9 @@ import { EventSystem } from "./systems/EventSystem"
 
 import { ItemTemplate } from "@/lib/item-templates-storage"
 
-import activeData from './data/actives.json'
-import passiveData from './data/passives.json'
-import evolutionData from './data/evolutions.json'
+import activeData from '@/components/game/data/actives'
+import passiveData from '@/components/game/data/passives'
+import evolutionData from '@/components/game/data/evolutions'
 interface CharacterInfo {
     id: string
     name: string
@@ -72,9 +72,9 @@ interface CharacterInfo {
     }
 }
 
-import characterDataImport from './data/characters.json'
+import characterDataImport from '@/components/game/data/characters'
 const characterData: CharacterInfo[] = characterDataImport as CharacterInfo[]
-import { WORLDS, WorldData } from './data/worlds'
+import { WORLDS, WorldData } from '@/components/game/data/worlds'
 
 const iconMap: Record<string, any> = {
     Circle, Sword, Zap, RotateCcw, Trophy, Crosshair, Skull, Cloud, Bird, Car, Heart, Magnet, Shield, Beaker,
