@@ -97,9 +97,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Pool is sold out!" }, { status: 400 });
         }
 
-        // Weighted random selection using supplyLimit as weight
+        // Weighted random selection using remaining supply as weight
         // For unlimited items (supplyLimit: 0), we assign a default weight (e.g. 100)
-        const getItemWeight = (item: any) => item.supplyLimit > 0 ? item.supplyLimit : 100;
+        const getItemWeight = (item: any) => {
+            if (item.supplyLimit === 0) return 100;
+            const minted = item.id ? (mintCountMap.get(item.id) || 0) : 0;
+            return Math.max(1, item.supplyLimit - minted);
+        };
 
         const totalWeight = availableItems.reduce((acc, item) => acc + getItemWeight(item), 0);
         let randomNum = Math.random() * totalWeight;
