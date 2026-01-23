@@ -167,6 +167,50 @@ export class HandCashService {
       multimediaUrl: item.mediaDetails?.multimedia?.url || item.multimediaUrl,
       rarity: item.rarity,
       color: item.color,
+      count: item.count || item.amount || item.quantity,
+      groupingValue: item.groupingValue,
+      attributes: item.attributes,
+      collection: item.collection,
+    }))
+  }
+
+  async getFullInventory(privateKey: string, batchSize = 500) {
+    const client = this.getSDKClient(privateKey)
+    const allItems: any[] = []
+    let from = 0
+
+    while (true) {
+      const { data, error } = await Connect.getItemsInventory({
+        client,
+        body: {
+          from,
+          to: from + batchSize,
+          fetchAttributes: true,
+        },
+      })
+
+      if (error) throw new Error(error.message || "Failed to get inventory")
+
+      const batchItems = (data as any)?.items || (Array.isArray(data) ? data : [])
+      allItems.push(...batchItems)
+
+      if (!batchItems.length || batchItems.length < batchSize) {
+        break
+      }
+      from += batchSize
+    }
+
+    return allItems.map((item: any) => ({
+      id: item.id || item.origin,
+      origin: item.origin,
+      name: item.name,
+      description: item.description,
+      imageUrl: item.mediaDetails?.image?.url || item.imageUrl || item.image,
+      multimediaUrl: item.mediaDetails?.multimedia?.url || item.multimediaUrl,
+      rarity: item.rarity,
+      color: item.color,
+      count: item.count || item.amount || item.quantity,
+      groupingValue: item.groupingValue,
       attributes: item.attributes,
       collection: item.collection,
     }))
@@ -235,23 +279,63 @@ export class HandCashService {
     return data
   }
 
+  async resolveHandles(privateKey: string, handles: string[]) {
+    const account = this.getConnectAccount(privateKey)
+    const cleanedHandles = handles
+      .map((handle) => handle.trim().replace(/^[@$]/, ""))
+      .filter(Boolean)
+
+    const result: Record<string, string> = {}
+
+    for (let i = 0; i < cleanedHandles.length; i += 10) {
+      const batch = cleanedHandles.slice(i, i + 10)
+      try {
+        const profiles = await account.profile.getPublicProfilesByHandle(batch)
+        profiles.forEach((profile: { handle: string; id: string }) => {
+          result[profile.handle.toLowerCase()] = profile.id
+        })
+      } catch (error) {
+        console.error("[HandCashService] Error resolving handles batch:", error)
+      }
+    }
+
+    return result
+  }
+
   // Item operations (uses handcash-connect)
   async transferItems(
     privateKey: string,
     params: {
       origins: string[]
-      destination: string
+      destination: string | string[]
     },
   ) {
     const account = this.getConnectAccount(privateKey)
 
-    const result = await account.items.transfer({
-      destinationsWithOrigins: [
+    const destinations = Array.isArray(params.destination) ? params.destination : [params.destination]
+
+    let destinationsWithOrigins: Array<{ origins: string[]; destination: string }> = []
+
+    if (destinations.length === 1) {
+      destinationsWithOrigins = [
         {
           origins: params.origins,
-          destination: params.destination,
+          destination: destinations[0],
         },
-      ],
+      ]
+    } else {
+      if (params.origins.length < destinations.length) {
+        throw new Error("Not enough item origins for all destinations")
+      }
+
+      destinationsWithOrigins = destinations.map((destination, index) => ({
+        destination,
+        origins: [params.origins[index]],
+      }))
+    }
+
+    const result = await account.items.transfer({
+      destinationsWithOrigins,
     })
 
     return result
