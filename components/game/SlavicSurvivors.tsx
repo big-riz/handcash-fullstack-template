@@ -1387,18 +1387,82 @@ export function SlavicSurvivors() {
                 )}
 
                 {gameState === "characterSelect" && (
-                    <div className="absolute inset-0 bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 z-50 animate-in fade-in zoom-in duration-300">
-                        <div className="mb-4 text-center">
-                            <div className="flex items-center justify-center gap-4 mb-2">
-                                <Button variant="ghost" onClick={() => setGameState("menu")} className="rounded-full h-12 w-12 border border-white/10 hover:bg-white/10 text-white/50 hover:text-white">
-                                    <RotateCcw className="w-5 h-5" />
+                    <div className={`absolute inset-0 bg-black/90 backdrop-blur-xl flex flex-col items-center ${isMobile ? 'justify-start pt-4' : 'justify-center'} ${isMobile ? 'p-3' : 'p-8'} z-50 animate-in fade-in zoom-in duration-300`}>
+                        <div className={`${isMobile ? 'mb-3' : 'mb-4'} text-center`}>
+                            <div className={`flex items-center justify-center ${isMobile ? 'gap-2' : 'gap-4'} mb-2`}>
+                                <Button variant="ghost" onClick={() => setGameState("menu")} className={`rounded-full ${isMobile ? 'h-10 w-10' : 'h-12 w-12'} border border-white/10 hover:bg-white/10 text-white/50 hover:text-white`}>
+                                    <RotateCcw className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
                                 </Button>
-                                <h2 className="text-4xl font-black italic uppercase text-white tracking-tight">Choose Your Fighter</h2>
+                                <h2 className={`${isMobile ? 'text-2xl' : 'text-4xl'} font-black italic uppercase text-white tracking-tight`}>Choose Your Fighter</h2>
                             </div>
-                            <p className="text-white/40 font-mono text-sm tracking-widest uppercase">Select a hero to brave the {WORLDS.find(w => w.id === selectedWorldId)?.name}</p>
+                            <p className={`text-white/40 font-mono ${isMobile ? 'text-[10px]' : 'text-sm'} tracking-widest uppercase`}>Select a hero to brave the {WORLDS.find(w => w.id === selectedWorldId)?.name}</p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 w-full max-w-7xl px-4">
+                        {isMobile ? (
+                            <>
+                            <div className="flex gap-3 overflow-x-auto w-full px-2 snap-x snap-mandatory mb-6 pb-4 scrollbar-hide">
+                                {characterData.map(char => (
+                                    <div
+                                        key={char.id}
+                                        onClick={() => setSelectedCharacterId(char.id)}
+                                        className={`cursor-pointer border-4 rounded-2xl p-4 min-w-[280px] transition-all relative overflow-hidden snap-center flex-shrink-0
+                                            ${selectedCharacterId === char.id
+                                                ? 'border-primary bg-primary/10 scale-105 shadow-[0_0_40px_rgba(255,100,0,0.3)]'
+                                                : 'border-white/10 bg-white/5'}`}
+                                    >
+                                        <div className="flex flex-col items-center text-center justify-center mb-4 relative">
+                                            <div className={`w-24 h-24 rounded-full bg-black/50 overflow-hidden border-4 ${selectedCharacterId === char.id ? 'border-primary' : 'border-white/10'} mb-3 shadow-2xl relative`}>
+                                                <div className="absolute inset-0 opacity-50 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/20 to-transparent" />
+                                                <div className="absolute inset-0 flex items-center justify-center font-black text-4xl text-white/5 uppercase select-none">{char.id.slice(0, 2)}</div>
+                                                <div className={`w-full h-full bg-cover bg-center transition-all duration-700 ${selectedCharacterId === char.id && 'scale-110'}`} style={{ backgroundImage: `url(/sprites/${char.sprite}.png)` }} />
+                                            </div>
+                                            <h3 className="font-black italic uppercase text-xl text-white mb-1 leading-none">{char.name}</h3>
+                                            <p className="text-white/60 text-xs font-medium leading-tight px-2 mb-3 line-clamp-2">{char.description}</p>
+
+                                            {/* Starting Weapon Badge */}
+                                            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-2 py-1 rounded-full mb-2">
+                                                <span className="text-[8px] font-black text-primary uppercase tracking-tighter">START</span>
+                                                <div className="flex items-center gap-1">
+                                                    {renderItemIcon(char.startingWeapon, "w-3 h-3")}
+                                                    <span className="text-[8px] font-bold text-white uppercase truncate max-w-[80px]">
+                                                        {getItemInfo(char.startingWeapon).name}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-black/40 rounded-xl p-2 border border-white/5 space-y-1">
+                                            <div className="flex justify-between text-[9px] font-mono font-bold text-white/40 border-b border-white/5 pb-1 mb-1">
+                                                <span>STATS</span>
+                                                <span>MOD</span>
+                                            </div>
+                                            {Object.entries(char.stats || {}).map(([key, val]: [string, any]) => (
+                                                <div key={key} className="flex justify-between text-xs items-center">
+                                                    <span className="uppercase text-white/60 font-bold text-[9px] tracking-wider">{key}</span>
+                                                    <span className={`font-mono font-bold text-[10px] ${val > 1 ? 'text-green-400' : val < 1 ? 'text-red-400' : 'text-white/40'}`}>
+                                                        {val === 1 ? '-' : val > 1 ? `+${Math.round((val - 1) * 100)}%` : `-${Math.round((1 - val) * 100)}%`}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {selectedCharacterId === char.id && (
+                                            <div className="absolute inset-0 border-4 border-primary rounded-2xl animate-pulse pointer-events-none" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex gap-2 mb-4">
+                                {characterData.map((char, idx) => (
+                                    <div 
+                                        key={char.id}
+                                        className={`w-2 h-2 rounded-full transition-all ${selectedCharacterId === char.id ? 'bg-primary w-6' : 'bg-white/20'}`}
+                                    />
+                                ))}
+                            </div>
+                            </>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 w-full max-w-7xl px-4">
                             {characterData.map(char => (
                                 <div
                                     key={char.id}
@@ -1451,16 +1515,33 @@ export function SlavicSurvivors() {
                                 </div>
                             ))}
                         </div>
+                        )}
 
-                        <div className="flex flex-col items-center gap-4">
-                            <div className="flex gap-4">
-                                <Button onClick={() => setGameState("menu")} variant="outline" size="lg" className="h-[80px] px-12 text-2xl font-black rounded-[2rem] border-4 border-white/20 hover:border-white text-white hover:bg-white/10 uppercase tracking-[0.2em] transition-all active:scale-95">
-                                    BACK
-                                </Button>
-                            </div>
-                            <Button onClick={() => { resetGame(false); setGameState("playing"); }} size="lg" className="h-[80px] px-24 text-4xl font-black rounded-[2rem] shadow-primary/60 shadow-[0_0_60px_rgba(255,100,0,0.5)] bg-primary text-black hover:scale-105 active:scale-95 transition-all uppercase tracking-[0.2em] animate-in slide-in-from-bottom-4">
+                        <div className={`flex flex-col items-center ${isMobile ? 'gap-3' : 'gap-4'}`}>
+                            {!isMobile && (
+                                <div className="flex gap-4">
+                                    <Button onClick={() => setGameState("menu")} variant="outline" size="lg" className="h-[80px] px-12 text-2xl font-black rounded-[2rem] border-4 border-white/20 hover:border-white text-white hover:bg-white/10 uppercase tracking-[0.2em] transition-all active:scale-95">
+                                        BACK
+                                    </Button>
+                                </div>
+                            )}
+                            <Button 
+                                onClick={() => { resetGame(false); setGameState("playing"); }} 
+                                size="lg" 
+                                className={`${isMobile ? 'h-16 px-16 text-2xl' : 'h-[80px] px-24 text-4xl'} font-black rounded-[2rem] shadow-primary/60 shadow-[0_0_60px_rgba(255,100,0,0.5)] bg-primary text-black hover:scale-105 active:scale-95 transition-all uppercase tracking-[0.2em] animate-in slide-in-from-bottom-4`}
+                            >
                                 BEGIN HUNT
                             </Button>
+                            {isMobile && (
+                                <Button 
+                                    onClick={() => setGameState("menu")} 
+                                    variant="outline" 
+                                    size="lg" 
+                                    className="h-12 px-8 text-sm font-black rounded-xl border-2 border-white/20 text-white hover:bg-white/10 uppercase tracking-wider transition-all active:scale-95"
+                                >
+                                    BACK
+                                </Button>
+                            )}
                         </div>
                     </div>
                 )}
