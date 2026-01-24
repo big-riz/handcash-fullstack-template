@@ -10,6 +10,7 @@ import { Player } from './Player'
 import { Enemy, EnemyType } from './Enemy'
 import { XPGem } from './XPGem'
 import { Projectile } from './Projectile'
+import { MeleeSwing } from './MeleeSwing'
 import { VFXManager } from '../systems/VFXManager'
 
 export interface Obstacle {
@@ -22,6 +23,7 @@ export class EntityManager {
     player: Player
     enemies: Enemy[] = []
     projectiles: Projectile[] = []
+    meleeSwings: MeleeSwing[] = []
     gems: XPGem[] = []
     obstacles: Obstacle[] = []
 
@@ -30,6 +32,7 @@ export class EntityManager {
     private enemyPools: Map<string, Enemy[]> = new Map()
     private gemPool: XPGem[] = []
     private projectilePool: Projectile[] = []
+    private meleeSwingPool: MeleeSwing[] = []
 
     private gemColor = 0x00cccc
     private gemEmissive = 0x00ffff
@@ -76,6 +79,17 @@ export class EntityManager {
             this.projectiles.push(projectile)
         }
         projectile.spawn(x, z, vx, vz, damage)
+    }
+
+    spawnMeleeSwing(x: number, z: number, facingAngle: number, damage: number, radius: number = 3.0, swingDuration: number = 0.3, arcAngle: number = Math.PI * 0.6, color: number = 0xcccccc) {
+        let swing = this.meleeSwingPool.find(s => !s.isActive)
+        if (!swing) {
+            swing = new MeleeSwing()
+            swing.createMesh(this.scene, color)
+            this.meleeSwingPool.push(swing)
+            this.meleeSwings.push(swing)
+        }
+        swing.spawn(x, z, facingAngle, damage, radius, swingDuration, arcAngle)
     }
 
     spawnEnemy(type: EnemyType, x: number, z: number, isElite: boolean = false): Enemy {
@@ -215,6 +229,28 @@ export class EntityManager {
             }
         }
 
+        // Update Melee Swings
+        for (const swing of this.meleeSwings) {
+            if (swing.isActive) {
+                const stillActive = swing.update(deltaTime)
+                if (stillActive) {
+                    // Check collision with enemies in arc
+                    for (let i = 0; i < this.enemies.length; i++) {
+                        const enemy = this.enemies[i]
+                        if (enemy.isActive) {
+                            if (swing.isEnemyInArc(enemy.position.x, enemy.position.z, enemy.radius, i)) {
+                                // Hit!
+                                enemy.takeDamage(swing.damage, this.vfx || undefined)
+                                if (this.vfx) {
+                                    this.vfx.createEmoji(enemy.position.x, enemy.position.z, '💥', 0.8)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Update Gems
         for (const gem of this.gems) {
             if (gem.isActive) {
@@ -292,12 +328,18 @@ export class EntityManager {
             projectile.despawn()
             if (projectile.mesh) this.scene.remove(projectile.mesh)
         }
+        for (const swing of this.meleeSwings) {
+            swing.despawn()
+            if (swing.mesh) this.scene.remove(swing.mesh)
+        }
         this.enemies = []
         this.gems = []
         this.projectiles = []
+        this.meleeSwings = []
         this.obstacles = []
         this.enemyPools.clear()
         this.gemPool = []
         this.projectilePool = []
+        this.meleeSwingPool = []
     }
 }

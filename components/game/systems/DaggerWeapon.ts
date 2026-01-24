@@ -1,21 +1,23 @@
 /**
  * DaggerWeapon.ts
  * 
- * Shoots daggers in the direction of movement.
+ * Throwing knives - auto-targets nearest enemies with piercing projectiles.
+ * Differentiation: High pierce, moderate speed, fan spread on multiple targets.
  */
 
 import { Player } from '../entities/Player'
 import { EntityManager } from '../entities/EntityManager'
 
 export class DaggerWeapon {
-    private cooldown = 0.8 // Attacks per second
+    public cooldown = 0.8
     private timer = 0
-    private level = 1
+    public level = 1
 
     // Stats
-    private damage = 18
-    private speed = 15
-    private count = 1
+    public damage = 18
+    public projectileSpeed = 18
+    public projectileLife = 1.5 // Longer range than melee
+    public count = 1
 
     constructor(
         private player: Player,
@@ -33,35 +35,30 @@ export class DaggerWeapon {
     }
 
     fire() {
-        // Find direction (use movement or last direction)
-        let dx = this.player.velocity.x
-        let dz = this.player.velocity.z
+        // Find nearest enemies to target
+        const enemies = this.entityManager.enemies
+            .filter(e => e.isActive)
+            .sort((a, b) => a.position.distanceTo(this.player.position) - b.position.distanceTo(this.player.position))
 
-        // If standing still, shoot forward (looking North based on camera)
-        if (Math.abs(dx) < 0.1 && Math.abs(dz) < 0.1) {
-            dz = 1
-            dx = 0
-        } else {
-            const mag = Math.sqrt(dx * dx + dz * dz)
-            dx /= mag
-            dz /= mag
-        }
+        if (enemies.length === 0) return // Don't fire if no enemies
 
-        // Spawn count projectiles with slight offset
+        // Fire at multiple targets if we have multiple projectiles
         for (let i = 0; i < this.count; i++) {
-            const spread = (i - (this.count - 1) / 2) * 0.1
-            const vx = dx * this.speed
-            const vz = dz * this.speed
+            const targetIdx = Math.min(i, enemies.length - 1)
+            const target = enemies[targetIdx]
+            
+            const dir = target.position.clone().sub(this.player.position).normalize()
+            const dx = dir.x
+            const dz = dir.z
 
-            // Adjust velocity by spread (perpendicular vector)
-            const sx = vx - dz * spread * this.speed
-            const sz = vz + dx * spread * this.speed
+            // Add slight spread for multiple projectiles at same target
+            const spread = i > 0 && targetIdx === enemies.length - 1 ? (this.rng.next() - 0.5) * 0.3 : 0
 
             this.entityManager.spawnProjectile(
                 this.player.position.x,
                 this.player.position.z,
-                sx,
-                sz,
+                (dx + spread) * this.projectileSpeed,
+                (dz + spread) * this.projectileSpeed,
                 this.damage * this.player.stats.damageMultiplier
             )
         }
@@ -69,11 +66,11 @@ export class DaggerWeapon {
 
     static getUpgradeDesc(level: number): string {
         switch (level) {
-            case 1: return "Shoot piercing blades in movement direction."
-            case 2: return "Fire an extra blade (+1 count)."
+            case 1: return "Throwing knives that pierce through enemies."
+            case 2: return "Extra blade (+1 knife)."
             case 3: return "Sharper blades (+50% damage)."
             case 4: return "Faster throwing (+30% attack speed)."
-            case 5: return "Hussar Volley (+1 extra blade)."
+            case 5: return "Blade Master (+1 knife, targets spread)."
             default: return ""
         }
     }

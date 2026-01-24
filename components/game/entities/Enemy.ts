@@ -31,6 +31,11 @@ export class Enemy {
     isActive = false
     onDie: ((x: number, z: number, xp: number) => void) | null = null
 
+    // Health bar
+    private healthBarBg: THREE.Mesh | null = null
+    private healthBarFill: THREE.Mesh | null = null
+    private healthBarWidth = 0.6
+
     // Behaviors
     private flickerTimer = 0
     private isInvulnerable = false
@@ -42,10 +47,10 @@ export class Enemy {
         this.radius = 0.3
         this.type = type
 
-        // Default Stats
+        // Default Stats (1.3x HP multiplier applied)
         this.stats = {
-            maxHp: 10,
-            currentHp: 10,
+            maxHp: 13,
+            currentHp: 13,
             moveSpeed: 3.0,
             damage: 5,
             xpValue: 1
@@ -55,37 +60,38 @@ export class Enemy {
     }
 
     private setStatsByType(type: EnemyType) {
+        // All HP values multiplied by 1.3x for balance
         switch (type) {
             case 'drifter':
-                this.stats = { maxHp: 15, currentHp: 15, moveSpeed: 3.5, damage: 10, xpValue: 1 }
+                this.stats = { maxHp: 20, currentHp: 20, moveSpeed: 3.5, damage: 10, xpValue: 1 }
                 this.radius = 0.3
                 break;
             case 'screecher':
-                this.stats = { maxHp: 8, currentHp: 8, moveSpeed: 5.5, damage: 5, xpValue: 1 }
+                this.stats = { maxHp: 10, currentHp: 10, moveSpeed: 5.5, damage: 5, xpValue: 1 }
                 this.radius = 0.25
                 break;
             case 'bruiser':
-                this.stats = { maxHp: 60, currentHp: 60, moveSpeed: 2.2, damage: 20, xpValue: 3 }
+                this.stats = { maxHp: 78, currentHp: 78, moveSpeed: 2.2, damage: 20, xpValue: 3 }
                 this.radius = 0.55
                 break;
             case 'zmora': // Ghost - flickers invulnerability
-                this.stats = { maxHp: 12, currentHp: 12, moveSpeed: 4.0, damage: 12, xpValue: 1 }
+                this.stats = { maxHp: 16, currentHp: 16, moveSpeed: 4.0, damage: 12, xpValue: 1 }
                 this.radius = 0.3
                 break;
             case 'domovoi': // Tiny swarm units
-                this.stats = { maxHp: 4, currentHp: 4, moveSpeed: 4.5, damage: 4, xpValue: 1 }
+                this.stats = { maxHp: 5, currentHp: 5, moveSpeed: 4.5, damage: 4, xpValue: 1 }
                 this.radius = 0.15
                 break;
             case 'kikimora': // Dropping slow patches (implemented in EntityManager)
-                this.stats = { maxHp: 25, currentHp: 25, moveSpeed: 2.8, damage: 15, xpValue: 2 }
+                this.stats = { maxHp: 33, currentHp: 33, moveSpeed: 2.8, damage: 15, xpValue: 2 }
                 this.radius = 0.4
                 break;
             case 'leshy': // BOSS - Forest Lord
-                this.stats = { maxHp: 500, currentHp: 500, moveSpeed: 1.8, damage: 40, xpValue: 10 }
+                this.stats = { maxHp: 650, currentHp: 650, moveSpeed: 1.8, damage: 40, xpValue: 10 }
                 this.radius = 1.2
                 break;
             case 'vodnik': // Ranged Water Spirit
-                this.stats = { maxHp: 12, currentHp: 12, moveSpeed: 3.0, damage: 8, xpValue: 2, isRanged: true }
+                this.stats = { maxHp: 16, currentHp: 16, moveSpeed: 3.0, damage: 8, xpValue: 2, isRanged: true }
                 this.radius = 0.35
                 break;
         }
@@ -115,6 +121,40 @@ export class Enemy {
             const mat = this.mesh.material as THREE.MeshStandardMaterial
             mat.opacity = this.type === 'zmora' ? 0.6 : 1.0
         }
+
+        // Reset health bar
+        this.updateHealthBar()
+        if (this.healthBarBg) this.healthBarBg.visible = true
+        if (this.healthBarFill) this.healthBarFill.visible = true
+    }
+
+    private updateHealthBar() {
+        if (!this.healthBarFill || !this.healthBarBg) return
+
+        const hpPercent = Math.max(0, this.stats.currentHp / this.stats.maxHp)
+        
+        // Scale the fill bar based on HP
+        this.healthBarFill.scale.x = hpPercent
+        // Offset to keep it left-aligned
+        this.healthBarFill.position.x = this.position.x - (this.healthBarWidth * (1 - hpPercent)) / 2
+
+        // Color: green (full) -> yellow (half) -> red (low)
+        const mat = this.healthBarFill.material as THREE.MeshBasicMaterial
+        if (hpPercent > 0.5) {
+            // Green to Yellow
+            const t = (hpPercent - 0.5) * 2
+            mat.color.setRGB(1 - t, 1, 0)
+        } else {
+            // Yellow to Red
+            const t = hpPercent * 2
+            mat.color.setRGB(1, t, 0)
+        }
+
+        // Position bars above enemy
+        const barHeight = this.radius * 2 + 0.4
+        this.healthBarBg.position.set(this.position.x, barHeight, this.position.z)
+        this.healthBarFill.position.y = barHeight
+        this.healthBarFill.position.z = this.position.z
     }
 
     update(deltaTime: number, player: Player, spawnProjectile?: (x: number, z: number, vx: number, vz: number, damage: number) => void) {
@@ -167,6 +207,9 @@ export class Enemy {
             this.mesh.position.copy(this.position)
             this.mesh.position.y = this.radius
         }
+
+        // Update health bar position
+        this.updateHealthBar()
     }
 
     takeDamage(amount: number, vfx?: VFXManager): boolean {
@@ -177,6 +220,9 @@ export class Enemy {
         if (vfx) {
             vfx.createDamageNumber(this.position.x, this.position.z, amount)
         }
+
+        // Update health bar after damage
+        this.updateHealthBar()
 
         if (this.stats.currentHp <= 0) {
             this.die()
@@ -191,6 +237,10 @@ export class Enemy {
         if (this.mesh) {
             this.mesh.visible = false
         }
+        // Hide health bar
+        if (this.healthBarBg) this.healthBarBg.visible = false
+        if (this.healthBarFill) this.healthBarFill.visible = false
+        
         if (this.onDie) {
             this.onDie(this.position.x, this.position.z, this.stats.xpValue)
         }
@@ -218,6 +268,35 @@ export class Enemy {
         this.mesh.receiveShadow = true
         this.mesh.visible = this.isActive
         scene.add(this.mesh)
+
+        // Create health bar (background - dark)
+        this.healthBarWidth = Math.max(0.4, this.radius * 1.5)
+        const barHeight = 0.08
+        const bgGeo = new THREE.PlaneGeometry(this.healthBarWidth, barHeight)
+        const bgMat = new THREE.MeshBasicMaterial({ 
+            color: 0x222222,
+            side: THREE.DoubleSide,
+            depthTest: false
+        })
+        this.healthBarBg = new THREE.Mesh(bgGeo, bgMat)
+        this.healthBarBg.rotation.x = -Math.PI / 2
+        this.healthBarBg.visible = this.isActive
+        this.healthBarBg.renderOrder = 999
+        scene.add(this.healthBarBg)
+
+        // Create health bar (fill - green to red)
+        const fillGeo = new THREE.PlaneGeometry(this.healthBarWidth, barHeight * 0.8)
+        const fillMat = new THREE.MeshBasicMaterial({ 
+            color: 0x00ff00,
+            side: THREE.DoubleSide,
+            depthTest: false
+        })
+        this.healthBarFill = new THREE.Mesh(fillGeo, fillMat)
+        this.healthBarFill.rotation.x = -Math.PI / 2
+        this.healthBarFill.visible = this.isActive
+        this.healthBarFill.renderOrder = 1000
+        scene.add(this.healthBarFill)
+
         return this.mesh
     }
 }

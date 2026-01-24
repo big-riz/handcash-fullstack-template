@@ -13,14 +13,14 @@ export class LadaVehicle {
     public level = 1
     private mesh: THREE.Mesh | null = null
     private isActive = false
-    private duration = 5
+    public duration = 5
     private timer = 0
     private cooldown = 20
     private cooldownTimer = 0
 
     // Stats
-    private damage = 50
-    private speed = 15
+    public damage = 50
+    public speed = 15
 
     constructor(
         private scene: THREE.Scene,

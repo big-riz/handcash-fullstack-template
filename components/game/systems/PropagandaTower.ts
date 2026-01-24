@@ -17,7 +17,7 @@ export class PropagandaTower {
     private slowEffectQueue: { enemy: any; timer: number; amount: number }[] = []
 
     // Stats
-    private damage = 15
+    public damage = 15
     private range = 4
     private duration = 12
     private slowAmount = 0.5

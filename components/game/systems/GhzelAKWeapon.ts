@@ -10,11 +10,11 @@ import { VFXManager } from './VFXManager'
 
 export class GhzelAKWeapon {
     public level = 1
-    private cooldown = 0.6
+    public cooldown = 0.6
     private timer = 0
 
     // Stats
-    private damage = 18
+    public damage = 18
     private speed = 40
     private critChanceBonus = 0.15
 

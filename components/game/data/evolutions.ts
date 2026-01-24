@@ -1,30 +1,30 @@
 const evolutions = [
     {
+        "type": "evolution",
         "id": "soul_siphon",
         "name": "Soul Siphon",
-        "description": "ULTIMATE EVOLUTION: Massive power spike! Heal per elite kill.",
-        "baseWeapon": "garlic",
+        "description": "ULTIMATE EVOLUTION: Skull Screen + Garlic Ring. Heal per elite kill.",
+        "baseWeapon": "skull_screen",
         "requiresPassive": "garlic_ring",
-        "requiresLevel": 8,
-        "icon": "Activity"
+        "requiresLevel": 5
     },
     {
+        "type": "evolution",
         "id": "silver_tt33",
         "name": "Silver TT33",
-        "description": "ULTIMATE EVOLUTION: Massive power spike! Bonus undead damage / crit.",
+        "description": "ULTIMATE EVOLUTION: TT33 + Spy Hat. Bonus crit damage.",
         "baseWeapon": "tt33",
-        "requiresPassive": "silver",
-        "requiresLevel": 8,
-        "icon": "Sword"
+        "requiresPassive": "spy_hat",
+        "requiresLevel": 5
     },
     {
+        "type": "evolution",
         "id": "melter",
         "name": "The Melter",
-        "description": "ULTIMATE EVOLUTION: Massive power spike! Melts everything.",
-        "baseWeapon": "ak_radioactive",
-        "requiresPassive": "icon",
-        "requiresLevel": 8,
-        "icon": "Zap"
+        "description": "ULTIMATE EVOLUTION: Gzhel SMG + Pickled GPU. Melts everything.",
+        "baseWeapon": "gzhel_smg",
+        "requiresPassive": "pickled_gpu",
+        "requiresLevel": 5
     }
 ];
 

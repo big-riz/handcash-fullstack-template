@@ -9,13 +9,13 @@ import { EntityManager } from '../entities/EntityManager'
 
 export class TT33Weapon {
     public level = 1
-    private cooldown = 0.5
+    public cooldown = 0.5
     private timer = 0
 
-    // Stats
-    private damage = 12
-    private speed = 25
-    private pierce = 0
+    // Stats - Base DPS = 30 (15 / 0.5)
+    public damage = 15
+    public speed = 25
+    public pierce = 0
 
     constructor(
         private player: Player,

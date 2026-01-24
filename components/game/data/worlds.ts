@@ -24,12 +24,12 @@ export const WORLDS: WorldData[] = [
         winCondition: 'level',
         winValue: 10,
         allowedUpgrades: [
-            // Actives
-            'garlic', 'dagger', 'holywater', 'stake', 'cross', 'salt', 'ak_mushroom', 'nuclear_pigeon',
-            'grail', 'skull_screen', 'visors', 'vampire_rat', 'haunted_lada', 'shank', 'knuckles',
-            // Passives
-            'hp', 'speed', 'magnet', 'area', 'damage', 'regen', 'garlic_ring', 'salt_passive',
-            'dove_coin', 'holy_bread', 'holy_cheese', 'sunflower_pouch',
+            // Actives (Common/Uncommon/Rare for early world)
+            'tt33', 'shank', 'stilleto', 'peppermill', 'soviet_stick',
+            'vampire_rat', 'pig_luggage', 'kabar', 'grail', 'propaganda_tower',
+            // Passives (All passives available)
+            'beer_coin', 'boss_shoe', 'dove_coin', 'garlic_ring', 'holy_bread', 'battle_scarf',
+            'holy_cheese', 'spy_hat', 'infinity_purse', 'ruby_ushanka', 'sunflower_pouch', 'pickled_gpu',
             // Evolutions
             'soul_siphon'
         ],
@@ -49,13 +49,14 @@ export const WORLDS: WorldData[] = [
         winCondition: 'level',
         winValue: 15,
         allowedUpgrades: [
-            // Actives
-            'tt33', 'ak_radioactive', 'ak_ghzel', 'ak_corrupted', 'propaganda_tower', 'lada', 'nuclear_pigeon',
-            'peppermill', 'gzhel_smg', 'kabar', 'stilleto', 'soviet_stick', 'kvass_reactor', 'pig_luggage',
-            'big_biz_lada', 'dadushka_chair', 'gopnik_gondola', 'tank_stroller',
-            // Passives
-            'hp', 'speed', 'magnet', 'armor', 'damage', 'icon', 'silver', 'iron',
-            'beer_coin', 'infinity_purse', 'spy_hat', 'pickled_gpu', 'battle_scarf', 'ruby_ushanka',
+            // Actives (Epic/Legendary for harder world)
+            'tt33', 'peppermill', 'gzhel_smg', 'kabar', 'stilleto', 'soviet_stick',
+            'skull_screen', 'visors', 'kvass_reactor', 'pig_luggage', 'nuclear_pigeon',
+            'haunted_lada', 'big_biz_lada', 'dadushka_chair', 'gopnik_gondola', 'tank_stroller',
+            'propaganda_tower',
+            // Passives (All passives available)
+            'beer_coin', 'boss_shoe', 'dove_coin', 'garlic_ring', 'holy_bread', 'battle_scarf',
+            'holy_cheese', 'spy_hat', 'infinity_purse', 'ruby_ushanka', 'sunflower_pouch', 'pickled_gpu',
             // Evolutions
             'silver_tt33', 'melter'
         ],

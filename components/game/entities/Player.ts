@@ -26,12 +26,9 @@ export interface PlayerStats {
     projectileSpeedMultiplier: number
     durationMultiplier: number
     growth: number // XP Gain
-    greed: number // Gold Gain
     curse: number // Enemy difficulty
     revivals: number
     rerolls: number
-    skips: number
-    banishes: number
     visionMultiplier: number
 }
 
@@ -83,12 +80,9 @@ export class Player {
             projectileSpeedMultiplier: 1.0,
             durationMultiplier: 1.0,
             growth: 1.0,
-            greed: 1.0,
             curse: 1.0,
-            revivals: 0,
-            rerolls: 0,
-            skips: 0,
-            banishes: 0,
+            revivals: 1,
+            rerolls: 3,
             visionMultiplier: 1.0
         }
     }
@@ -122,9 +116,13 @@ export class Player {
             this.iframeTimer -= deltaTime
         }
 
-        // Regen logic (passive)
-        if (this.stats.regen > 0 && this.stats.currentHp < this.stats.maxHp) {
-            this.stats.currentHp = Math.min(this.stats.maxHp, this.stats.currentHp + this.stats.regen * deltaTime)
+        // Regen/Degeneration logic
+        if (this.stats.regen !== 0) {
+            if (this.stats.regen > 0 && this.stats.currentHp < this.stats.maxHp) {
+                this.stats.currentHp = Math.min(this.stats.maxHp, this.stats.currentHp + this.stats.regen * deltaTime)
+            } else if (this.stats.regen < 0) {
+                this.stats.currentHp = Math.max(0, this.stats.currentHp + this.stats.regen * deltaTime)
+            }
         }
 
         // Update mesh position if it exists

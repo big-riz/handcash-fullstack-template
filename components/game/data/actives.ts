@@ -1,426 +1,201 @@
 const actives = [
-    {
-        "id": "garlic",
-        "name": "Czosnek Halo\n(Garlic Halo)",
-        "description": "A damaging aura that keeps spirits at bay.",
-        "category": "ActiveWeapon",
-        "rarity": "Common",
-        "minLevel": 1,
-        "icon": "Circle",
-        "tags": [
-            "area",
-            "ritual"
-        ]
-    },
-    {
-        "id": "dagger",
-        "name": "Hussar Lances",
-        "description": "Shoot piercing blades in movement direction.",
-        "category": "ActiveWeapon",
-        "rarity": "Common",
-        "minLevel": 1,
-        "icon": "Sword",
-        "tags": [
-            "projectile",
-            "ritual"
-        ]
-    },
-    {
-        "id": "holywater",
-        "name": "Svyata Voda\n(Holy Water)",
-        "description": "Create lingering damage pools on the ground.",
-        "category": "ActiveWeapon",
-        "rarity": "Common",
-        "minLevel": 1,
-        "icon": "Zap",
-        "tags": [
-            "zone",
-            "ritual"
-        ]
-    },
-    {
-        "id": "stake",
-        "name": "Aspen Stake",
-        "description": "Auto-targets nearest enemies with high damage.",
-        "category": "ActiveWeapon",
-        "rarity": "Common",
-        "minLevel": 1,
-        "icon": "Sword",
-        "tags": [
-            "projectile",
-            "ritual"
-        ]
-    },
-    {
-        "id": "cross",
-        "name": "Krzyż Boomerang\n(Cross Boomerang)",
-        "description": "A holy cross that returns to you, piercing enemies.",
-        "category": "ActiveWeapon",
-        "rarity": "Rare",
-        "minLevel": 2,
-        "icon": "RotateCcw",
-        "tags": [
-            "projectile",
-            "ritual"
-        ]
-    },
-    {
-        "id": "salt",
-        "name": "Solny Krąg\n(Salt Circle)",
-        "description": "A protective circle of salt that wards off spirits.",
-        "category": "ActiveWeapon",
-        "rarity": "Rare",
-        "minLevel": 3,
-        "icon": "Circle",
-        "tags": [
-            "zone",
-            "ritual"
-        ]
-    },
+    // === STARTER WEAPONS (Common, minLevel 1) ===
     {
         "id": "tt33",
-        "name": "TT33 Handgun",
-        "description": "Rapid single shots at nearest enemy. Likes crit.",
+        "name": "TT33 Pistol",
+        "description": "Balanced shots at nearest enemy. Reliable.",
         "category": "ActiveWeapon",
         "rarity": "Common",
-        "minLevel": 3,
-        "icon": "Sword",
-        "tags": [
-            "projectile",
-            "gun",
-            "contraband"
-        ]
-    },
-    {
-        "id": "peppermill",
-        "name": "Peppermill Gun",
-        "description": "Sprays bullets like spices everywhere.",
-        "category": "ActiveWeapon",
-        "rarity": "Uncommon",
-        "minLevel": 3,
-        "icon": "Cloud",
-        "tags": [
-            "projectile",
-            "gun",
-            "contraband"
-        ]
-    },
-    {
-        "id": "gzhel_smg",
-        "name": "Gzhel SMG",
-        "description": "Fine china rapid fire. Fragile but deadly.",
-        "category": "ActiveWeapon",
-        "rarity": "Epic",
-        "minLevel": 7,
-        "icon": "Crosshair",
-        "tags": [
-            "projectile",
-            "gun",
-            "contraband"
-        ]
+        "minLevel": 1,
+        "tags": ["projectile", "gun"]
     },
     {
         "id": "shank",
         "name": "Babushka's Shank",
-        "description": "Short range, high bleed damage.",
+        "description": "Very fast close-range stabs. High damage.",
         "category": "ActiveWeapon",
         "rarity": "Common",
         "minLevel": 1,
-        "icon": "Sword",
-        "tags": [
-            "melee",
-            "contraband"
-        ]
-    },
-    {
-        "id": "kabar",
-        "name": "Kabar Knife",
-        "description": "Military grade steel. Slices through armor.",
-        "category": "ActiveWeapon",
-        "rarity": "Rare",
-        "minLevel": 4,
-        "icon": "Sword",
-        "tags": [
-            "melee",
-            "contraband"
-        ]
+        "tags": ["melee"]
     },
     {
         "id": "knuckles",
         "name": "Ceramic Knuckles",
-        "description": "Hard-hitting melee punches.",
+        "description": "Slow but devastating punches. Massive hits.",
         "category": "ActiveWeapon",
-        "rarity": "Uncommon",
-        "minLevel": 3,
-        "icon": "Circle",
-        "tags": [
-            "melee",
-            "contraband"
-        ]
+        "rarity": "Common",
+        "minLevel": 1,
+        "tags": ["melee"]
     },
     {
         "id": "stilleto",
         "name": "Stilleto",
-        "description": "Throwing knives that pierce multiple enemies.",
+        "description": "Fast throwing knives at multiple targets.",
         "category": "ActiveWeapon",
-        "rarity": "Rare",
-        "minLevel": 6,
-        "icon": "Sword",
-        "tags": [
-            "projectile",
-            "contraband"
-        ]
+        "rarity": "Common",
+        "minLevel": 1,
+        "tags": ["projectile"]
     },
+
+    // === UNCOMMON WEAPONS (minLevel 2-3) ===
     {
-        "id": "grail",
-        "name": "Gopnik Grail",
-        "description": "Spills holy liquid that damages enemies and heals you.",
+        "id": "peppermill",
+        "name": "Peppermill Gun",
+        "description": "Rapid spray of bullets. Quantity over quality.",
         "category": "ActiveWeapon",
-        "rarity": "Legendary",
-        "minLevel": 11,
-        "icon": "Beaker",
-        "tags": [
-            "area",
-            "ritual"
-        ]
+        "rarity": "Uncommon",
+        "minLevel": 2,
+        "tags": ["projectile", "gun"]
     },
     {
         "id": "soviet_stick",
         "name": "Soviet Stick",
-        "description": "A symbol of authority. Huge knockback.",
+        "description": "Slow heavy strikes. Massive damage per hit.",
         "category": "ActiveWeapon",
         "rarity": "Uncommon",
         "minLevel": 2,
-        "icon": "Sword",
-        "tags": [
-            "melee",
-            "contraband"
-        ]
-    },
-    {
-        "id": "skull_screen",
-        "name": "Skull Screen",
-        "description": "Rotating skulls that block projectiles and damage enemies.",
-        "category": "ActiveWeapon",
-        "rarity": "Epic",
-        "minLevel": 9,
-        "icon": "Skull",
-        "tags": [
-            "area",
-            "ritual"
-        ]
-    },
-    {
-        "id": "visors",
-        "name": "Orthodox Visors",
-        "description": "Shoots holy lasers from eyes.",
-        "category": "ActiveWeapon",
-        "rarity": "Legendary",
-        "minLevel": 13,
-        "icon": "Zap",
-        "tags": [
-            "projectile",
-            "ritual"
-        ]
-    },
-    {
-        "id": "propaganda_tower",
-        "name": "Propaganda Tower",
-        "description": "Deploy stationary towers that damage and slow.",
-        "category": "Deployable",
-        "rarity": "Rare",
-        "minLevel": 4,
-        "icon": "Trophy",
-        "tags": [
-            "deployable",
-            "contraband"
-        ]
-    },
-    {
-        "id": "kvass_reactor",
-        "name": "Kvass Reactor",
-        "description": "Deploys a healing zone that boosts speed.",
-        "category": "Deployable",
-        "rarity": "Epic",
-        "minLevel": 6,
-        "icon": "Beaker",
-        "tags": [
-            "deployable",
-            "contraband"
-        ]
-    },
-    {
-        "id": "ak_radioactive",
-        "name": "Radioactive AK",
-        "description": "Fast nuclear bursts. Chance to melt enemies.",
-        "category": "ActiveWeapon",
-        "rarity": "Epic",
-        "minLevel": 6,
-        "icon": "Zap",
-        "tags": [
-            "projectile",
-            "gun",
-            "contraband"
-        ]
-    },
-    {
-        "id": "ak_ghzel",
-        "name": "Ghzel AK",
-        "description": "Artisanal precision. High critical hit chance.",
-        "category": "ActiveWeapon",
-        "rarity": "Epic",
-        "minLevel": 6,
-        "icon": "Crosshair",
-        "tags": [
-            "projectile",
-            "gun",
-            "contraband"
-        ]
-    },
-    {
-        "id": "ak_corrupted",
-        "name": "Corrupted AK",
-        "description": "Demonic weapon that siphons life from foes.",
-        "category": "ActiveWeapon",
-        "rarity": "Legendary",
-        "minLevel": 7,
-        "icon": "Skull",
-        "tags": [
-            "projectile",
-            "gun",
-            "contraband"
-        ]
-    },
-    {
-        "id": "ak_mushroom",
-        "name": "Mushroom AK",
-        "description": "Fires rounds that burst into toxic spore clouds.",
-        "category": "ActiveWeapon",
-        "rarity": "Epic",
-        "minLevel": 9,
-        "icon": "Cloud",
-        "tags": [
-            "projectile",
-            "gun",
-            "contraband"
-        ]
-    },
-    {
-        "id": "nuclear_pigeon",
-        "name": "Nuclear Pigeon",
-        "description": "A radioactive companion that orbits and protects.",
-        "category": "Companion",
-        "rarity": "Legendary",
-        "minLevel": 9,
-        "icon": "Bird",
-        "tags": [
-            "companion",
-            "contraband"
-        ]
+        "tags": ["melee"]
     },
     {
         "id": "vampire_rat",
         "name": "Vampire Rat",
-        "description": "Scurries around biting enemies for you.",
+        "description": "Companion that scurries and bites enemies.",
         "category": "Companion",
-        "rarity": "Rare",
+        "rarity": "Uncommon",
         "minLevel": 3,
-        "icon": "Skull",
-        "tags": [
-            "companion",
-            "ritual"
-        ]
+        "tags": ["companion"]
     },
     {
         "id": "pig_luggage",
         "name": "Pig Luggage",
-        "description": "Follows you and occasionally drops ammo/food.",
+        "description": "Companion that drops health pickups.",
         "category": "Companion",
         "rarity": "Uncommon",
         "minLevel": 3,
-        "icon": "Car",
-        "tags": [
-            "companion",
-            "contraband"
-        ]
+        "tags": ["companion"]
+    },
+
+    // === RARE WEAPONS (minLevel 4-6) ===
+    {
+        "id": "kabar",
+        "name": "Kabar Knife",
+        "description": "Armor-piercing blade. High single-target damage.",
+        "category": "ActiveWeapon",
+        "rarity": "Rare",
+        "minLevel": 4,
+        "tags": ["melee"]
     },
     {
-        "id": "lada",
-        "name": "Lada Vehicle",
-        "description": "Periodic armored push. Crust anything in your path.",
-        "category": "Vehicle",
-        "rarity": "Legendary",
-        "minLevel": 11,
-        "icon": "Car",
-        "tags": [
-            "vehicle",
-            "contraband"
-        ]
+        "id": "grail",
+        "name": "Gopnik Grail",
+        "description": "Holy aura that damages nearby enemies.",
+        "category": "ActiveWeapon",
+        "rarity": "Rare",
+        "minLevel": 4,
+        "tags": ["area"]
     },
     {
-        "id": "big_biz_lada",
-        "name": "Big Biz Lada",
-        "description": "Gold plated tankiness. Generates coins while driving.",
-        "category": "Vehicle",
-        "rarity": "Legendary",
-        "minLevel": 15,
-        "icon": "Car",
-        "tags": [
-            "vehicle",
-            "contraband"
-        ]
+        "id": "propaganda_tower",
+        "name": "Propaganda Tower",
+        "description": "Deploy towers that damage and slow enemies.",
+        "category": "Deployable",
+        "rarity": "Rare",
+        "minLevel": 5,
+        "tags": ["deployable"]
     },
     {
         "id": "dadushka_chair",
         "name": "Dadushka Chair",
-        "description": "Comfortable slaughter. Slow but high armor.",
+        "description": "Slow armored vehicle. High defense.",
         "category": "Vehicle",
         "rarity": "Rare",
-        "minLevel": 7,
-        "icon": "Car",
-        "tags": [
-            "vehicle",
-            "contraband"
-        ]
-    },
-    {
-        "id": "gopnik_gondola",
-        "name": "Gopnik Gondola",
-        "description": "Float over enemies. Ignores terrain collision.",
-        "category": "Vehicle",
-        "rarity": "Epic",
-        "minLevel": 12,
-        "icon": "Car",
-        "tags": [
-            "vehicle",
-            "contraband"
-        ]
+        "minLevel": 6,
+        "tags": ["vehicle"]
     },
     {
         "id": "tank_stroller",
         "name": "Tank Stroller",
-        "description": "Heavily armored personal transport.",
+        "description": "Armored transport. Crushes enemies.",
+        "category": "Vehicle",
+        "rarity": "Rare",
+        "minLevel": 6,
+        "tags": ["vehicle"]
+    },
+
+    // === EPIC WEAPONS (minLevel 7-10) ===
+    {
+        "id": "gzhel_smg",
+        "name": "Gzhel SMG",
+        "description": "Rapid bursts with high crit chance.",
+        "category": "ActiveWeapon",
+        "rarity": "Epic",
+        "minLevel": 7,
+        "tags": ["projectile", "gun"]
+    },
+    {
+        "id": "kvass_reactor",
+        "name": "Kvass Reactor",
+        "description": "Deploy healing zones that boost speed.",
+        "category": "Deployable",
+        "rarity": "Epic",
+        "minLevel": 7,
+        "tags": ["deployable"]
+    },
+    {
+        "id": "skull_screen",
+        "name": "Skull Screen",
+        "description": "Orbiting skulls damage nearby enemies.",
+        "category": "ActiveWeapon",
+        "rarity": "Epic",
+        "minLevel": 8,
+        "tags": ["orbital"]
+    },
+    {
+        "id": "gopnik_gondola",
+        "name": "Gopnik Gondola",
+        "description": "Floating vehicle. Ignores terrain.",
         "category": "Vehicle",
         "rarity": "Epic",
+        "minLevel": 9,
+        "tags": ["vehicle"]
+    },
+
+    // === LEGENDARY WEAPONS (minLevel 11+) ===
+    {
+        "id": "visors",
+        "name": "Orthodox Visors",
+        "description": "Devastating holy lasers. High damage.",
+        "category": "ActiveWeapon",
+        "rarity": "Legendary",
         "minLevel": 10,
-        "icon": "Shield",
-        "tags": [
-            "vehicle",
-            "contraband"
-        ]
+        "tags": ["projectile"]
+    },
+    {
+        "id": "nuclear_pigeon",
+        "name": "Nuclear Pigeon",
+        "description": "Radioactive companion. Orbits and nukes.",
+        "category": "Companion",
+        "rarity": "Legendary",
+        "minLevel": 11,
+        "tags": ["companion"]
     },
     {
         "id": "haunted_lada",
         "name": "Haunted Lada",
-        "description": "Ghost car that phases through enemies dealing cold damage.",
+        "description": "Ghost car. Phases through dealing cold damage.",
         "category": "Vehicle",
         "rarity": "Legendary",
-        "minLevel": 13,
-        "icon": "Cloud",
-        "tags": [
-            "vehicle",
-            "ritual"
-        ]
+        "minLevel": 12,
+        "tags": ["vehicle"]
+    },
+    {
+        "id": "big_biz_lada",
+        "name": "Big Biz Lada",
+        "description": "Gold tank. Generates coins while ramming.",
+        "category": "Vehicle",
+        "rarity": "Legendary",
+        "minLevel": 14,
+        "tags": ["vehicle"]
     }
 ];
 

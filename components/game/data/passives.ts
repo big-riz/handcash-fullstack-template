@@ -1,257 +1,145 @@
 const passives = [
+    // === COMMON PASSIVES (minLevel 1) ===
     {
-        "id": "hp",
-        "name": "Old World Heart",
-        "description": "+20 Max Vitality & Full Recovery.",
+        "id": "beer_coin",
+        "name": "Beer Coin",
+        "description": "+0.3 Speed, +1 Armor. Slightly wobbly.",
         "category": "Passive",
         "rarity": "Common",
         "minLevel": 1,
-        "icon": "Heart",
         "statBonus": {
-            "maxHp": 20
-        }
-    },
-    {
-        "id": "speed",
-        "name": "Wild Spirit",
-        "description": "+0.5 Movement Speed.",
-        "category": "Passive",
-        "rarity": "Common",
-        "minLevel": 1,
-        "icon": "Zap",
-        "statBonus": {
-            "moveSpeed": 0.5
-        }
-    },
-    {
-        "id": "magnet",
-        "name": "Amber Stone",
-        "description": "+1.5 Collection Radius.",
-        "category": "Passive",
-        "rarity": "Common",
-        "minLevel": 1,
-        "icon": "Magnet",
-        "statBonus": {
-            "magnet": 1.5
-        }
-    },
-    {
-        "id": "regen",
-        "name": "Health Regen",
-        "description": "+1.0 HP Regeneration per second.",
-        "category": "Passive",
-        "rarity": "Rare",
-        "minLevel": 1,
-        "icon": "Heart",
-        "statBonus": {
-            "regen": 1.0
-        }
-    },
-    {
-        "id": "iron",
-        "name": "Zhelezo\n(Iron)",
-        "description": "+1 Permanent Armor & Knockback Resist.",
-        "category": "Passive",
-        "rarity": "Uncommon",
-        "minLevel": 1,
-        "icon": "Shield",
-        "statBonus": {
+            "moveSpeed": 0.3,
             "armor": 1.0
         }
     },
     {
-        "id": "area",
-        "name": "Vistula Reach",
-        "description": "+15% Ability Area Multiplier.",
+        "id": "boss_shoe",
+        "name": "Boss Shoe",
+        "description": "+0.5 Movement Speed. Walk like a boss.",
         "category": "Passive",
-        "rarity": "Uncommon",
-        "minLevel": 2,
-        "icon": "Circle",
+        "rarity": "Common",
+        "minLevel": 1,
         "statBonus": {
-            "areaMultiplier": 0.15
+            "moveSpeed": 0.5
         }
     },
-    {
-        "id": "damage",
-        "name": "Silver",
-        "description": "+15% Total Damage Multiplier.",
-        "category": "Passive",
-        "rarity": "Rare",
-        "minLevel": 4,
-        "icon": "Beaker",
-        "statBonus": {
-            "damageMultiplier": 0.15
-        }
-    },
-    {
-        "id": "icon",
-        "name": "Ikona\n(Icon)",
-        "description": "+10% Cooldown Reduction.",
-        "category": "Passive",
-        "rarity": "Rare",
-        "minLevel": 7,
-        "icon": "RotateCcw",
-        "statBonus": {
-            "cooldownMultiplier": -0.10
-        }
-    },
-    {
-        "id": "garlic_ring",
-        "name": "Garlic Ring",
-        "description": "+10% Ability Area. Required for Soul Siphon.",
-        "category": "Passive",
-        "rarity": "Rare",
-        "minLevel": 3,
-        "icon": "Circle",
-        "statBonus": {
-            "areaMultiplier": 0.10
-        }
-    },
-    {
-        "id": "salt_passive",
-        "name": "Sol\n(Salt)",
-        "description": "+10% Area & +5% Damage.",
-        "category": "Passive",
-        "rarity": "Uncommon",
-        "minLevel": 5,
-        "icon": "Circle",
-        "statBonus": {
-            "areaMultiplier": 0.10,
-            "damageMultiplier": 0.05
-        }
-    },
-    {
-        "id": "silver",
-        "name": "Srebro\n(Silver)",
-        "description": "+15% Total Damage Multiplier.",
-        "category": "Passive",
-        "rarity": "Rare",
-        "minLevel": 4,
-        "icon": "Beaker",
-        "statBonus": {
-            "damageMultiplier": 0.15
-        }
-    },
+
+    // === UNCOMMON PASSIVES (minLevel 2-3) ===
     {
         "id": "dove_coin",
         "name": "Dove Coin",
-        "description": "Increases Luck by 20%. Birds love you.",
+        "description": "+20% Luck. Better drops and crits.",
         "category": "Passive",
         "rarity": "Uncommon",
         "minLevel": 2,
-        "icon": "Bird",
         "statBonus": {
             "luck": 0.2
         }
     },
     {
-        "id": "beer_coin",
-        "name": "Beer Coin",
-        "description": "Slight movement wobbly speed (+0.2) and damage reduction.",
+        "id": "garlic_ring",
+        "name": "Garlic Ring",
+        "description": "+15% Ability Area. Smells powerful.",
         "category": "Passive",
-        "rarity": "Common",
-        "minLevel": 1,
-        "icon": "Beaker",
+        "rarity": "Uncommon",
+        "minLevel": 2,
         "statBonus": {
-            "moveSpeed": 0.2,
-            "armor": 1.0
+            "areaMultiplier": 0.15
         }
     },
+
+    // === RARE PASSIVES (minLevel 3-5) ===
     {
         "id": "holy_bread",
         "name": "Holy Bread",
-        "description": "Increases Max Health by 50.",
+        "description": "+40 Max Health. Blessed sustenance.",
         "category": "Passive",
         "rarity": "Rare",
         "minLevel": 3,
-        "icon": "Heart",
         "statBonus": {
-            "maxHp": 50
-        }
-    },
-    {
-        "id": "holy_cheese",
-        "name": "Holy Cheese",
-        "description": "Tasty regeneration. +2.0 HP/sec.",
-        "category": "Passive",
-        "rarity": "Epic",
-        "minLevel": 6,
-        "icon": "Heart",
-        "statBonus": {
-            "regen": 2.0
-        }
-    },
-    {
-        "id": "sunflower_pouch",
-        "name": "Infinite Sunflower Pouch",
-        "description": "Seeds everywhere. +1 Amount to all projectiles.",
-        "category": "Passive",
-        "rarity": "Legendary",
-        "minLevel": 9,
-        "icon": "Cloud",
-        "statBonus": {
-            "amount": 1
-        }
-    },
-    {
-        "id": "infinity_purse",
-        "name": "Babushka's Infinity Purse",
-        "description": "Deep pockets. +50% Greed (Gold Gain).",
-        "category": "Passive",
-        "rarity": "Epic",
-        "minLevel": 7,
-        "icon": "Trophy",
-        "statBonus": {
-            "greed": 0.5
-        }
-    },
-    {
-        "id": "spy_hat",
-        "name": "Gopnik Spy Hat",
-        "description": "See further. +20% Vision Range and Crit Chance.",
-        "category": "Passive",
-        "rarity": "Epic",
-        "minLevel": 6,
-        "icon": "Crosshair",
-        "statBonus": {
-            "crit": 0.2
-        }
-    },
-    {
-        "id": "pickled_gpu",
-        "name": "Pickled GPU",
-        "description": "Overclocked fermentation. -15% Cooldowns.",
-        "category": "Passive",
-        "rarity": "Legendary",
-        "minLevel": 10,
-        "icon": "Zap",
-        "statBonus": {
-            "cooldownMultiplier": -0.15
+            "maxHp": 40
         }
     },
     {
         "id": "battle_scarf",
         "name": "Babushka's Battle Scarf",
-        "description": "Warm and plotted. +3 Armor and slows attackers.",
+        "description": "+3 Armor. Warm and protective.",
         "category": "Passive",
         "rarity": "Rare",
-        "minLevel": 5,
-        "icon": "Shield",
+        "minLevel": 4,
         "statBonus": {
             "armor": 3.0
+        }
+    },
+
+    // === EPIC PASSIVES (minLevel 6-8) ===
+    {
+        "id": "holy_cheese",
+        "name": "Holy Cheese",
+        "description": "+2.0 HP/sec Regeneration. Blessed dairy.",
+        "category": "Passive",
+        "rarity": "Epic",
+        "minLevel": 5,
+        "statBonus": {
+            "regen": 2.0
+        }
+    },
+    {
+        "id": "spy_hat",
+        "name": "Gopnik Spy Hat",
+        "description": "+20% Critical Hit Chance. See everything.",
+        "category": "Passive",
+        "rarity": "Epic",
+        "minLevel": 6,
+        "statBonus": {
+            "crit": 0.2
+        }
+    },
+    {
+        "id": "infinity_purse",
+        "name": "Babushka's Infinity Purse",
+        "description": "+20% Experience Gain. Bottomless knowledge.",
+        "category": "Passive",
+        "rarity": "Epic",
+        "minLevel": 7,
+        "statBonus": {
+            "growth": 0.2
         }
     },
     {
         "id": "ruby_ushanka",
         "name": "Ruby Ushanka",
-        "description": "Stylish protection. +2 Armor and +10% Damage.",
+        "description": "+2 Armor, +15% Damage. Royal headwear.",
         "category": "Passive",
         "rarity": "Epic",
         "minLevel": 8,
-        "icon": "Shield",
         "statBonus": {
             "armor": 2.0,
-            "damageMultiplier": 0.1
+            "damageMultiplier": 0.15
+        }
+    },
+
+    // === LEGENDARY PASSIVES (minLevel 9+) ===
+    {
+        "id": "sunflower_pouch",
+        "name": "Infinite Sunflower Pouch",
+        "description": "+1 Projectile to all weapons. Seeds forever.",
+        "category": "Passive",
+        "rarity": "Legendary",
+        "minLevel": 9,
+        "statBonus": {
+            "amount": 1
+        }
+    },
+    {
+        "id": "pickled_gpu",
+        "name": "Pickled GPU",
+        "description": "-20% Cooldowns. Overclocked fermentation.",
+        "category": "Passive",
+        "rarity": "Legendary",
+        "minLevel": 10,
+        "statBonus": {
+            "cooldownMultiplier": -0.20
         }
     }
 ];

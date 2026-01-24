@@ -15,3 +15,21 @@
 [2026-01-24] [UPD] Enhanced touch controls with smooth virtual joystick mechanics
 [2026-01-24] [UPD] Hide header and borders on mobile during active gameplay for full-screen immersion
 [2026-01-24] [UPD] Changed touch controls to direct position - tap and hold to move towards that spot
+[2026-01-24] [UPD] Integrated database item template images into level-up upgrade cards
+[2026-01-24] [FIX] Fixed item name mismatch (TT33 Handgun â†’ TT33 Pistol) for database image matching
+[2026-01-24] [UPD] Completed item name audit - all 31 database items match game perfectly
+[2026-01-24] [UPD] Added debug logging to track image loading in level-up system
+[2026-01-24] [FIX] Fixed item icon log spam during template loading
+[2026-01-24] [FIX] Fixed stale closure issue preventing item icons from displaying
+[2026-01-24] [UPD] Renamed items to English-only names (removed Polish/Slavic names)
+[2026-01-24] [UPD] Reworked all items to use template images (21 actives, 12 passives, 33 total)
+[2026-01-24] [UPD] Added pastel glow effects to buff icons (orange for actives, blue for passives)
+[2026-01-24] [UPD] Enlarged starting weapon icons on character select (w-12 mobile, w-20 desktop)
+[2026-01-24] [REM] Removed character portrait images from character select and history
+[2026-01-24] [UPD] All ranged weapons now auto-target nearest enemy, differentiated by speed/damage/range
+[2026-01-24] [FIX] Fixed passives not appearing in upgrade menu - updated world allowedUpgrades
+[2026-01-24] [UPD] Balanced all weapons DPS: minLevel 1=30 DPS, +5 DPS per minLevel
+[2026-01-24] [UPD] Increased all enemy health by 1.3x for balance
+[2026-01-24] [ADD] Added health bars above all enemies (green to red gradient)
+[2026-01-24] [FIX] Fixed duplicate Level X text in upgrade descriptions
+[2026-01-24] [UPD] Implemented arc swing animations for melee weapons (shank, knuckles, soviet_stick)

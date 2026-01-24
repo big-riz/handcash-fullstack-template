@@ -39,7 +39,8 @@ import {
     ArrowLeft,
     FastForward,
     Minimize2,
-    Maximize2
+    Maximize2,
+    Lock
 } from "lucide-react"
 import * as THREE from "three"
 import { GameLoop } from "./core/GameLoop"
@@ -64,6 +65,8 @@ interface CharacterInfo {
     description: string
     startingWeapon: string
     sprite: string
+    unlockPrice?: number
+    isUnlocked?: boolean
     stats?: {
         maxHp?: number
         moveSpeed?: number
@@ -71,6 +74,9 @@ interface CharacterInfo {
         area?: number
         luck?: number
         curse?: number
+        greed?: number
+        regen?: number
+        cooldownMultiplier?: number
     }
 }
 
@@ -108,27 +114,7 @@ const getItemInfo = (id: string) => {
     return { name: id, desc: "A mysterious power." }
 }
 
-const renderItemIcon = (id: string, className = "w-6 h-6") => {
-    const meta = getItemMetadata(id)
-    const iconKey = meta?.icon || 'Circle'
-    const Icon = iconMap[iconKey] || Circle
-
-    let colorClass = "text-primary"
-    let animationClass = ""
-
-    // Special item styling
-    if (id === 'area') colorClass = "text-cyan-400"
-    if (id === 'damage') colorClass = "text-purple-400"
-    if (id === 'regen') { colorClass = "text-red-400"; animationClass = "animate-pulse" }
-    if (id === 'soul_siphon') { colorClass = "text-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]" }
-    if (id === 'melter') { colorClass = "text-lime-400"; animationClass = "animate-pulse" }
-    if (id === 'ak_corrupted') colorClass = "text-red-600"
-    if (id === 'ak_mushroom') colorClass = "text-purple-400"
-    if (id === 'nuclear_pigeon') colorClass = "text-green-400"
-    if (id === 'lada') colorClass = "text-gray-400"
-
-    return <Icon className={`${className} ${colorClass} ${animationClass}`} />
-}
+// Item icon rendering now handled by renderTemplateIcon inside component
 
 export function SlavicSurvivors() {
     const containerRef = useRef<HTMLDivElement>(null)
@@ -161,6 +147,9 @@ export function SlavicSurvivors() {
     const [replaySpeed, setReplaySpeed] = useState(1)
     const [isMobile, setIsMobile] = useState(false)
     const [isFullscreen, setIsFullscreen] = useState(false)
+    const [banishedItems, setBanishedItems] = useState<Set<string>>(new Set())
+    const [unlockedCharacters, setUnlockedCharacters] = useState<Set<string>>(new Set(['gopnik']))
+    const [newHeroUnlocked, setNewHeroUnlocked] = useState<string | null>(null)
 
     const replayPausedRef = useRef(false)
     useEffect(() => { replayPausedRef.current = replayPaused }, [replayPaused])
@@ -195,10 +184,94 @@ export function SlavicSurvivors() {
     const obstaclesRef = useRef<{ x: number, z: number, radius: number }[]>([])
     const [itemTemplates, setItemTemplates] = useState<ItemTemplate[]>([])
 
+    // Cache missing items to avoid spamming logs
+    const missingItemsRef = useRef<Set<string>>(new Set())
+
+    // Store templates in a ref for stable access from callbacks
+    const itemTemplatesRef = useRef<ItemTemplate[]>([])
+    useEffect(() => {
+        itemTemplatesRef.current = itemTemplates
+    }, [itemTemplates])
+
     const getItemIcon = (id: string, name: string): string | undefined => {
-        if (!itemTemplates.length) return undefined
-        const match = itemTemplates.find(t => t.name.toLowerCase() === name.toLowerCase())
+        // Use ref to get latest templates (avoids stale closure issues)
+        const templates = itemTemplatesRef.current
+        if (!templates.length) {
+            // Don't log here to avoid spam on initial load
+            return undefined
+        }
+
+        // Normalize name for better matching (remove line breaks, extra spaces)
+        const normalizeName = (n: string) => n.toLowerCase().replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
+        const normalizedSearchName = normalizeName(name)
+
+        // Try exact match first
+        let match = templates.find(t => normalizeName(t.name) === normalizedSearchName)
+
+        // Try partial match if exact doesn't work
+        if (!match) {
+            match = templates.find(t => {
+                const templateName = normalizeName(t.name)
+                return templateName.includes(normalizedSearchName) || normalizedSearchName.includes(templateName)
+            })
+        }
+
+        // Try matching by key words (e.g., "TT33" matches "TT33 Handgun" or "TT33 Pistol")
+        if (!match) {
+            const searchWords = normalizedSearchName.split(' ').filter(w => w.length > 2)
+            match = templates.find(t => {
+                const templateWords = normalizeName(t.name).split(' ')
+                return searchWords.some(sw => templateWords.some(tw => tw.includes(sw) || sw.includes(tw)))
+            })
+        }
+
+        if (match) {
+            console.log(`[ItemIcon] ✅ Matched "${name}" → "${match.name}" (${match.imageUrl ? 'has image' : 'no image'})`)
+        } else {
+            if (!missingItemsRef.current.has(name)) {
+                console.log(`[ItemIcon] ❌ No match found for: ${name}`)
+                missingItemsRef.current.add(name)
+            }
+        }
+
         return match ? (match.imageUrl || undefined) : undefined
+    }
+
+    // Render item icon using template images (component-level, has access to templates)
+    const renderTemplateIcon = (id: string, className = "w-6 h-6", showGlow = true) => {
+        const meta = getItemMetadata(id)
+        const name = meta?.name || id
+        const imageUrl = getItemIcon(id, name)
+
+        // Determine if active (weapon) or passive for glow color
+        const isWeapon = activeData.some(a => a.id === id)
+        const glowColor = isWeapon
+            ? 'shadow-[0_0_12px_rgba(251,146,60,0.6)]' // Orange/amber glow for actives
+            : 'shadow-[0_0_12px_rgba(147,197,253,0.6)]' // Blue glow for passives
+        const bgGlow = isWeapon
+            ? 'bg-gradient-to-br from-orange-400/30 to-red-500/20'
+            : 'bg-gradient-to-br from-blue-400/30 to-cyan-500/20'
+
+        if (imageUrl) {
+            return (
+                <div className={`${className} relative rounded-lg overflow-hidden ${showGlow ? glowColor : ''}`}>
+                    {showGlow && <div className={`absolute inset-0 ${bgGlow} rounded-lg`} />}
+                    <img
+                        src={imageUrl}
+                        alt={name}
+                        className="w-full h-full object-cover rounded-lg relative z-10"
+                    />
+                </div>
+            )
+        }
+
+        // Fallback: colored placeholder based on item type
+        const bgColor = isWeapon ? 'bg-orange-500/40' : 'bg-blue-500/40'
+        return (
+            <div className={`${className} ${bgColor} rounded-lg flex items-center justify-center text-white/80 text-xs font-bold ${showGlow ? glowColor : ''}`}>
+                {name.charAt(0).toUpperCase()}
+            </div>
+        )
     }
 
     // Camera follow
@@ -215,9 +288,9 @@ export function SlavicSurvivors() {
 
         const handleFullscreenChange = () => {
             const isFs = !!(
-                document.fullscreenElement || 
-                (document as any).webkitFullscreenElement || 
-                (document as any).mozFullScreenElement || 
+                document.fullscreenElement ||
+                (document as any).webkitFullscreenElement ||
+                (document as any).mozFullScreenElement ||
                 (document as any).msFullscreenElement
             )
             setIsFullscreen(isFs)
@@ -227,7 +300,7 @@ export function SlavicSurvivors() {
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
         document.addEventListener('mozfullscreenchange', handleFullscreenChange)
         document.addEventListener('MSFullscreenChange', handleFullscreenChange)
-        
+
         return () => {
             document.removeEventListener('fullscreenchange', handleFullscreenChange)
             document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
@@ -245,11 +318,11 @@ export function SlavicSurvivors() {
                 try {
                     const elem = document.documentElement
                     const isAlreadyFullscreen = !!(
-                        document.fullscreenElement || 
-                        (document as any).webkitFullscreenElement || 
+                        document.fullscreenElement ||
+                        (document as any).webkitFullscreenElement ||
                         (document as any).mozFullScreenElement
                     )
-                    
+
                     if (!isAlreadyFullscreen) {
                         if (elem.requestFullscreen) {
                             await elem.requestFullscreen()
@@ -259,7 +332,7 @@ export function SlavicSurvivors() {
                             await (elem as any).mozRequestFullScreen()
                         }
                     }
-                    
+
                     // Lock to landscape if supported
                     if (screen.orientation && 'lock' in screen.orientation) {
                         try {
@@ -277,11 +350,11 @@ export function SlavicSurvivors() {
         const exitFullscreen = async () => {
             if (gameState === "menu" || gameState === "characterSelect" || gameState === "gameOver" || gameState === "gameVictory" || gameState === "leaderboard" || gameState === "myHistory") {
                 const isFullscreen = !!(
-                    document.fullscreenElement || 
-                    (document as any).webkitFullscreenElement || 
+                    document.fullscreenElement ||
+                    (document as any).webkitFullscreenElement ||
                     (document as any).mozFullScreenElement
                 )
-                
+
                 if (isFullscreen) {
                     try {
                         if (document.exitFullscreen) {
@@ -295,7 +368,7 @@ export function SlavicSurvivors() {
                         // Exit fullscreen failed
                     }
                 }
-                
+
                 // Unlock orientation
                 if (screen.orientation && 'unlock' in screen.orientation) {
                     try {
@@ -624,6 +697,20 @@ export function SlavicSurvivors() {
                     const currentWorld = WORLDS.find(w => w.id === selectedWorldId) || WORLDS[0]
                     if (currentWorld.winCondition === 'level' && p.stats.level >= currentWorld.maxLevel && !allowPostVictoryRef.current) {
                         setGameState("gameVictory")
+
+                        // Sequential Unlock: Unlock the next character in the array
+                        const currentIndex = characterData.findIndex(c => c.id === selectedCharacterId);
+                        if (currentIndex !== -1 && currentIndex < characterData.length - 1) {
+                            const nextChar = characterData[currentIndex + 1];
+                            setUnlockedCharacters(prev => {
+                                if (prev.has(nextChar.id)) return prev;
+                                setNewHeroUnlocked(nextChar.name);
+                                const next = new Set(prev);
+                                next.add(nextChar.id);
+                                return next;
+                            });
+                        }
+
                         if (replayRef.current) {
                             replayRef.current.finish(p.stats.level, Math.floor(gameTimeRef.current))
                         }
@@ -725,18 +812,38 @@ export function SlavicSurvivors() {
         fetchGlobalScores()
 
         // Fetch item templates for icons
+        console.log("[ItemTemplates] Fetching from /api/pool-stats...")
         fetch("/api/pool-stats")
             .then(res => res.json())
             .then(data => {
+                console.log("[ItemTemplates] API Response:", data)
                 if (data.success && data.pools) {
                     const defaultPool = data.pools.find((p: any) => p.poolName === 'default')
                     if (defaultPool) {
+                        console.log(`[ItemTemplates] Loaded ${defaultPool.items.length} templates from default pool`)
                         setItemTemplates(defaultPool.items)
+                    } else {
+                        console.warn("[ItemTemplates] No default pool found")
                     }
+                } else {
+                    console.warn("[ItemTemplates] Invalid API response")
                 }
             })
-            .catch(err => console.error("Failed to fetch templates:", err))
+            .catch(err => console.error("[ItemTemplates] Failed to fetch:", err))
+
+        // Load Meta Progression
+        const savedChars = localStorage.getItem('slavic_unlocked_chars')
+        if (savedChars) {
+            try {
+                const charArray = JSON.parse(savedChars)
+                if (Array.isArray(charArray)) setUnlockedCharacters(new Set(charArray))
+            } catch (e) { }
+        }
     }, [])
+
+    useEffect(() => {
+        localStorage.setItem('slavic_unlocked_chars', JSON.stringify(Array.from(unlockedCharacters)))
+    }, [unlockedCharacters])
 
     const fetchUserHistory = async () => {
         if (!user) return
@@ -791,7 +898,7 @@ export function SlavicSurvivors() {
             const res = await fetch('/api/comments', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     content: newComment.trim(),
                     parentId: parentId || null
                 })
@@ -928,6 +1035,7 @@ export function SlavicSurvivors() {
             p.stats.level = 1
             p.stats.xp = 0
             p.stats.xpToNextLevel = 25
+            setBanishedItems(new Set())
             p.stats.moveSpeed = 8.0
             p.stats.magnet = 2.5
             p.stats.armor = 0
@@ -950,6 +1058,8 @@ export function SlavicSurvivors() {
                 p.stats.damageMultiplier = character.stats.might || 1.0
                 p.stats.luck = character.stats.luck || 1.0
                 p.stats.curse = character.stats.curse || 1.0
+                p.stats.regen = character.stats.regen || 0
+                p.stats.cooldownMultiplier = character.stats.cooldownMultiplier || 1.0
             }
 
             setPlayerHp(p.stats.currentHp)
@@ -1081,32 +1191,36 @@ export function SlavicSurvivors() {
         const ownedItems = as.getUpgrades().map(u => u.id)
 
         const actives = activeData.filter(a => {
+            if (banishedItems.has(a.id)) return false
             const isAllowed = allowed.includes('all') || allowed.includes(a.id)
             const isOwned = ownedItems.includes(a.id)
             return isAllowed || isOwned
         }).map(a => {
-            const Icon = iconMap[a.icon] || Circle
+            const imageUrl = getItemIcon(a.id, a.name)
             return {
                 id: a.id,
                 title: a.name,
                 desc: a.description,
                 minLevel: a.minLevel,
-                icon: <Icon className={`w-10 h-10 md:w-12 md:h-12 ${a.rarity === 'Legendary' ? 'text-yellow-400' : 'text-white'}`} />
+                imageUrl: imageUrl,
+                rarity: (a as any).rarity || 'Common'
             }
         })
 
         const passives = passiveData.filter(p => {
+            if (banishedItems.has(p.id)) return false
             const isAllowed = allowed.includes('all') || allowed.includes(p.id)
             const isOwned = ownedItems.includes(p.id)
             return isAllowed || isOwned
         }).map(p => {
-            const Icon = iconMap[p.icon] || Circle
+            const imageUrl = getItemIcon(p.id, p.name)
             return {
                 id: p.id,
                 title: p.name,
                 desc: p.description,
                 minLevel: p.minLevel,
-                icon: <Icon className="w-10 h-10 md:w-12 md:h-12 text-white" />
+                imageUrl: imageUrl,
+                rarity: (p as any).rarity || 'Common'
             }
         })
 
@@ -1119,14 +1233,18 @@ export function SlavicSurvivors() {
             else if (evo.evolvedAbility === 'silver_tt33') title = "Silver TT33"
             else if (evo.evolvedAbility === 'melter') title = "The Melter"
 
+            const imageUrl = getItemIcon(evo.evolvedAbility, title)
+
             return {
                 id: `evolve_${evo.evolvedAbility}`,
                 title: title,
                 desc: "ULTIMATE EVOLUTION: Massive power spike!",
-                icon: <Trophy className="text-yellow-400 w-10 h-10 md:w-12 md:h-12 animate-bounce" />
+                imageUrl: imageUrl,
+                rarity: 'Evolution'
             }
         })
 
+        // Filter by capacity (can only take new if space available)
         const validActives = actives.filter(a => {
             const level = as.getAbilityLevel(a.id as any)
             if (level === 0) {
@@ -1145,25 +1263,61 @@ export function SlavicSurvivors() {
             return level < 5
         })
 
-        let allPool = [...validActives, ...validPassives]
+        const rarities: Record<string, number> = {
+            'Common': 100,
+            'Uncommon': 60,
+            'Rare': 30,
+            'Epic': 15,
+            'Legendary': 5,
+            'Evolution': 2
+        }
 
-        // Update descriptions to show current level
-        let finalChoices = allPool.map(choice => {
-            const isPassive = passives.some(p => p.id === choice.id)
-            const level = isPassive ? as.getPassiveLevel(choice.id as any) : as.getAbilityLevel(choice.id as any)
-            const nextLevelDescription = as.getUpgradeDescription(choice.id, level + 1)
-            return {
-                ...choice,
-                desc: level > 0 ? `Level ${level + 1}: ${nextLevelDescription}` : `New: ${nextLevelDescription}`
+        // Combine all candidates into a weighted pool
+        const poolWithWeights = [
+            ...validActives.map(item => ({ item, weight: rarities[item.rarity] || 100 })),
+            ...validPassives.map(item => ({ item, weight: rarities[item.rarity] || 100 })),
+            ...evos.map(item => ({ item, weight: rarities['Evolution'] || 2 }))
+        ]
+
+        // Weighted Random Selection
+        const rng = rngRef.current || { next: () => Math.random() }
+        const result: any[] = []
+
+        while (result.length < 5 && poolWithWeights.length > 0) {
+            const totalWeight = poolWithWeights.reduce((sum, entry) => sum + entry.weight, 0)
+            let random = rng.next() * totalWeight
+
+            let foundIndex = -1
+            for (let i = 0; i < poolWithWeights.length; i++) {
+                random -= poolWithWeights[i].weight
+                if (random <= 0) {
+                    foundIndex = i
+                    break
+                }
             }
-        })
 
-        // Shuffle and take 4 (including evos) using deterministic RNG
-        const rng = rngRef.current
-        finalChoices = finalChoices.sort(() => (rng ? rng.next() : Math.random()) - 0.5)
-        const result = [...evos]
-        while (result.length < 4 && finalChoices.length > 0) {
-            result.push(finalChoices.shift()!)
+            if (foundIndex !== -1) {
+                const selectedEntry = poolWithWeights.splice(foundIndex, 1)[0]
+                const selected = selectedEntry.item
+
+                // Get description for the item (New vs Level X)
+                const isPassiveProp = passiveData.some(p => p.id === selected.id)
+                const isEvo = selected.id.startsWith('evolve_')
+
+                let desc = selected.desc
+                if (!isEvo) {
+                    const level = isPassiveProp ? as.getPassiveLevel(selected.id as any) : as.getAbilityLevel(selected.id as any)
+                    const nextLevelDescription = as.getUpgradeDescription(selected.id, level + 1)
+                    desc = level > 0 ? `Level ${level + 1}: ${nextLevelDescription}` : `New: ${nextLevelDescription}`
+                }
+
+                result.push({
+                    ...selected,
+                    desc
+                })
+            } else {
+                break
+            }
         }
 
         return result
@@ -1206,7 +1360,10 @@ export function SlavicSurvivors() {
                 <div className="bg-card/80 backdrop-blur-md border border-border rounded-2xl p-4 shadow-xl mx-4 flex justify-between items-center">
                     <div>
                         <h2 className="text-2xl font-black italic uppercase tracking-tighter text-primary leading-none">Slavic Survivors</h2>
-                        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">Authentic Folklore Rogue-lite</p>
+                        <div className="flex items-center gap-2 mt-1">
+                            <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest opacity-60">Authentic Folklore Rogue-lite</p>
+                            <div className="w-1 h-1 bg-white/20 rounded-full" />
+                        </div>
                     </div>
                     <div className="flex gap-2">
                         {gameState === "menu" && <Button onClick={() => setGameState("playing")} size="default" className="bg-primary hover:bg-primary/90 font-black px-6 h-10">START HUNT</Button>}
@@ -1265,7 +1422,7 @@ export function SlavicSurvivors() {
                                             </div>
 
                                             <div className="group-hover:scale-110 transition-transform">
-                                                {renderItemIcon(item.id, isMobile ? "w-4 h-4" : "w-6 h-6")}
+                                                {renderTemplateIcon(item.id, isMobile ? "w-4 h-4" : "w-6 h-6")}
                                             </div>
                                             <div className={`absolute ${isMobile ? '-bottom-1 -right-1' : '-bottom-2 -right-2'} bg-primary text-black ${isMobile ? 'text-[8px] px-1' : 'text-[10px] px-1.5'} font-black rounded-full border border-black ring-2 ring-primary/20 shadow-lg`}>
                                                 {item.level}
@@ -1336,16 +1493,16 @@ export function SlavicSurvivors() {
                 {/* Mobile Controls (Bottom) */}
                 {isMobile && (gameState === "playing" || gameState === "paused") && (
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 pointer-events-auto z-40">
-                        <Button 
-                            onClick={() => setGameState(gameState === "paused" ? "playing" : "paused")} 
-                            size="icon" 
+                        <Button
+                            onClick={() => setGameState(gameState === "paused" ? "playing" : "paused")}
+                            size="icon"
                             className="h-14 w-14 rounded-2xl bg-black/80 backdrop-blur-md border-2 border-white/20 hover:bg-white/10 text-white shadow-lg"
                         >
                             {gameState === "paused" ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
                         </Button>
-                        <Button 
-                            onClick={() => { resetGame(); setGameState("menu"); }} 
-                            size="icon" 
+                        <Button
+                            onClick={() => { resetGame(); setGameState("menu"); }}
+                            size="icon"
                             className="h-14 w-14 rounded-2xl bg-black/80 backdrop-blur-md border-2 border-white/20 hover:bg-white/10 text-white shadow-lg"
                         >
                             <RotateCcw className="w-6 h-6" />
@@ -1371,13 +1528,10 @@ export function SlavicSurvivors() {
                             <StatRow label="Magnet" value={playerRef.current?.stats.magnet.toFixed(1)} icon={<Magnet className="w-4 h-4 text-blue-300" />} />
                             <StatRow label="Luck" value={`${Math.round(playerRef.current?.stats.luck! * 100)}%`} icon={<Gift className="w-4 h-4 text-emerald-400" />} />
                             <StatRow label="Growth" value={`${Math.round(playerRef.current?.stats.growth! * 100)}%`} icon={<Trophy className="w-4 h-4 text-amber-300" />} />
-                            <StatRow label="Greed" value={`${Math.round(playerRef.current?.stats.greed! * 100)}%`} icon={<CircleDot className="w-4 h-4 text-yellow-500" />} />
                             <StatRow label="Curse" value={`${Math.round(playerRef.current?.stats.curse! * 100)}%`} icon={<Skull className="w-4 h-4 text-purple-900" />} />
-                            <div className="pt-2 border-t border-white/10 grid grid-cols-4 gap-1 text-center text-xs">
+                            <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-1 text-center text-xs">
                                 <div className="flex flex-col items-center"><span className="text-white/50">Rev</span><span>{playerRef.current?.stats.revivals}</span></div>
                                 <div className="flex flex-col items-center"><span className="text-white/50">Rer</span><span>{playerRef.current?.stats.rerolls}</span></div>
-                                <div className="flex flex-col items-center"><span className="text-white/50">Skp</span><span>{playerRef.current?.stats.skips}</span></div>
-                                <div className="flex flex-col items-center"><span className="text-white/50">Ban</span><span>{playerRef.current?.stats.banishes}</span></div>
                             </div>
                         </div>
                     </div>
@@ -1450,124 +1604,66 @@ export function SlavicSurvivors() {
                             <p className={`text-white/40 font-mono ${isMobile ? 'text-[10px]' : 'text-sm'} tracking-widest uppercase`}>Select a hero to brave the {WORLDS.find(w => w.id === selectedWorldId)?.name}</p>
                         </div>
 
-                        {isMobile ? (
-                            <>
-                            <div className="flex gap-3 overflow-x-auto w-full px-2 snap-x snap-mandatory mb-6 pb-4 scrollbar-hide">
-                                {characterData.map(char => (
+                        <div className="flex gap-6 overflow-x-auto w-full px-10 snap-x snap-mandatory mb-10 pb-8 scrollbar-hide no-scrollbar">
+                            {characterData.map((char, index) => {
+                                const isUnlocked = unlockedCharacters.has(char.id)
+                                const prevChar = index > 0 ? characterData[index - 1] : null
+                                return (
                                     <div
                                         key={char.id}
-                                        onClick={() => setSelectedCharacterId(char.id)}
-                                        className={`cursor-pointer border-4 rounded-2xl p-4 min-w-[280px] transition-all relative overflow-hidden snap-center flex-shrink-0
-                                            ${selectedCharacterId === char.id
-                                                ? 'border-primary bg-primary/10 scale-105 shadow-[0_0_40px_rgba(255,100,0,0.3)]'
-                                                : 'border-white/10 bg-white/5'}`}
+                                        onClick={() => isUnlocked && setSelectedCharacterId(char.id)}
+                                        className={`cursor-pointer border-4 rounded-[2.5rem] p-6 transition-all relative overflow-hidden group flex flex-col min-w-[320px] md:min-w-[380px] snap-center
+                                        ${selectedCharacterId === char.id
+                                                ? 'border-primary bg-primary/10 scale-105 z-10 shadow-[0_0_40px_rgba(255,100,0,0.3)]'
+                                                : !isUnlocked
+                                                    ? 'border-white/5 bg-black/40 grayscale'
+                                                    : 'border-white/10 bg-white/5 hover:border-white/30 hover:bg-white/10'}`}
                                     >
-                                        <div className="flex flex-col items-center text-center justify-center mb-4 relative">
-                                            <div className={`w-24 h-24 rounded-full bg-black/50 overflow-hidden border-4 ${selectedCharacterId === char.id ? 'border-primary' : 'border-white/10'} mb-3 shadow-2xl relative`}>
-                                                <div className="absolute inset-0 opacity-50 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/20 to-transparent" />
-                                                <div className="absolute inset-0 flex items-center justify-center font-black text-4xl text-white/5 uppercase select-none">{char.id.slice(0, 2)}</div>
-                                                <div className={`w-full h-full bg-cover bg-center transition-all duration-700 ${selectedCharacterId === char.id && 'scale-110'}`} style={{ backgroundImage: `url(/sprites/${char.sprite}.png)` }} />
-                                            </div>
-                                            <h3 className="font-black italic uppercase text-xl text-white mb-1 leading-none">{char.name}</h3>
-                                            <p className="text-white/60 text-xs font-medium leading-tight px-2 mb-3 line-clamp-2">{char.description}</p>
+                                        <div className="flex-1 flex flex-col items-center text-center justify-center mb-6 relative">
+                                            <h3 className="font-black italic uppercase text-2xl md:text-3xl text-white mb-2 leading-none">{char.name}</h3>
+                                            <p className="text-white/60 text-sm font-medium leading-relaxed px-2 mb-4">{char.description}</p>
 
                                             {/* Starting Weapon Badge */}
-                                            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-2 py-1 rounded-full mb-2">
-                                                <span className="text-[8px] font-black text-primary uppercase tracking-tighter">START</span>
-                                                <div className="flex items-center gap-1">
-                                                    {renderItemIcon(char.startingWeapon, "w-3 h-3")}
-                                                    <span className="text-[8px] font-bold text-white uppercase truncate max-w-[80px]">
-                                                        {getItemInfo(char.startingWeapon).name}
-                                                    </span>
-                                                </div>
+                                            <div className="flex flex-col items-center gap-3 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl mb-4">
+                                                <span className="text-xs font-black text-primary uppercase tracking-widest">STARTING WEAPON</span>
+                                                {renderTemplateIcon(char.startingWeapon, "w-16 h-16")}
+                                                <span className="text-sm font-bold text-white uppercase text-center leading-tight">
+                                                    {getItemInfo(char.startingWeapon).name}
+                                                </span>
                                             </div>
                                         </div>
 
-                                        <div className="bg-black/40 rounded-xl p-2 border border-white/5 space-y-1">
-                                            <div className="flex justify-between text-[9px] font-mono font-bold text-white/40 border-b border-white/5 pb-1 mb-1">
-                                                <span>STATS</span>
-                                                <span>MOD</span>
-                                            </div>
+                                        {/* Stats List */}
+                                        <div className="bg-black/40 rounded-3xl p-4 border border-white/5 space-y-2 mb-4">
                                             {Object.entries(char.stats || {}).map(([key, val]: [string, any]) => (
-                                                <div key={key} className="flex justify-between text-xs items-center">
-                                                    <span className="uppercase text-white/60 font-bold text-[9px] tracking-wider">{key}</span>
-                                                    <span className={`font-mono font-bold text-[10px] ${val > 1 ? 'text-green-400' : val < 1 ? 'text-red-400' : 'text-white/40'}`}>
-                                                        {val === 1 ? '-' : val > 1 ? `+${Math.round((val - 1) * 100)}%` : `-${Math.round((1 - val) * 100)}%`}
+                                                <div key={key} className="flex justify-between text-sm items-center">
+                                                    <span className="uppercase text-white/40 font-black text-[10px] tracking-[0.2em]">{key}</span>
+                                                    <span className={`font-mono font-black text-xs ${val > 1 ? 'text-green-400' : val < 0 ? 'text-red-400' : val < 1 && key !== 'cooldownMultiplier' ? 'text-red-400' : val < 1 && key === 'cooldownMultiplier' ? 'text-green-400' : 'text-white/20'}`}>
+                                                        {val === 1 ? '-' : val > 1 ? `+${Math.round((val - 1) * 100)}%` : val < 0 ? `${val}/s` : `-${Math.round((1 - val) * 100)}%`}
                                                     </span>
                                                 </div>
                                             ))}
                                         </div>
 
-                                        {selectedCharacterId === char.id && (
-                                            <div className="absolute inset-0 border-4 border-primary rounded-2xl animate-pulse pointer-events-none" />
+                                        {/* Lock Overlay */}
+                                        {!isUnlocked && (
+                                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center z-20">
+                                                <Lock className="w-12 h-12 text-white/20 mb-4" />
+                                                <div className="text-white/40 font-black text-xs uppercase tracking-widest leading-loose">
+                                                    LOCKED<br />
+                                                    <span className="text-primary">Win a run with {prevChar?.name || 'Boris'}</span><br />
+                                                    to unlock
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {selectedCharacterId === char.id && isUnlocked && (
+                                            <div className="absolute inset-0 border-4 border-primary rounded-[2.5rem] animate-pulse pointer-events-none" />
                                         )}
                                     </div>
-                                ))}
-                            </div>
-                            <div className="flex gap-2 mb-4">
-                                {characterData.map((char, idx) => (
-                                    <div 
-                                        key={char.id}
-                                        className={`w-2 h-2 rounded-full transition-all ${selectedCharacterId === char.id ? 'bg-primary w-6' : 'bg-white/20'}`}
-                                    />
-                                ))}
-                            </div>
-                            </>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 w-full max-w-7xl px-4">
-                            {characterData.map(char => (
-                                <div
-                                    key={char.id}
-                                    onClick={() => setSelectedCharacterId(char.id)}
-                                    className={`cursor-pointer border-4 rounded-[2.5rem] p-6 transition-all relative overflow-hidden group flex flex-col
-                                        ${selectedCharacterId === char.id
-                                            ? 'border-primary bg-primary/10 scale-105 z-10 shadow-[0_0_40px_rgba(255,100,0,0.3)]'
-                                            : 'border-white/10 bg-white/5 hover:border-white/30 hover:bg-white/10'}`}
-                                >
-                                    <div className="flex-1 flex flex-col items-center text-center justify-center mb-6 relative">
-                                        <div className={`w-32 h-32 md:w-40 md:h-40 rounded-full bg-black/50 overflow-hidden border-4 ${selectedCharacterId === char.id ? 'border-primary' : 'border-white/10'} mb-6 shadow-2xl relative`}>
-                                            <div className="absolute inset-0 opacity-50 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/20 to-transparent" />
-                                            {/* Sprite/Placeholder */}
-                                            <div className="absolute inset-0 flex items-center justify-center font-black text-6xl text-white/5 uppercase select-none">{char.id.slice(0, 2)}</div>
-                                            <div className={`w-full h-full bg-cover bg-center transition-all duration-700 ${selectedCharacterId === char.id && 'scale-110'}`} style={{ backgroundImage: `url(/sprites/${char.sprite}.png)` }} />
-                                        </div>
-                                        <h3 className="font-black italic uppercase text-2xl md:text-3xl text-white mb-2 leading-none">{char.name}</h3>
-                                        <p className="text-white/60 text-sm font-medium leading-relaxed px-2 mb-4">{char.description}</p>
-
-                                        {/* Starting Weapon Badge */}
-                                        <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full mb-2">
-                                            <span className="text-[10px] font-black text-primary uppercase tracking-tighter">STARTING</span>
-                                            <div className="flex items-center gap-2">
-                                                {renderItemIcon(char.startingWeapon, "w-4 h-4")}
-                                                <span className="text-[10px] font-bold text-white uppercase truncate max-w-[100px]">
-                                                    {getItemInfo(char.startingWeapon).name}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-black/40 rounded-2xl p-4 border border-white/5 space-y-2">
-                                        <div className="flex justify-between text-xs font-mono font-bold text-white/40 border-b border-white/5 pb-2 mb-2">
-                                            <span>STATS</span>
-                                            <span>MODIFIERS</span>
-                                        </div>
-                                        {Object.entries(char.stats || {}).map(([key, val]: [string, any]) => (
-                                            <div key={key} className="flex justify-between text-sm items-center">
-                                                <span className="uppercase text-white/60 font-bold text-[10px] tracking-wider">{key}</span>
-                                                <span className={`font-mono font-bold ${val > 1 ? 'text-green-400' : val < 1 ? 'text-red-400' : 'text-white/40'}`}>
-                                                    {val === 1 ? '-' : val > 1 ? `+${Math.round((val - 1) * 100)}%` : `-${Math.round((1 - val) * 100)}%`}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {selectedCharacterId === char.id && (
-                                        <div className="absolute inset-0 border-4 border-primary rounded-[2.5rem] animate-pulse pointer-events-none" />
-                                    )}
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
-                        )}
 
                         <div className={`flex flex-col items-center ${isMobile ? 'gap-3' : 'gap-4'}`}>
                             {!isMobile && (
@@ -1577,18 +1673,19 @@ export function SlavicSurvivors() {
                                     </Button>
                                 </div>
                             )}
-                            <Button 
-                                onClick={() => { resetGame(false); setGameState("playing"); }} 
-                                size="lg" 
-                                className={`${isMobile ? 'h-16 px-16 text-2xl' : 'h-[80px] px-24 text-4xl'} font-black rounded-[2rem] shadow-primary/60 shadow-[0_0_60px_rgba(255,100,0,0.5)] bg-primary text-black hover:scale-105 active:scale-95 transition-all uppercase tracking-[0.2em] animate-in slide-in-from-bottom-4`}
+                            <Button
+                                onClick={() => { resetGame(false); setGameState("playing"); }}
+                                size="lg"
+                                disabled={!unlockedCharacters.has(selectedCharacterId)}
+                                className={`${isMobile ? 'h-16 px-16 text-2xl' : 'h-[80px] px-24 text-4xl'} font-black rounded-[2rem] shadow-primary/60 shadow-[0_0_60px_rgba(255,100,0,0.5)] bg-primary text-black hover:scale-105 active:scale-95 transition-all uppercase tracking-[0.2em] animate-in slide-in-from-bottom-4 disabled:opacity-20`}
                             >
                                 BEGIN HUNT
                             </Button>
                             {isMobile && (
-                                <Button 
-                                    onClick={() => setGameState("menu")} 
-                                    variant="outline" 
-                                    size="lg" 
+                                <Button
+                                    onClick={() => setGameState("menu")}
+                                    variant="outline"
+                                    size="lg"
                                     className="h-12 px-8 text-sm font-black rounded-xl border-2 border-white/20 text-white hover:bg-white/10 uppercase tracking-wider transition-all active:scale-95"
                                 >
                                     BACK
@@ -1620,11 +1717,7 @@ export function SlavicSurvivors() {
                                             <div key={i} className="flex justify-between items-center text-white/80 font-bold border-b-2 border-white/5 pb-6 pt-2 hover:bg-white/5 px-6 rounded-2xl transition-all group animate-in fade-in slide-in-from-right duration-500" style={{ animationDelay: `${i * 50}ms` }}>
                                                 <div className="flex items-center gap-6 md:gap-8">
                                                     <div className="relative">
-                                                        <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full bg-black/50 border-4 ${s.level >= world.maxLevel ? 'border-yellow-500' : 'border-white/10'} overflow-hidden group-hover:scale-110 transition-all shadow-xl relative flex items-center justify-center`}>
-                                                            <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(/sprites/${char.sprite}.png)` }} />
-                                                            <span className="text-white/10 font-black text-2xl uppercase select-none">{char.name.charAt(0)}</span>
-                                                        </div>
-                                                        {s.level >= world.maxLevel && <Trophy className="absolute -top-2 -right-2 w-6 h-6 text-yellow-500 drop-shadow-lg" />}
+                                                        {s.level >= world.maxLevel && <Trophy className="w-8 h-8 text-yellow-500 drop-shadow-lg" />}
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <span className="text-2xl md:text-3xl tracking-tighter text-white font-black uppercase group-hover:text-cyan-400 transition-colors leading-tight">{char.name}</span>
@@ -1780,23 +1873,60 @@ export function SlavicSurvivors() {
                 )}
 
                 {gameState === "levelUp" && (
-                    <div className="absolute inset-0 bg-black/90 backdrop-blur-xl flex flex-col items-center justify-start p-6 md:p-12 z-50 overflow-y-auto pt-16 pb-20">
-                        <div className="mb-8 text-center animate-pulse shrink-0">
-                            <h2 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.4)]">
-                                {WORLDS.find(w => w.id === selectedWorldId)?.lootThemeName || "RELIQUARY OPEN"}
+                    <div className="absolute inset-0 bg-black/90 backdrop-blur-3xl flex flex-col items-center justify-start p-6 md:p-12 z-50 overflow-y-auto pt-16 pb-20 scrollbar-hide">
+                        <div className="mb-8 text-center animate-in zoom-in duration-500 shrink-0">
+                            <div className="inline-block px-4 py-1 bg-primary/20 border border-primary/30 rounded-full mb-4">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Ancient Reliquary Opened</span>
+                            </div>
+                            <h2 className="text-4xl md:text-7xl font-black italic uppercase tracking-tighter text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.3)] leading-none">
+                                {WORLDS.find(w => w.id === selectedWorldId)?.lootThemeName || "DIVINE FAVOR"}
                             </h2>
-                            <p className="text-primary font-black tracking-[0.3em] uppercase text-sm mt-2 font-mono">CHOOSE YOUR POWER</p>
+                            <p className="text-white/40 font-bold tracking-[0.3em] uppercase text-xs mt-4 font-mono">LEVEL {playerLevel} ACCOMPLISHED</p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl w-full mx-auto">
-                            {levelUpChoices.current.map((choice) => (
-                                <UpgradeCard
+
+                        {/* Card Container - Adjusted for 5 slots and better presentation */}
+                        <div className="flex flex-wrap justify-center gap-4 md:gap-8 max-w-7xl w-full mx-auto mb-16 px-4">
+                            {levelUpChoices.current.map((choice, index) => (
+                                <div
                                     key={choice.id}
-                                    title={choice.title}
-                                    desc={choice.desc}
-                                    icon={choice.icon}
-                                    onClick={() => handleUpgrade(choice.id)}
-                                />
+                                    className="animate-in slide-in-from-bottom-12 fade-in duration-700 fill-mode-both"
+                                    style={{ animationDelay: `${index * 150}ms` }}
+                                >
+                                    <UpgradeCard
+                                        title={choice.title}
+                                        desc={choice.desc}
+                                        imageUrl={choice.imageUrl}
+                                        onClick={() => handleUpgrade(choice.id)}
+                                    />
+                                </div>
                             ))}
+                        </div>
+
+                        {/* Meta Choice Buttons (Reroll, Skip) */}
+                        <div className="sticky bottom-0 left-0 w-full flex justify-center gap-4 md:gap-8 mt-auto py-8 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none">
+                            <div className="flex gap-4 pointer-events-auto">
+                                <Button
+                                    onClick={() => {
+                                        if (playerRef.current && playerRef.current.stats.rerolls > 0) {
+                                            playerRef.current.stats.rerolls--;
+                                            levelUpChoices.current = getLevelUpChoices();
+                                            // Force re-render if needed, though ref change might not trigger it directly if not careful
+                                            // We can use a dummy state to force update if necessary
+                                            handleUpgrade('REROLL_INTERNAL', false); // This is a hack, let's just trigger a state change
+                                            setGameState("playing"); setTimeout(() => setGameState("levelUp"), 10);
+                                        }
+                                    }}
+                                    disabled={!playerRef.current || playerRef.current.stats.rerolls <= 0}
+                                    variant="outline"
+                                    className="h-14 px-8 bg-black/60 border-2 border-primary/20 rounded-2xl flex flex-col gap-0 transition-all hover:border-primary hover:bg-primary/10 group active:scale-95"
+                                >
+                                    <span className="text-[10px] font-black text-primary/50 uppercase tracking-widest group-hover:text-primary transition-colors">Reroll ({playerRef.current?.stats.rerolls})</span>
+                                    <div className="flex items-center gap-2">
+                                        <RotateCcw className="w-4 h-4 text-primary" />
+                                        <span className="text-white font-black italic uppercase">Try Fate</span>
+                                    </div>
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -1811,7 +1941,9 @@ export function SlavicSurvivors() {
                                     <div className={`flex flex-col items-center gap-2 ${isMobile ? 'mb-6' : 'mb-12'}`}>
                                         <div className={`text-white/40 font-black uppercase tracking-[0.3em] ${isMobile ? 'text-xs' : 'text-sm'}`}>Final Accomplishment</div>
                                         <div className={`${isMobile ? 'text-3xl' : 'text-4xl md:text-6xl'} text-cyan-400 font-black italic uppercase tracking-tighter`}>Level {playerLevel} Survival</div>
-                                        <div className={`${isMobile ? 'text-base' : 'text-xl'} text-white/60 font-mono mt-2`}>{Math.floor(gameTime / 60)}m {(gameTime % 60).toFixed(0)}s on the clock</div>
+                                        <div className="flex items-center gap-4 mt-2">
+                                            <div className={`${isMobile ? 'text-base' : 'text-xl'} text-white/60 font-mono`}>{Math.floor(gameTime / 60)}m {(gameTime % 60).toFixed(0)}s on the clock</div>
+                                        </div>
                                     </div>
                                     <div className={`flex ${isMobile ? 'flex-col w-full' : 'flex-row'} ${isMobile ? 'gap-3' : 'gap-6 md:gap-10'}`}>
                                         <Button onClick={() => {
@@ -1884,7 +2016,7 @@ export function SlavicSurvivors() {
                 )}
 
                 {gameState === "gameVictory" && (
-                    <div className={`absolute inset-0 bg-gradient-to-br from-amber-950 via-orange-950 to-amber-950 backdrop-blur-xl flex flex-col items-center justify-center ${isMobile ? 'p-4' : 'p-8'} z-50 animate-in fade-in zoom-in duration-700`} style={{background: 'radial-gradient(circle, rgba(120,53,15,0.3) 0%, rgba(154,52,18,0.5) 50%, rgba(120,53,15,0.8) 100%)'}}>
+                    <div className={`absolute inset-0 bg-gradient-to-br from-amber-950 via-orange-950 to-amber-950 backdrop-blur-xl flex flex-col items-center justify-center ${isMobile ? 'p-4' : 'p-8'} z-50 animate-in fade-in zoom-in duration-700`} style={{ background: 'radial-gradient(circle, rgba(120,53,15,0.3) 0%, rgba(154,52,18,0.5) 50%, rgba(120,53,15,0.8) 100%)' }}>
                         <div className={`bg-black/80 border-4 border-yellow-400 shadow-[0_0_40px_rgba(234,179,8,0.6)] ${isMobile ? 'p-6' : 'p-12 md:p-16'} rounded-[4rem] flex flex-col items-center shadow-2xl max-w-4xl w-full relative`}>
                             <Trophy className={`${isMobile ? 'w-16 h-16' : 'w-24 h-24'} text-yellow-400 ${isMobile ? 'mb-3' : 'mb-6'} animate-bounce drop-shadow-[0_0_30px_rgba(234,179,8,1)]`} />
                             <h2 className={`${isMobile ? 'text-5xl' : 'text-6xl md:text-[8rem]'} font-black italic uppercase tracking-tighter text-white ${isMobile ? 'mb-3' : 'mb-4'} drop-shadow-[0_0_60px_rgba(255,255,255,0.8)] text-center leading-none`}>VICTORY</h2>
@@ -1896,6 +2028,15 @@ export function SlavicSurvivors() {
                                         <div className={`${isMobile ? 'text-2xl' : 'text-4xl md:text-6xl'} text-yellow-400 font-black italic uppercase tracking-tighter drop-shadow-[0_0_40px_rgba(234,179,8,0.8)] text-center`}>LEGENDARY SURVIVAL</div>
                                         <div className={`${isMobile ? 'text-xs' : 'text-sm md:text-base'} text-white font-black uppercase tracking-[0.3em] mt-2 text-center px-2`}>VICTORY GRANTS A LEADERBOARD SPOT</div>
                                         <div className={`${isMobile ? 'text-sm' : 'text-base md:text-lg'} text-white/60 font-mono mt-2`}>{Math.floor(gameTime / 60)}m {(gameTime % 60).toFixed(0)}s - Final Level {playerLevel}</div>
+
+                                        {newHeroUnlocked && (
+                                            <div className="mt-8 animate-in slide-in-from-bottom-4 duration-1000">
+                                                <div className="bg-primary/20 border border-primary/40 px-6 py-4 rounded-3xl flex flex-col items-center gap-2 shadow-[0_0_30px_rgba(255,100,0,0.2)]">
+                                                    <span className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em]">Legendary Achievement</span>
+                                                    <span className="text-white font-black text-xl italic uppercase tracking-tight">NEW HERO JOINED: <span className="text-primary">{newHeroUnlocked}</span></span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className={`flex ${isMobile ? 'flex-col w-full' : 'flex-row flex-wrap'} ${isMobile ? 'gap-3' : 'gap-4 md:gap-6'} justify-center`}>
@@ -2082,8 +2223,8 @@ export function SlavicSurvivors() {
                                         className="w-full bg-black/40 border-2 border-white/10 rounded-2xl p-4 text-white placeholder:text-white/20 focus:border-primary/50 outline-none transition-all min-h-[100px] resize-none font-medium"
                                     />
                                     <div className="flex justify-end">
-                                        <Button 
-                                            onClick={() => postComment(replyingTo?.id)} 
+                                        <Button
+                                            onClick={() => postComment(replyingTo?.id)}
                                             disabled={!newComment.trim() || isPostingComment}
                                             className="bg-primary text-black font-black uppercase px-8 rounded-xl h-12 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
                                         >
@@ -2120,9 +2261,9 @@ export function SlavicSurvivors() {
                                                     </div>
                                                     <p className="text-white/80 text-sm leading-relaxed font-medium mb-3">{comment.content}</p>
                                                     <div className="flex justify-start">
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="sm" 
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
                                                             onClick={() => {
                                                                 setReplyingTo({ id: comment.id, handle: comment.handle })
                                                                 // Scroll to textarea
@@ -2170,21 +2311,32 @@ export function SlavicSurvivors() {
     )
 }
 
-function UpgradeCard({ title, desc, icon, onClick }: { title: string, desc: string, icon: React.ReactNode, onClick: () => void }) {
+function UpgradeCard({ title, desc, imageUrl, onClick }: { title: string, desc: string, imageUrl?: string, onClick: () => void }) {
     return (
-        <button
-            onClick={onClick}
-            className="group relative bg-black/60 border-4 border-white/5 p-8 md:p-10 rounded-[3rem] md:rounded-[4rem] text-left transition-all hover:bg-white/10 hover:border-primary/50 hover:scale-[1.02] active:scale-95 shadow-2xl overflow-hidden ring-1 ring-white/10"
-        >
-            <div className="mb-6 md:mb-8 w-16 md:w-20 h-16 md:h-20 rounded-[1.5rem] md:rounded-[2rem] bg-white/5 flex items-center justify-center group-hover:bg-primary/30 transition-all group-hover:rotate-12 group-hover:scale-110">
-                {icon}
-            </div>
-            <h3 className="text-3xl md:text-4xl font-black italic uppercase text-white mb-2 md:mb-3 group-hover:text-primary transition-colors tracking-tighter">{title}</h3>
-            <p className="text-base md:text-lg text-white/50 font-black leading-tight tracking-tight opacity-70">{desc}</p>
-            <div className="absolute top-8 right-10 text-[10px] font-black uppercase text-white/5 tracking-[0.5em] group-hover:text-primary/40 transition-colors">Ancient Relic</div>
+        <div className="relative group">
+            <button
+                onClick={onClick}
+                className="relative bg-black/60 border-4 border-white/5 p-8 md:p-10 rounded-[3rem] md:rounded-[4rem] text-left transition-all hover:bg-white/10 hover:border-primary/50 hover:scale-[1.02] active:scale-95 shadow-2xl overflow-hidden ring-1 ring-white/10 w-[320px] md:w-[380px] h-[320px] md:h-[380px] flex flex-col"
+            >
+                <div className="mb-6 md:mb-8 w-16 md:w-24 h-16 md:h-24 rounded-[1.5rem] md:rounded-[2rem] bg-white/5 flex items-center justify-center group-hover:bg-primary/30 transition-all group-hover:rotate-12 group-hover:scale-110 overflow-hidden shrink-0">
+                    {imageUrl ? (
+                        <img
+                            src={imageUrl}
+                            alt={title}
+                            className="w-full h-full object-cover rounded-[1.5rem] md:rounded-[2rem]"
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/30 to-purple-500/30 flex items-center justify-center text-white text-3xl font-black">
+                            {title.charAt(0)}
+                        </div>
+                    )}
+                </div>
+                <h3 className="text-3xl md:text-4xl font-black italic uppercase text-white mb-2 md:mb-3 group-hover:text-primary transition-colors tracking-tighter leading-tight">{title}</h3>
+                <p className="text-sm md:text-lg text-white/50 font-black leading-tight tracking-tight opacity-70 line-clamp-4">{desc}</p>
+                <div className="absolute top-8 right-10 text-[10px] font-black uppercase text-white/5 tracking-[0.5em] group-hover:text-primary/40 transition-colors">Ancient Relic</div>
 
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
-        </button>
+            </button>
+        </div>
     )
 }
 

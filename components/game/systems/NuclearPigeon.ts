@@ -13,13 +13,13 @@ export class NuclearPigeon {
     public level = 1
     private mesh: THREE.Mesh | null = null
     private angle = 0
-    private orbitRadius = 2.5
-    private orbitSpeed = 3
+    public orbitRadius = 2.5
+    public orbitSpeed = 3
     private fireTimer = 0
     private fireCooldown = 0.8
 
     // Stats
-    private damage = 18
+    public damage = 18
     private range = 10
 
     constructor(
