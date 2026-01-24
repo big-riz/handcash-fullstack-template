@@ -4,12 +4,10 @@
  * Handles keyboard and touch input for player movement and game controls
  * 
  * Keyboard: WASD and arrow keys for movement, ESC for pause
- * Touch: Virtual joystick style - touch and drag to move
- *   - Touch anywhere on screen (except UI buttons)
- *   - Drag in the direction you want to move
- *   - Distance from touch start determines movement speed (up to max radius)
- *   - Small dead zone prevents accidental movement
- *   - Smooth, responsive controls optimized for mobile gameplay
+ * Touch: Direct position control
+ *   - Tap and hold anywhere on screen to move in that direction
+ *   - Player moves towards the tapped position
+ *   - Simple, intuitive mobile controls
  */
 
 export class InputManager {
@@ -17,12 +15,10 @@ export class InputManager {
     private keyDownHandler: (e: KeyboardEvent) => void
     private keyUpHandler: (e: KeyboardEvent) => void
     
-    // Touch/pointer input
+    // Touch/pointer input - Direct position control
     private touchActive = false
     private touchX = 0
     private touchY = 0
-    private touchStartX = 0
-    private touchStartY = 0
     private pointerDownHandler: (e: PointerEvent) => void
     private pointerMoveHandler: (e: PointerEvent) => void
     private pointerUpHandler: (e: PointerEvent) => void
@@ -76,8 +72,6 @@ export class InputManager {
         e.preventDefault()
         
         this.touchActive = true
-        this.touchStartX = e.clientX
-        this.touchStartY = e.clientY
         this.touchX = e.clientX
         this.touchY = e.clientY
     }
@@ -97,8 +91,6 @@ export class InputManager {
         this.touchActive = false
         this.touchX = 0
         this.touchY = 0
-        this.touchStartX = 0
-        this.touchStartY = 0
     }
 
     isKeyDown(code: string): boolean {
@@ -119,28 +111,28 @@ export class InputManager {
         if (this.isKeyDown('KeyA') || this.isKeyDown('ArrowLeft')) x += 1
         if (this.isKeyDown('KeyD') || this.isKeyDown('ArrowRight')) x -= 1
 
-        // Touch/pointer input - Virtual joystick style
+        // Touch/pointer input - Direct position control
         if (this.touchActive) {
-            const deltaX = this.touchX - this.touchStartX
-            const deltaY = this.touchY - this.touchStartY
+            // Calculate direction from screen center to touch position
+            const screenCenterX = window.innerWidth / 2
+            const screenCenterY = window.innerHeight / 2
+            
+            const deltaX = this.touchX - screenCenterX
+            const deltaY = this.touchY - screenCenterY
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
             
-            // Dead zone threshold (minimum movement before registering input)
-            const deadZone = 5
+            // Minimum distance threshold to prevent jittery movement near center
+            const deadZone = 30
             
             if (distance > deadZone) {
-                // Virtual joystick with maximum effective radius
-                const maxRadius = 80 // Maximum distance for full speed
-                const normalizedDistance = Math.min(distance, maxRadius) / maxRadius
-                
-                // Calculate direction from the delta
+                // Calculate normalized direction vector
                 const dirX = deltaX / distance
                 const dirY = deltaY / distance
                 
-                // Apply movement with distance-based intensity
+                // Apply movement at full speed
                 // Screen X maps to game X (inverted), Screen Y maps to game Z (inverted)
-                x -= dirX * normalizedDistance
-                z -= dirY * normalizedDistance
+                x -= dirX
+                z -= dirY
             }
         }
 
@@ -169,7 +161,5 @@ export class InputManager {
         this.touchActive = false
         this.touchX = 0
         this.touchY = 0
-        this.touchStartX = 0
-        this.touchStartY = 0
     }
 }

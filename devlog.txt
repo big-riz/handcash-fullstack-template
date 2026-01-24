@@ -13,3 +13,5 @@
 [2026-01-24] [FIX] Mobile fullscreen button positioning and cross-browser compatibility
 [2026-01-24] [FIX] Game over and victory screen button layouts now responsive without overflow
 [2026-01-24] [UPD] Enhanced touch controls with smooth virtual joystick mechanics
+[2026-01-24] [UPD] Hide header and borders on mobile during active gameplay for full-screen immersion
+[2026-01-24] [UPD] Changed touch controls to direct position - tap and hold to move towards that spot

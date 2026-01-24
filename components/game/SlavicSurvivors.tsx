@@ -1199,9 +1199,10 @@ export function SlavicSurvivors() {
     const hpPercent = Math.min(100, (playerHp / playerMaxHp) * 100)
 
     return (
-        <div className="relative w-[100vw] left-1/2 -translate-x-1/2 space-y-3 font-sans select-none overflow-x-hidden pt-2">
+        <div className={`relative w-[100vw] left-1/2 -translate-x-1/2 ${isMobile && ['playing', 'paused', 'levelUp', 'replaying'].includes(gameState) ? 'space-y-0 pt-0' : 'space-y-3 pt-2'} font-sans select-none overflow-x-hidden`}>
             {/* Header Card - More Compact */}
-            {!isMobile && (
+            {/* Hide on mobile during active gameplay (playing, paused, levelUp) */}
+            {(!isMobile || (isMobile && !['playing', 'paused', 'levelUp', 'replaying'].includes(gameState))) && (
                 <div className="bg-card/80 backdrop-blur-md border border-border rounded-2xl p-4 shadow-xl mx-4 flex justify-between items-center">
                     <div>
                         <h2 className="text-2xl font-black italic uppercase tracking-tighter text-primary leading-none">Slavic Survivors</h2>
@@ -1214,7 +1215,7 @@ export function SlavicSurvivors() {
             )}
 
             {/* FULL WIDTH Game Viewport Container */}
-            <div className="relative bg-[#1a1e1a] border-y-8 border-card overflow-hidden shadow-2xl w-full translate-x-0">
+            <div className={`relative bg-[#1a1e1a] ${isMobile && ['playing', 'paused', 'levelUp', 'replaying'].includes(gameState) ? 'border-0' : 'border-y-8'} border-card overflow-hidden shadow-2xl w-full translate-x-0`}>
                 <div ref={containerRef} className={`w-full ${isMobile ? 'h-[100vh]' : 'h-[960px]'}`} style={{ touchAction: 'none', userSelect: 'none' }} />
 
                 {/* HUD Overlay */}
