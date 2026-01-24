@@ -24,9 +24,8 @@ export const WORLDS: WorldData[] = [
         winCondition: 'level',
         winValue: 10,
         allowedUpgrades: [
-            // Actives (Common/Uncommon/Rare for early world)
+            // Actives (Exactly 5 per world)
             'tt33', 'shank', 'stilleto', 'peppermill', 'soviet_stick',
-            'vampire_rat', 'pig_luggage', 'kabar', 'grail', 'propaganda_tower',
             // Passives (All passives available)
             'beer_coin', 'boss_shoe', 'dove_coin', 'garlic_ring', 'holy_bread', 'battle_scarf',
             'holy_cheese', 'spy_hat', 'infinity_purse', 'ruby_ushanka', 'sunflower_pouch', 'pickled_gpu',
@@ -49,11 +48,8 @@ export const WORLDS: WorldData[] = [
         winCondition: 'level',
         winValue: 15,
         allowedUpgrades: [
-            // Actives (Epic/Legendary for harder world)
-            'tt33', 'peppermill', 'gzhel_smg', 'kabar', 'stilleto', 'soviet_stick',
-            'skull_screen', 'visors', 'kvass_reactor', 'pig_luggage', 'nuclear_pigeon',
-            'haunted_lada', 'big_biz_lada', 'dadushka_chair', 'gopnik_gondola', 'tank_stroller',
-            'propaganda_tower',
+            // Actives (Exactly 5 per world)
+            'gzhel_smg', 'skull_screen', 'visors', 'kvass_reactor', 'haunted_lada',
             // Passives (All passives available)
             'beer_coin', 'boss_shoe', 'dove_coin', 'garlic_ring', 'holy_bread', 'battle_scarf',
             'holy_cheese', 'spy_hat', 'infinity_purse', 'ruby_ushanka', 'sunflower_pouch', 'pickled_gpu',

@@ -1173,13 +1173,14 @@ export function SlavicSurvivors() {
     }
 
     const getLevelUpChoices = () => {
+        const p = playerRef.current
         const as = abilitySystemRef.current
-        if (!as) return []
+        if (!p || !as) return []
 
         const currentWorld = WORLDS.find(w => w.id === selectedWorldId) || WORLDS[0]
         const allowed = [...(currentWorld.allowedUpgrades || ['all'])]
         const levelGateBonus = selectedWorldId === 'frozen_waste' ? 3 : 0
-        const gatingLevel = playerLevel + levelGateBonus
+        const gatingLevel = p.stats.level + levelGateBonus
 
         // Always allow the character's starting weapon to be upgraded
         const character = characterData.find(c => c.id === selectedCharacterId) || characterData[0]
@@ -1273,10 +1274,21 @@ export function SlavicSurvivors() {
         }
 
         // Combine all candidates into a weighted pool
+        // Luck influences the weight of non-common items
+        const luck = p.stats.luck || 1.0
         const poolWithWeights = [
-            ...validActives.map(item => ({ item, weight: rarities[item.rarity] || 100 })),
-            ...validPassives.map(item => ({ item, weight: rarities[item.rarity] || 100 })),
-            ...evos.map(item => ({ item, weight: rarities['Evolution'] || 2 }))
+            ...validActives.map(item => ({
+                item,
+                weight: (rarities[item.rarity] || 100) * (item.rarity === 'Common' ? 1 : luck)
+            })),
+            ...validPassives.map(item => ({
+                item,
+                weight: (rarities[item.rarity] || 100) * (item.rarity === 'Common' ? 1 : luck)
+            })),
+            ...evos.map(item => ({
+                item,
+                weight: (rarities['Evolution'] || 2) * luck
+            }))
         ]
 
         // Weighted Random Selection
@@ -1530,8 +1542,8 @@ export function SlavicSurvivors() {
                             <StatRow label="Growth" value={`${Math.round(playerRef.current?.stats.growth! * 100)}%`} icon={<Trophy className="w-4 h-4 text-amber-300" />} />
                             <StatRow label="Curse" value={`${Math.round(playerRef.current?.stats.curse! * 100)}%`} icon={<Skull className="w-4 h-4 text-purple-900" />} />
                             <div className="pt-2 border-t border-white/10 grid grid-cols-2 gap-1 text-center text-xs">
-                                <div className="flex flex-col items-center"><span className="text-white/50">Rev</span><span>{playerRef.current?.stats.revivals}</span></div>
-                                <div className="flex flex-col items-center"><span className="text-white/50">Rer</span><span>{playerRef.current?.stats.rerolls}</span></div>
+                                <div className="flex flex-col items-center"><span className="text-white/50">Revivals</span><span>{playerRef.current?.stats.revivals}</span></div>
+                                <div className="flex flex-col items-center"><span className="text-white/50">Rerolls</span><span>{playerRef.current?.stats.rerolls}</span></div>
                             </div>
                         </div>
                     </div>
@@ -1594,7 +1606,7 @@ export function SlavicSurvivors() {
 
                 {gameState === "characterSelect" && (
                     <div className={`absolute inset-0 bg-black/90 backdrop-blur-xl flex flex-col items-center ${isMobile ? 'justify-start pt-4' : 'justify-center'} ${isMobile ? 'p-3' : 'p-8'} z-50 animate-in fade-in zoom-in duration-300`}>
-                        <div className={`${isMobile ? 'mb-3' : 'mb-4'} text-center`}>
+                        <div className={`${isMobile ? 'mb-3' : 'mb-10'} text-center`}>
                             <div className={`flex items-center justify-center ${isMobile ? 'gap-2' : 'gap-4'} mb-2`}>
                                 <Button variant="ghost" onClick={() => setGameState("menu")} className={`rounded-full ${isMobile ? 'h-10 w-10' : 'h-12 w-12'} border border-white/10 hover:bg-white/10 text-white/50 hover:text-white`}>
                                     <RotateCcw className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
@@ -1604,7 +1616,7 @@ export function SlavicSurvivors() {
                             <p className={`text-white/40 font-mono ${isMobile ? 'text-[10px]' : 'text-sm'} tracking-widest uppercase`}>Select a hero to brave the {WORLDS.find(w => w.id === selectedWorldId)?.name}</p>
                         </div>
 
-                        <div className="flex gap-6 overflow-x-auto w-full px-10 snap-x snap-mandatory mb-10 pb-8 scrollbar-hide no-scrollbar">
+                        <div className="flex gap-6 overflow-x-auto w-full px-10 py-10 snap-x snap-mandatory mb-10 scrollbar-hide no-scrollbar">
                             {characterData.map((char, index) => {
                                 const isUnlocked = unlockedCharacters.has(char.id)
                                 const prevChar = index > 0 ? characterData[index - 1] : null
@@ -1910,15 +1922,14 @@ export function SlavicSurvivors() {
                                         if (playerRef.current && playerRef.current.stats.rerolls > 0) {
                                             playerRef.current.stats.rerolls--;
                                             levelUpChoices.current = getLevelUpChoices();
-                                            // Force re-render if needed, though ref change might not trigger it directly if not careful
-                                            // We can use a dummy state to force update if necessary
-                                            handleUpgrade('REROLL_INTERNAL', false); // This is a hack, let's just trigger a state change
+                                            // Force re-render if needed
+                                            handleUpgrade('REROLL_INTERNAL', false);
                                             setGameState("playing"); setTimeout(() => setGameState("levelUp"), 10);
                                         }
                                     }}
                                     disabled={!playerRef.current || playerRef.current.stats.rerolls <= 0}
                                     variant="outline"
-                                    className="h-14 px-8 bg-black/60 border-2 border-primary/20 rounded-2xl flex flex-col gap-0 transition-all hover:border-primary hover:bg-primary/10 group active:scale-95"
+                                    className="h-14 px-8 bg-black/60 border-2 border-primary/20 rounded-2xl flex flex-col gap-0 transition-all hover:border-primary hover:bg-primary/10 group active:scale-95 disabled:opacity-30"
                                 >
                                     <span className="text-[10px] font-black text-primary/50 uppercase tracking-widest group-hover:text-primary transition-colors">Reroll ({playerRef.current?.stats.rerolls})</span>
                                     <div className="flex items-center gap-2">

@@ -43,11 +43,14 @@ export class SpawnSystem {
         // Scaling: spawn interval decreases moderately over time and with Curse
         const currentCurse = this.player.stats.curse || 1.0
 
-        // Check if boss (leshy) is alive to slow down other spawns
+        // Check if boss (leshy) is alive to stop other spawns
         const isBossAlive = this.entityManager.enemies.some(e => e.isActive && e.type === 'leshy')
-        const bossSpawnMultiplier = isBossAlive ? 0.5 : 1.0
+        if (isBossAlive) {
+            this.spawnTimer = 0 // Keep timer reset so they don't all pop at once when boss dies
+            return
+        }
 
-        const interval = Math.max(0.1, (this.spawnInterval - (this.progressionSeconds / 900)) / (this.spawnRateMultiplier * currentCurse * bossSpawnMultiplier))
+        const interval = Math.max(0.1, (this.spawnInterval - (this.progressionSeconds / 900)) / (this.spawnRateMultiplier * currentCurse))
 
         if (this.spawnTimer >= interval) {
             this.spawnTimer = 0
