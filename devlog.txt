@@ -9,3 +9,6 @@
 [2026-01-24] [UPD] Adjusted difficulty scaling to medium progression rate
 [2026-01-24] [ADD] Mobile support with landscape fullscreen mode and responsive UI
 [2026-01-24] [UPD] Improved mobile character selection with horizontal scrolling layout
+[2026-01-24] [ADD] Touch controls for mobile character movement with pointer API
+[2026-01-24] [FIX] Mobile fullscreen button positioning and cross-browser compatibility
+[2026-01-24] [FIX] Game over and victory screen button layouts now responsive without overflow

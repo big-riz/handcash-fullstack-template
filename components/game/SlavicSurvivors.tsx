@@ -214,11 +214,26 @@ export function SlavicSurvivors() {
         checkMobile()
 
         const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement)
+            const isFs = !!(
+                document.fullscreenElement || 
+                (document as any).webkitFullscreenElement || 
+                (document as any).mozFullScreenElement || 
+                (document as any).msFullscreenElement
+            )
+            setIsFullscreen(isFs)
         }
 
         document.addEventListener('fullscreenchange', handleFullscreenChange)
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange)
+        
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange)
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+            document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+            document.removeEventListener('MSFullscreenChange', handleFullscreenChange)
+        }
     }, [])
 
     // Handle fullscreen and orientation when playing on mobile
@@ -229,9 +244,22 @@ export function SlavicSurvivors() {
             if (gameState === "playing" || gameState === "paused" || gameState === "levelUp") {
                 try {
                     const elem = document.documentElement
-                    if (elem.requestFullscreen && !document.fullscreenElement) {
-                        await elem.requestFullscreen()
+                    const isAlreadyFullscreen = !!(
+                        document.fullscreenElement || 
+                        (document as any).webkitFullscreenElement || 
+                        (document as any).mozFullScreenElement
+                    )
+                    
+                    if (!isAlreadyFullscreen) {
+                        if (elem.requestFullscreen) {
+                            await elem.requestFullscreen()
+                        } else if ((elem as any).webkitRequestFullscreen) {
+                            await (elem as any).webkitRequestFullscreen()
+                        } else if ((elem as any).mozRequestFullScreen) {
+                            await (elem as any).mozRequestFullScreen()
+                        }
                     }
+                    
                     // Lock to landscape if supported
                     if (screen.orientation && 'lock' in screen.orientation) {
                         try {
@@ -248,13 +276,26 @@ export function SlavicSurvivors() {
 
         const exitFullscreen = async () => {
             if (gameState === "menu" || gameState === "characterSelect" || gameState === "gameOver" || gameState === "gameVictory" || gameState === "leaderboard" || gameState === "myHistory") {
-                if (document.fullscreenElement) {
+                const isFullscreen = !!(
+                    document.fullscreenElement || 
+                    (document as any).webkitFullscreenElement || 
+                    (document as any).mozFullScreenElement
+                )
+                
+                if (isFullscreen) {
                     try {
-                        await document.exitFullscreen()
+                        if (document.exitFullscreen) {
+                            await document.exitFullscreen()
+                        } else if ((document as any).webkitExitFullscreen) {
+                            await (document as any).webkitExitFullscreen()
+                        } else if ((document as any).mozCancelFullScreen) {
+                            await (document as any).mozCancelFullScreen()
+                        }
                     } catch (e) {
                         // Exit fullscreen failed
                     }
                 }
+                
                 // Unlock orientation
                 if (screen.orientation && 'unlock' in screen.orientation) {
                     try {
@@ -276,8 +317,18 @@ export function SlavicSurvivors() {
                 await document.exitFullscreen()
             } else {
                 const elem = document.documentElement
+                // Try different fullscreen APIs for mobile compatibility
                 if (elem.requestFullscreen) {
                     await elem.requestFullscreen()
+                } else if ((elem as any).webkitRequestFullscreen) {
+                    // Safari iOS
+                    await (elem as any).webkitRequestFullscreen()
+                } else if ((elem as any).mozRequestFullScreen) {
+                    // Firefox
+                    await (elem as any).mozRequestFullScreen()
+                } else if ((elem as any).msRequestFullscreen) {
+                    // IE/Edge
+                    await (elem as any).msRequestFullscreen()
                 }
             }
         } catch (e) {
@@ -1240,24 +1291,6 @@ export function SlavicSurvivors() {
                             </div>
                         </div>
 
-                        {/* Right: Fullscreen Toggle (Mobile) */}
-                        {isMobile && (
-                            <div className="flex-1 flex justify-end pointer-events-auto">
-                                <Button
-                                    onClick={toggleFullscreen}
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-14 w-14 rounded-2xl bg-black/60 backdrop-blur-md border-2 border-white/20 hover:bg-white/10 hover:border-white/40 transition-all shadow-lg"
-                                >
-                                    {isFullscreen ? (
-                                        <Minimize2 className="w-6 h-6 text-white" />
-                                    ) : (
-                                        <Maximize2 className="w-6 h-6 text-white" />
-                                    )}
-                                </Button>
-                            </div>
-                        )}
-
 
 
                         {/* Right: Spacer for balance / Stats Toggle */}
@@ -1280,6 +1313,24 @@ export function SlavicSurvivors() {
                         </div>
                     </div>
                 </div>
+
+                {/* Mobile Fullscreen Toggle (Top Right) */}
+                {isMobile && (gameState === "playing" || gameState === "paused" || gameState === "levelUp") && (
+                    <div className="absolute top-4 right-4 pointer-events-auto z-40">
+                        <Button
+                            onClick={toggleFullscreen}
+                            size="icon"
+                            variant="ghost"
+                            className="h-12 w-12 rounded-xl bg-black/80 backdrop-blur-md border-2 border-white/20 hover:bg-white/10 hover:border-white/40 transition-all shadow-lg"
+                        >
+                            {isFullscreen ? (
+                                <Minimize2 className="w-5 h-5 text-white" />
+                            ) : (
+                                <Maximize2 className="w-5 h-5 text-white" />
+                            )}
+                        </Button>
+                    </div>
+                )}
 
                 {/* Mobile Controls (Bottom) */}
                 {isMobile && (gameState === "playing" || gameState === "paused") && (
@@ -1750,40 +1801,40 @@ export function SlavicSurvivors() {
                 )}
 
                 {gameState === "gameOver" && (
-                    <div className="absolute inset-0 bg-red-950/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 z-50 animate-in fade-in zoom-in duration-500">
-                        <div className="bg-black/60 border-4 border-red-500/30 p-12 md:p-16 rounded-[4rem] flex flex-col items-center shadow-2xl ring-2 ring-red-500/10 max-w-4xl w-full">
-                            <h2 className="text-6xl md:text-[8rem] font-black italic uppercase tracking-tighter text-white mb-4 drop-shadow-[0_0_60px_rgba(220,38,38,1)] text-center leading-none">FALLEN</h2>
+                    <div className={`absolute inset-0 bg-red-950/90 backdrop-blur-xl flex flex-col items-center justify-center ${isMobile ? 'p-4' : 'p-8'} z-50 animate-in fade-in zoom-in duration-500`}>
+                        <div className={`bg-black/60 border-4 border-red-500/30 ${isMobile ? 'p-6' : 'p-12 md:p-16'} rounded-[4rem] flex flex-col items-center shadow-2xl ring-2 ring-red-500/10 max-w-4xl w-full`}>
+                            <h2 className={`${isMobile ? 'text-5xl' : 'text-6xl md:text-[8rem]'} font-black italic uppercase tracking-tighter text-white ${isMobile ? 'mb-3' : 'mb-4'} drop-shadow-[0_0_60px_rgba(220,38,38,1)] text-center leading-none`}>FALLEN</h2>
 
                             {!showScoreInput ? (
                                 <>
-                                    <div className="flex flex-col items-center gap-2 mb-12">
-                                        <div className="text-white/40 font-black uppercase tracking-[0.3em] text-sm">Final Accomplishment</div>
-                                        <div className="text-4xl md:text-6xl text-cyan-400 font-black italic uppercase italic tracking-tighter">Level {playerLevel} Survival</div>
-                                        <div className="text-xl text-white/60 font-mono mt-2">{Math.floor(gameTime / 60)}m {(gameTime % 60).toFixed(0)}s on the clock</div>
+                                    <div className={`flex flex-col items-center gap-2 ${isMobile ? 'mb-6' : 'mb-12'}`}>
+                                        <div className={`text-white/40 font-black uppercase tracking-[0.3em] ${isMobile ? 'text-xs' : 'text-sm'}`}>Final Accomplishment</div>
+                                        <div className={`${isMobile ? 'text-3xl' : 'text-4xl md:text-6xl'} text-cyan-400 font-black italic uppercase tracking-tighter`}>Level {playerLevel} Survival</div>
+                                        <div className={`${isMobile ? 'text-base' : 'text-xl'} text-white/60 font-mono mt-2`}>{Math.floor(gameTime / 60)}m {(gameTime % 60).toFixed(0)}s on the clock</div>
                                     </div>
-                                    <div className="flex gap-6 md:gap-10">
+                                    <div className={`flex ${isMobile ? 'flex-col w-full' : 'flex-row'} ${isMobile ? 'gap-3' : 'gap-6 md:gap-10'}`}>
                                         <Button onClick={() => {
                                             setTotalRuns(r => r + 1);
                                             resetGame(false);
                                             setGameState("playing")
-                                        }} size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-white text-black hover:bg-white/90 font-black text-xl md:text-3xl uppercase tracking-widest shadow-white/30 shadow-2xl transition-all active:scale-95">TRY AGAIN</Button>
+                                        }} size="lg" className={`${isMobile ? 'h-16 px-8 text-lg w-full' : 'h-20 md:h-24 px-12 md:px-20 text-xl md:text-3xl'} rounded-[2.5rem] bg-white text-black hover:bg-white/90 font-black uppercase tracking-widest shadow-white/30 shadow-2xl transition-all active:scale-95`}>TRY AGAIN</Button>
                                         <Button onClick={() => {
                                             setTotalRuns(r => r + 1);
                                             resetGame(false);
                                             setGameState("menu");
-                                        }} variant="outline" size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-white/5 border-white/20 text-white hover:bg-white/10 font-black text-xl md:text-3xl uppercase tracking-widest transition-all">BACK</Button>
+                                        }} variant="outline" size="lg" className={`${isMobile ? 'h-16 px-8 text-lg w-full' : 'h-20 md:h-24 px-12 md:px-20 text-xl md:text-3xl'} rounded-[2.5rem] bg-white/5 border-white/20 text-white hover:bg-white/10 font-black uppercase tracking-widest transition-all`}>BACK</Button>
                                     </div>
                                 </>
                             ) : (
-                                <div className="flex flex-col items-center gap-8 w-full">
+                                <div className={`flex flex-col items-center ${isMobile ? 'gap-4' : 'gap-8'} w-full`}>
                                     <div className="text-center">
-                                        <h3 className="text-3xl md:text-5xl font-black italic uppercase text-primary animate-bounce mb-2">NEW HIGH SCORE!</h3>
-                                        <p className="text-white/60 font-black uppercase tracking-[0.2em]">Enter your initials for the Hall of Heroes</p>
+                                        <h3 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-5xl'} font-black italic uppercase text-primary animate-bounce mb-2`}>NEW HIGH SCORE!</h3>
+                                        <p className={`text-white/60 font-black uppercase tracking-[0.2em] ${isMobile ? 'text-xs' : 'text-sm'}`}>Enter your initials for the Hall of Heroes</p>
                                     </div>
 
-                                    <div className="flex gap-4">
+                                    <div className={`flex ${isMobile ? 'gap-2' : 'gap-4'}`}>
                                         {[0, 1, 2, 3].map((i) => (
-                                            <div key={i} className="w-20 h-24 bg-black/80 border-4 border-primary/50 rounded-2xl flex items-center justify-center text-6xl font-black text-white italic drop-shadow-[0_0_20px_rgba(255,100,0,0.5)] shadow-inner">
+                                            <div key={i} className={`${isMobile ? 'w-14 h-16 text-4xl' : 'w-20 h-24 text-6xl'} bg-black/80 border-4 border-primary/50 rounded-2xl flex items-center justify-center font-black text-white italic drop-shadow-[0_0_20px_rgba(255,100,0,0.5)] shadow-inner`}>
                                                 {playerName[i] || "_"}
                                             </div>
                                         ))}
@@ -1798,13 +1849,13 @@ export function SlavicSurvivors() {
                                         className="absolute opacity-0 pointer-events-none"
                                     />
 
-                                    <div className="grid grid-cols-6 md:grid-cols-9 gap-2 max-w-2xl pointer-events-auto">
+                                    <div className={`grid ${isMobile ? 'grid-cols-6' : 'grid-cols-6 md:grid-cols-9'} ${isMobile ? 'gap-1.5' : 'gap-2'} max-w-2xl pointer-events-auto`}>
                                         {"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("").map(char => (
                                             <Button
                                                 key={char}
                                                 variant="outline"
                                                 onClick={() => { if (playerName.length < 4) setPlayerName(prev => prev + char) }}
-                                                className="h-12 w-12 font-black text-xl bg-white/5 border-white/10 hover:bg-primary hover:text-black transition-all"
+                                                className={`${isMobile ? 'h-10 w-10 text-base' : 'h-12 w-12 text-xl'} font-black bg-white/5 border-white/10 hover:bg-primary hover:text-black transition-all`}
                                             >
                                                 {char}
                                             </Button>
@@ -1812,19 +1863,19 @@ export function SlavicSurvivors() {
                                         <Button
                                             variant="outline"
                                             onClick={() => setPlayerName(prev => prev.slice(0, -1))}
-                                            className="h-12 col-span-2 font-black text-xs bg-red-500/20 border-red-500/30 hover:bg-red-500 uppercase tracking-tighter"
+                                            className={`${isMobile ? 'h-10' : 'h-12'} col-span-2 font-black text-xs bg-red-500/20 border-red-500/30 hover:bg-red-500 uppercase tracking-tighter`}
                                         >
                                             Del
                                         </Button>
                                         <Button
                                             disabled={playerName.length !== 4}
                                             onClick={saveScore}
-                                            className="h-12 col-span-3 font-black text-sm bg-primary text-black hover:bg-primary/80 uppercase tracking-widest disabled:opacity-30"
+                                            className={`${isMobile ? 'h-10' : 'h-12'} col-span-3 font-black text-sm bg-primary text-black hover:bg-primary/80 uppercase tracking-widest disabled:opacity-30`}
                                         >
                                             Confirm
                                         </Button>
                                     </div>
-                                    <div className="text-[10px] text-white/30 font-bold uppercase tracking-widest mt-4">Tip: You can use your keyboard!</div>
+                                    <div className={`${isMobile ? 'text-[8px]' : 'text-[10px]'} text-white/30 font-bold uppercase tracking-widest mt-4`}>Tip: You can use your keyboard!</div>
                                 </div>
                             )}
                         </div>
@@ -1832,47 +1883,47 @@ export function SlavicSurvivors() {
                 )}
 
                 {gameState === "gameVictory" && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-950 via-orange-950 to-amber-950 backdrop-blur-xl flex flex-col items-center justify-center p-8 z-50 animate-in fade-in zoom-in duration-700" style={{background: 'radial-gradient(circle, rgba(120,53,15,0.3) 0%, rgba(154,52,18,0.5) 50%, rgba(120,53,15,0.8) 100%)'}}>
-                        <div className="bg-black/80 border-4 border-yellow-400 shadow-[0_0_40px_rgba(234,179,8,0.6)] p-12 md:p-16 rounded-[4rem] flex flex-col items-center shadow-2xl max-w-4xl w-full relative">
-                            <Trophy className="w-24 h-24 text-yellow-400 mb-6 animate-bounce drop-shadow-[0_0_30px_rgba(234,179,8,1)]" />
-                            <h2 className="text-6xl md:text-[8rem] font-black italic uppercase tracking-tighter text-white mb-4 drop-shadow-[0_0_60px_rgba(255,255,255,0.8)] text-center leading-none">VICTORY</h2>
+                    <div className={`absolute inset-0 bg-gradient-to-br from-amber-950 via-orange-950 to-amber-950 backdrop-blur-xl flex flex-col items-center justify-center ${isMobile ? 'p-4' : 'p-8'} z-50 animate-in fade-in zoom-in duration-700`} style={{background: 'radial-gradient(circle, rgba(120,53,15,0.3) 0%, rgba(154,52,18,0.5) 50%, rgba(120,53,15,0.8) 100%)'}}>
+                        <div className={`bg-black/80 border-4 border-yellow-400 shadow-[0_0_40px_rgba(234,179,8,0.6)] ${isMobile ? 'p-6' : 'p-12 md:p-16'} rounded-[4rem] flex flex-col items-center shadow-2xl max-w-4xl w-full relative`}>
+                            <Trophy className={`${isMobile ? 'w-16 h-16' : 'w-24 h-24'} text-yellow-400 ${isMobile ? 'mb-3' : 'mb-6'} animate-bounce drop-shadow-[0_0_30px_rgba(234,179,8,1)]`} />
+                            <h2 className={`${isMobile ? 'text-5xl' : 'text-6xl md:text-[8rem]'} font-black italic uppercase tracking-tighter text-white ${isMobile ? 'mb-3' : 'mb-4'} drop-shadow-[0_0_60px_rgba(255,255,255,0.8)] text-center leading-none`}>VICTORY</h2>
 
                             {!showScoreInput ? (
                                 <>
-                                    <div className="flex flex-col items-center gap-2 mb-12">
-                                        <div className="text-white/40 font-black uppercase tracking-[0.3em] text-sm md:text-base">TASK COMPLETED</div>
-                                        <div className="text-4xl md:text-6xl text-yellow-400 font-black italic uppercase tracking-tighter drop-shadow-[0_0_40px_rgba(234,179,8,0.8)]">LEGENDARY SURVIVAL</div>
-                                        <div className="text-sm md:text-base text-white font-black uppercase tracking-[0.3em] mt-2">VICTORY GRANTS A LEADERBOARD SPOT</div>
-                                        <div className="text-base md:text-lg text-white/60 font-mono mt-2">{Math.floor(gameTime / 60)}m {(gameTime % 60).toFixed(0)}s - Final Level {playerLevel}</div>
+                                    <div className={`flex flex-col items-center gap-2 ${isMobile ? 'mb-6' : 'mb-12'}`}>
+                                        <div className={`text-white/40 font-black uppercase tracking-[0.3em] ${isMobile ? 'text-xs' : 'text-sm md:text-base'}`}>TASK COMPLETED</div>
+                                        <div className={`${isMobile ? 'text-2xl' : 'text-4xl md:text-6xl'} text-yellow-400 font-black italic uppercase tracking-tighter drop-shadow-[0_0_40px_rgba(234,179,8,0.8)] text-center`}>LEGENDARY SURVIVAL</div>
+                                        <div className={`${isMobile ? 'text-xs' : 'text-sm md:text-base'} text-white font-black uppercase tracking-[0.3em] mt-2 text-center px-2`}>VICTORY GRANTS A LEADERBOARD SPOT</div>
+                                        <div className={`${isMobile ? 'text-sm' : 'text-base md:text-lg'} text-white/60 font-mono mt-2`}>{Math.floor(gameTime / 60)}m {(gameTime % 60).toFixed(0)}s - Final Level {playerLevel}</div>
                                     </div>
 
-                                    <div className="flex gap-6 md:gap-10 justify-center">
+                                    <div className={`flex ${isMobile ? 'flex-col w-full' : 'flex-row flex-wrap'} ${isMobile ? 'gap-3' : 'gap-4 md:gap-6'} justify-center`}>
                                         <Button onClick={() => {
                                             allowPostVictoryRef.current = true
                                             setGameState("playing")
-                                        }} size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-black/80 border-2 border-white/20 text-white hover:bg-black/90 font-black text-xl md:text-3xl uppercase tracking-widest transition-all">CONTINUE</Button>
+                                        }} size="lg" className={`${isMobile ? 'h-16 px-8 text-base w-full' : 'h-20 md:h-24 px-8 md:px-12 text-lg md:text-2xl'} rounded-[2.5rem] bg-black/80 border-2 border-white/20 text-white hover:bg-black/90 font-black uppercase tracking-widest transition-all`}>CONTINUE</Button>
                                         <Button onClick={() => {
                                             setTotalRuns(r => r + 1);
                                             resetGame(false);
                                             setGameState("playing")
-                                        }} size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-yellow-400 text-black hover:bg-yellow-300 font-black text-xl md:text-3xl uppercase tracking-widest shadow-[0_0_30px_rgba(234,179,8,0.8)] transition-all active:scale-95">ANOTHER RUN</Button>
+                                        }} size="lg" className={`${isMobile ? 'h-16 px-8 text-base w-full' : 'h-20 md:h-24 px-8 md:px-12 text-lg md:text-2xl'} rounded-[2.5rem] bg-yellow-400 text-black hover:bg-yellow-300 font-black uppercase tracking-widest shadow-[0_0_30px_rgba(234,179,8,0.8)] transition-all active:scale-95`}>ANOTHER RUN</Button>
                                         <Button onClick={() => {
                                             setTotalRuns(r => r + 1);
                                             resetGame(false);
                                             setGameState("menu");
-                                        }} variant="outline" size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-black/80 border-2 border-white/20 text-white hover:bg-black/90 font-black text-xl md:text-3xl uppercase tracking-widest transition-all">RETIRE</Button>
+                                        }} variant="outline" size="lg" className={`${isMobile ? 'h-16 px-8 text-base w-full' : 'h-20 md:h-24 px-8 md:px-12 text-lg md:text-2xl'} rounded-[2.5rem] bg-black/80 border-2 border-white/20 text-white hover:bg-black/90 font-black uppercase tracking-widest transition-all`}>RETIRE</Button>
                                     </div>
                                 </>
                             ) : (
-                                <div className="flex flex-col items-center gap-8 w-full">
+                                <div className={`flex flex-col items-center ${isMobile ? 'gap-4' : 'gap-8'} w-full`}>
                                     <div className="text-center">
-                                        <h3 className="text-3xl md:text-5xl font-black italic uppercase text-yellow-500 animate-bounce mb-2">RECORD RECORDED!</h3>
-                                        <p className="text-white/60 font-black uppercase tracking-[0.2em]">Enter your initials for the Hall of Heroes</p>
+                                        <h3 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-5xl'} font-black italic uppercase text-yellow-500 animate-bounce mb-2`}>RECORD RECORDED!</h3>
+                                        <p className={`text-white/60 font-black uppercase tracking-[0.2em] ${isMobile ? 'text-xs' : 'text-sm'}`}>Enter your initials for the Hall of Heroes</p>
                                     </div>
 
-                                    <div className="flex gap-4">
+                                    <div className={`flex ${isMobile ? 'gap-2' : 'gap-4'}`}>
                                         {[0, 1, 2, 3].map((i) => (
-                                            <div key={i} className="w-20 h-24 bg-black/80 border-4 border-yellow-500/50 rounded-2xl flex items-center justify-center text-6xl font-black text-white italic drop-shadow-[0_0_20px_rgba(234,179,8,1)] shadow-inner">
+                                            <div key={i} className={`${isMobile ? 'w-14 h-16 text-4xl' : 'w-20 h-24 text-6xl'} bg-black/80 border-4 border-yellow-500/50 rounded-2xl flex items-center justify-center font-black text-white italic drop-shadow-[0_0_20px_rgba(234,179,8,1)] shadow-inner`}>
                                                 {playerName[i] || "_"}
                                             </div>
                                         ))}
@@ -1887,13 +1938,13 @@ export function SlavicSurvivors() {
                                         className="absolute opacity-0 pointer-events-none"
                                     />
 
-                                    <div className="grid grid-cols-6 md:grid-cols-9 gap-2 max-w-2xl pointer-events-auto">
+                                    <div className={`grid ${isMobile ? 'grid-cols-6' : 'grid-cols-6 md:grid-cols-9'} ${isMobile ? 'gap-1.5' : 'gap-2'} max-w-2xl pointer-events-auto`}>
                                         {"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("").map(char => (
                                             <Button
                                                 key={char}
                                                 variant="outline"
                                                 onClick={() => { if (playerName.length < 4) setPlayerName(prev => prev + char) }}
-                                                className="h-12 w-12 font-black text-xl bg-white/5 border-white/10 hover:bg-yellow-500 hover:text-black transition-all"
+                                                className={`${isMobile ? 'h-10 w-10 text-base' : 'h-12 w-12 text-xl'} font-black bg-white/5 border-white/10 hover:bg-yellow-500 hover:text-black transition-all`}
                                             >
                                                 {char}
                                             </Button>
@@ -1901,19 +1952,19 @@ export function SlavicSurvivors() {
                                         <Button
                                             variant="outline"
                                             onClick={() => setPlayerName(prev => prev.slice(0, -1))}
-                                            className="h-12 col-span-2 font-black text-xs bg-red-500/20 border-red-500/30 hover:bg-red-500 uppercase tracking-tighter"
+                                            className={`${isMobile ? 'h-10' : 'h-12'} col-span-2 font-black text-xs bg-red-500/20 border-red-500/30 hover:bg-red-500 uppercase tracking-tighter`}
                                         >
                                             Del
                                         </Button>
                                         <Button
                                             disabled={playerName.length !== 4}
                                             onClick={saveScore}
-                                            className="h-12 col-span-3 font-black text-sm bg-yellow-500 text-black hover:bg-yellow-500/80 uppercase tracking-widest disabled:opacity-30"
+                                            className={`${isMobile ? 'h-10' : 'h-12'} col-span-3 font-black text-sm bg-yellow-500 text-black hover:bg-yellow-500/80 uppercase tracking-widest disabled:opacity-30`}
                                         >
                                             Confirm
                                         </Button>
                                     </div>
-                                    <div className="text-[10px] text-white/30 font-bold uppercase tracking-widest mt-4">Tip: You can use your keyboard!</div>
+                                    <div className={`${isMobile ? 'text-[8px]' : 'text-[10px]'} text-white/30 font-bold uppercase tracking-widest mt-4`}>Tip: You can use your keyboard!</div>
                                 </div>
                             )}
                         </div>
