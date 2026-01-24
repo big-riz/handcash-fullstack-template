@@ -33,3 +33,11 @@
 [2026-01-24] [ADD] Added health bars above all enemies (green to red gradient)
 [2026-01-24] [FIX] Fixed duplicate Level X text in upgrade descriptions
 [2026-01-24] [UPD] Implemented arc swing animations for melee weapons (shank, knuckles, soviet_stick)
+[2026-01-24] [FIX] Fixed melee attack direction and collision alignment
+[2026-01-24] [UPD] Increased melee attack radius for 100% more area coverage
+[2026-01-24] [UPD] Disabled enemy spawning while Boss is active
+[2026-01-24] [FIX] Fixed character select screen clipping and layout spacing
+[2026-01-24] [FIX] Fixed upgrade pool stagnation by using real-time player level
+[2026-01-24] [ADD] Implemented Luck-based rarity weighting for level-up upgrades
+[2026-01-24] [UPD] Consolidated world weapon pools to exactly 5 base weapons
+[2026-01-24] [REM] Removed Knuckles from the Dark Forest item pool
