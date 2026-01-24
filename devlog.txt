@@ -12,3 +12,4 @@
 [2026-01-24] [ADD] Touch controls for mobile character movement with pointer API
 [2026-01-24] [FIX] Mobile fullscreen button positioning and cross-browser compatibility
 [2026-01-24] [FIX] Game over and victory screen button layouts now responsive without overflow
+[2026-01-24] [UPD] Enhanced touch controls with smooth virtual joystick mechanics

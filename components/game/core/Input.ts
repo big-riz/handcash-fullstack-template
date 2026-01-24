@@ -2,7 +2,14 @@
  * Input.ts
  * 
  * Handles keyboard and touch input for player movement and game controls
- * Supports WASD and arrow keys for movement, ESC for pause, and touch/pointer input
+ * 
+ * Keyboard: WASD and arrow keys for movement, ESC for pause
+ * Touch: Virtual joystick style - touch and drag to move
+ *   - Touch anywhere on screen (except UI buttons)
+ *   - Drag in the direction you want to move
+ *   - Distance from touch start determines movement speed (up to max radius)
+ *   - Small dead zone prevents accidental movement
+ *   - Smooth, responsive controls optimized for mobile gameplay
  */
 
 export class InputManager {
@@ -31,10 +38,12 @@ export class InputManager {
     start() {
         window.addEventListener('keydown', this.keyDownHandler)
         window.addEventListener('keyup', this.keyUpHandler)
-        window.addEventListener('pointerdown', this.pointerDownHandler)
-        window.addEventListener('pointermove', this.pointerMoveHandler)
-        window.addEventListener('pointerup', this.pointerUpHandler)
-        window.addEventListener('pointercancel', this.pointerUpHandler)
+        
+        // Use non-passive event listeners for touch to allow preventDefault
+        window.addEventListener('pointerdown', this.pointerDownHandler, { passive: false })
+        window.addEventListener('pointermove', this.pointerMoveHandler, { passive: false })
+        window.addEventListener('pointerup', this.pointerUpHandler, { passive: false })
+        window.addEventListener('pointercancel', this.pointerUpHandler, { passive: false })
     }
 
     stop() {
@@ -59,10 +68,13 @@ export class InputManager {
     private onPointerDown(e: PointerEvent) {
         // Ignore if clicking on UI elements (buttons, etc)
         const target = e.target as HTMLElement
-        if (target.closest('button') || target.closest('[role="button"]')) {
+        if (target.closest('button') || target.closest('[role="button"]') || target.closest('input')) {
             return
         }
 
+        // Prevent default to avoid text selection and scrolling
+        e.preventDefault()
+        
         this.touchActive = true
         this.touchStartX = e.clientX
         this.touchStartY = e.clientY
@@ -72,12 +84,16 @@ export class InputManager {
 
     private onPointerMove(e: PointerEvent) {
         if (this.touchActive) {
+            e.preventDefault()
             this.touchX = e.clientX
             this.touchY = e.clientY
         }
     }
 
     private onPointerUp(e: PointerEvent) {
+        if (this.touchActive) {
+            e.preventDefault()
+        }
         this.touchActive = false
         this.touchX = 0
         this.touchY = 0
@@ -103,18 +119,28 @@ export class InputManager {
         if (this.isKeyDown('KeyA') || this.isKeyDown('ArrowLeft')) x += 1
         if (this.isKeyDown('KeyD') || this.isKeyDown('ArrowRight')) x -= 1
 
-        // Touch/pointer input
+        // Touch/pointer input - Virtual joystick style
         if (this.touchActive) {
             const deltaX = this.touchX - this.touchStartX
             const deltaY = this.touchY - this.touchStartY
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
             
-            // Only register movement if touch moved at least 10 pixels
-            if (distance > 10) {
-                // Convert screen coordinates to game coordinates
-                // Inverted X because camera looks down at the scene
-                x -= deltaX / 100 // Scale down the sensitivity
-                z -= deltaY / 100 // Negative because screen Y is inverted
+            // Dead zone threshold (minimum movement before registering input)
+            const deadZone = 5
+            
+            if (distance > deadZone) {
+                // Virtual joystick with maximum effective radius
+                const maxRadius = 80 // Maximum distance for full speed
+                const normalizedDistance = Math.min(distance, maxRadius) / maxRadius
+                
+                // Calculate direction from the delta
+                const dirX = deltaX / distance
+                const dirY = deltaY / distance
+                
+                // Apply movement with distance-based intensity
+                // Screen X maps to game X (inverted), Screen Y maps to game Z (inverted)
+                x -= dirX * normalizedDistance
+                z -= dirY * normalizedDistance
             }
         }
 
