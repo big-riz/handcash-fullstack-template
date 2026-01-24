@@ -13,6 +13,12 @@ export const metadata: Metadata = {
   title: "squat.zone",
   description: "Collect ultra-rare digital gear from the Eastern Treasure archive. Secure your on-chain street gear via HandCash.",
   generator: "v0.app",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
   icons: {
     icon: [
       {
