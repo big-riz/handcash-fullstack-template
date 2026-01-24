@@ -10,6 +10,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 
 export interface UserProfile {
   publicProfile: {
+    id?: string
     handle: string
     displayName: string
     avatarUrl: string

@@ -185,6 +185,7 @@ export function SlavicSurvivors() {
     const rngRef = useRef<SeededRandom | null>(null)
     const replayRef = useRef<ReplayRecorder | null>(null)
     const replayPlayerRef = useRef<ReplayPlayer | null>(null)
+    const allowPostVictoryRef = useRef(false)
     const replayFrameRef = useRef<number>(0)
     const gameTimeRef = useRef<number>(0)
     const obstaclesRef = useRef<{ x: number, z: number, radius: number }[]>([])
@@ -487,7 +488,7 @@ export function SlavicSurvivors() {
                 // Win Condition Check
                 else if (gameStateRef.current === "playing") {
                     const currentWorld = WORLDS.find(w => w.id === selectedWorldId) || WORLDS[0]
-                    if (currentWorld.winCondition === 'level' && p.stats.level >= currentWorld.maxLevel) {
+                    if (currentWorld.winCondition === 'level' && p.stats.level >= currentWorld.maxLevel && !allowPostVictoryRef.current) {
                         setGameState("gameVictory")
                         if (replayRef.current) {
                             replayRef.current.finish(p.stats.level, Math.floor(gameTimeRef.current))
@@ -559,7 +560,7 @@ export function SlavicSurvivors() {
     }, [gameState])
 
     const fetchGlobalScores = () => {
-        fetch('/api/replays?limit=10')
+        fetch('/api/replays?limit=25')
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data)) {
@@ -713,7 +714,7 @@ export function SlavicSurvivors() {
                 gameVersion: replayData.gameVersion,
                 characterId: replayData.characterId || selectedCharacterId,
                 worldId: replayData.worldId || selectedWorldId,
-                userId: user?.id || null
+                userId: user?.publicProfile?.id || null
             })
         }).then(() => {
             fetchUserHistory()
@@ -738,6 +739,21 @@ export function SlavicSurvivors() {
             worldId: replayData?.worldId || selectedWorldId
         }
 
+        const sortScoresForWorld = (worldId: string, list: typeof scores) => {
+            const world = WORLDS.find(w => w.id === worldId)
+            if (world?.id === 'dark_forest' && world.winCondition === 'level') {
+                const completionLevel = world.winValue || world.maxLevel
+                return [...list].sort((a, b) => {
+                    const aCompleted = a.level >= completionLevel
+                    const bCompleted = b.level >= completionLevel
+                    if (aCompleted && bCompleted) return a.time - b.time
+                    if (aCompleted !== bCompleted) return aCompleted ? -1 : 1
+                    return b.level - a.level || b.time - a.time
+                })
+            }
+            return [...list].sort((a, b) => b.level - a.level || b.time - a.time)
+        }
+
         // Keep top 10 per map
         const allNewScores = [...scores, newScore]
         const scoresPerMap: Record<string, any[]> = {}
@@ -750,9 +766,7 @@ export function SlavicSurvivors() {
 
         const finalScores: any[] = []
         Object.keys(scoresPerMap).forEach(wid => {
-            const sortedMapScores = scoresPerMap[wid]
-                .sort((a, b) => b.level - a.level || b.time - a.time)
-                .slice(0, 10)
+            const sortedMapScores = sortScoresForWorld(wid, scoresPerMap[wid]).slice(0, 25)
             finalScores.push(...sortedMapScores)
         })
 
@@ -772,6 +786,7 @@ export function SlavicSurvivors() {
         const vm = vfxManagerRef.current
 
         if (p && scene && em && vm) {
+            allowPostVictoryRef.current = false
             p.position.set(0, 0, 0)
             p.velocity.set(0, 0, 0)
             p.stats.currentHp = 100
@@ -1388,7 +1403,7 @@ export function SlavicSurvivors() {
 
                 {gameState === "leaderboard" && (
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center p-6 md:p-12 z-50 animate-in fade-in duration-300">
-                        <div className="bg-black/80 backdrop-blur-md border-4 border-primary/20 p-6 md:p-12 rounded-[4rem] w-full max-w-5xl shadow-[0_0_80px_rgba(0,0,0,0.9)] ring-1 ring-white/10 relative overflow-hidden">
+                        <div className="bg-black/80 backdrop-blur-md border-4 border-primary/20 p-6 md:p-12 rounded-[4rem] w-full max-w-6xl shadow-[0_0_80px_rgba(0,0,0,0.9)] ring-1 ring-white/10 relative overflow-hidden">
                             {/* Decorative Background Element */}
                             <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/10 rounded-full blur-[80px]" />
                             <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-cyan-500/10 rounded-full blur-[80px]" />
@@ -1416,49 +1431,90 @@ export function SlavicSurvivors() {
                                 </Button>
                             </div>
 
-                            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-6 custom-scrollbar relative z-10 w-full text-left">
+                            <div className="max-h-[70vh] overflow-auto pr-6 custom-scrollbar relative z-10 w-full text-left">
                                 {scores.filter(s => (s.worldId || 'dark_forest') === leaderboardWorldId).length > 0 ? (
-                                    scores.filter(s => (s.worldId || 'dark_forest') === leaderboardWorldId).map((s, i) => {
-                                        const char = characterData.find(c => c.id === s.characterId) || characterData[0]
+                                    (() => {
+                                        const world = WORLDS.find(w => w.id === leaderboardWorldId)
+                                        const completionLevel = world?.winValue || world?.maxLevel || 10
+                                        const sortedScores = [...scores]
+                                            .filter(s => (s.worldId || 'dark_forest') === leaderboardWorldId)
+                                            .sort((a, b) => {
+                                                if (leaderboardWorldId === 'dark_forest' && world?.winCondition === 'level') {
+                                                    const aCompleted = a.level >= completionLevel
+                                                    const bCompleted = b.level >= completionLevel
+                                                    if (aCompleted && bCompleted) return a.time - b.time
+                                                    if (aCompleted !== bCompleted) return aCompleted ? -1 : 1
+                                                }
+                                                return b.level - a.level || b.time - a.time
+                                            })
                                         return (
-                                            <div key={i} className="flex justify-between items-center text-white/80 font-bold border-b-2 border-white/5 pb-6 pt-2 hover:bg-white/5 px-6 rounded-2xl transition-all group animate-in fade-in slide-in-from-right duration-500" style={{ animationDelay: `${i * 100}ms` }}>
-                                                <div className="flex items-center gap-8 md:gap-10">
-                                                    <span className={`${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-600' : 'text-white/20'} w-10 italic font-black text-3xl md:text-5xl drop-shadow-md`}>#{i + 1}</span>
-                                                    <div className="relative">
-                                                        <Avatar className="w-16 h-16 md:w-20 md:h-20 border-4 border-white/10 shadow-2xl group-hover:border-primary transition-all group-hover:scale-110">
-                                                            <AvatarImage src={s.avatarUrl} />
-                                                            <AvatarFallback className="bg-gradient-to-br from-white/10 to-white/5 font-black text-2xl text-white">{s.name.charAt(0)}</AvatarFallback>
-                                                        </Avatar>
-                                                        {/* Character Badge */}
-                                                        <div className="absolute -bottom-2 -right-2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-black border-2 border-white/20 overflow-hidden shadow-lg z-10 flex items-center justify-center" title={char.name}>
-                                                            <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(/sprites/${char.sprite}.png)` }} />
-                                                            <span className="text-white/20 font-black text-[10px] uppercase select-none">{char.name.charAt(0)}</span>
-                                                        </div>
-                                                        {i < 3 && <Trophy className={`absolute -top-3 -left-3 w-8 h-8 ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-600' : ''} drop-shadow-lg z-20`} />}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-3xl md:text-4xl tracking-tighter text-white font-black uppercase group-hover:text-primary transition-colors leading-tight drop-shadow-md">{s.name}</span>
-                                                        {s.handle && <span className="text-xs md:text-sm text-primary/60 font-mono tracking-widest uppercase mt-1">@{s.handle}</span>}
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-8 md:gap-12 items-center">
-                                                    <div className="flex flex-col items-end shrink-0">
-                                                        <span className="text-primary font-black italic text-xl md:text-2xl drop-shadow-md tracking-tighter">LVL {s.level}</span>
-                                                        <span className="text-xs md:text-sm uppercase opacity-40 font-mono tracking-widest mt-1 italic">{Math.floor(s.time / 60)}:{(s.time % 60).toFixed(0).padStart(2, '0')}</span>
-                                                    </div>
-                                                    {s.seed && s.events && (
-                                                        <Button
-                                                            onClick={() => startReplay(s)}
-                                                            size="lg"
-                                                            className="h-14 md:h-16 px-8 md:px-10 bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-black text-sm md:text-base font-black uppercase rounded-[2rem] border-2 border-cyan-500/30 transition-all shadow-[0_0_25px_rgba(34,211,238,0.3)] hover:scale-105 active:scale-95"
-                                                        >
-                                                            Review Session
-                                                        </Button>
-                                                    )}
-                                                </div>
+                                            <div className="w-full">
+                                                <table className="w-full text-left text-sm md:text-base border-separate border-spacing-y-2">
+                                                    <thead className="sticky top-0 bg-black/80 backdrop-blur-md">
+                                                        <tr className="text-xs uppercase tracking-[0.3em] text-white/40">
+                                                            <th className="py-3 px-4">Rank</th>
+                                                            <th className="py-3 px-4">Player</th>
+                                                            <th className="py-3 px-4">Character</th>
+                                                            <th className="py-3 px-4">Level</th>
+                                                            <th className="py-3 px-4">Final Time</th>
+                                                            <th className="py-3 px-4 text-right">Replay</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {sortedScores.map((s, i) => {
+                                                            const char = characterData.find(c => c.id === s.characterId) || characterData[0]
+                                                            const timeLabel = `${Math.floor(s.time / 60)}:${(s.time % 60).toFixed(0).padStart(2, '0')}`
+                                                            return (
+                                                                <tr key={i} className="bg-white/5 hover:bg-white/10 transition-colors">
+                                                                    <td className="py-4 px-4 font-black">
+                                                                        <span className={`${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-600' : 'text-white/60'} text-2xl`}>#{i + 1}</span>
+                                                                    </td>
+                                                                    <td className="py-4 px-4">
+                                                                        <div className="flex items-center gap-4">
+                                                                            <div className="relative">
+                                                                                <Avatar className="w-12 h-12 border-2 border-white/10 shadow-2xl">
+                                                                                    <AvatarImage src={s.avatarUrl} />
+                                                                                    <AvatarFallback className="bg-gradient-to-br from-white/10 to-white/5 font-black text-white">{s.name.charAt(0)}</AvatarFallback>
+                                                                                </Avatar>
+                                                                                {i < 3 && <Trophy className={`absolute -top-2 -left-2 w-6 h-6 ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-slate-300' : 'text-amber-600'} drop-shadow-lg`} />}
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-lg md:text-xl tracking-tighter text-white font-black uppercase">{s.name}</span>
+                                                                                {s.handle && <span className="text-xs text-primary/60 font-mono tracking-widest uppercase">@{s.handle}</span>}
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-4 px-4">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div className="relative w-10 h-10 rounded-full bg-black border border-white/20 overflow-hidden shadow-lg" title={char.name}>
+                                                                                <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(/sprites/${char.sprite}.png)` }} />
+                                                                            </div>
+                                                                            <span className="font-bold text-white/80 uppercase">{char.name}</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-4 px-4 font-black text-primary">LVL {s.level}</td>
+                                                                    <td className="py-4 px-4 font-mono text-white/70">{timeLabel}</td>
+                                                                    <td className="py-4 px-4 text-right">
+                                                                        {s.seed && s.events ? (
+                                                                            <Button
+                                                                                onClick={() => startReplay(s)}
+                                                                                size="sm"
+                                                                                className="h-10 px-4 bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-black text-xs font-black uppercase rounded-[2rem] border border-cyan-500/30 transition-all shadow-[0_0_20px_rgba(34,211,238,0.2)]"
+                                                                            >
+                                                                                Review
+                                                                            </Button>
+                                                                        ) : (
+                                                                            <span className="text-xs text-white/30 uppercase">N/A</span>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            )
+                                                        })}
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         )
-                                    })
+                                    })()
                                 ) : (
                                     <div className="py-20 text-center text-white/20 italic font-black uppercase tracking-[0.5em] text-2xl">No legends recorded yet...</div>
                                 )}
@@ -1582,10 +1638,15 @@ export function SlavicSurvivors() {
                                     <div className="flex flex-col items-center gap-2 mb-12">
                                         <div className="text-white/40 font-black uppercase tracking-[0.3em] text-sm">Task Completed</div>
                                         <div className="text-4xl md:text-6xl text-yellow-400 font-black italic uppercase tracking-tighter">Legendary Survival</div>
+                                        <div className="text-sm md:text-base text-yellow-200 font-black uppercase tracking-[0.3em] mt-2">Victory grants a leaderboard spot</div>
                                         <div className="text-xl text-white/60 font-mono mt-2">{Math.floor(gameTime / 60)}m {(gameTime % 60).toFixed(0)}s - Final Level {playerLevel}</div>
                                     </div>
 
                                     <div className="flex gap-6 md:gap-10">
+                                        <Button onClick={() => {
+                                            allowPostVictoryRef.current = true
+                                            setGameState("playing")
+                                        }} size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-white/5 border-white/20 text-white hover:bg-white/10 font-black text-xl md:text-3xl uppercase tracking-widest transition-all">CONTINUE</Button>
                                         <Button onClick={() => {
                                             setTotalRuns(r => r + 1);
                                             resetGame(false);
