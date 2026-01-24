@@ -40,9 +40,9 @@ export class SpawnSystem {
         this.progressionSeconds += deltaTime * this.progressionRateMultiplier
         this.spawnTimer += deltaTime
 
-        // Scaling: spawn interval decreases very gradually over time and with Curse
+        // Scaling: spawn interval decreases moderately over time and with Curse
         const currentCurse = this.player.stats.curse || 1.0
-        const interval = Math.max(0.1, (this.spawnInterval - (this.progressionSeconds / 1800)) / (this.spawnRateMultiplier * currentCurse))
+        const interval = Math.max(0.1, (this.spawnInterval - (this.progressionSeconds / 900)) / (this.spawnRateMultiplier * currentCurse))
 
         if (this.spawnTimer >= interval) {
             this.spawnTimer = 0
@@ -65,8 +65,8 @@ export class SpawnSystem {
     private spawnEnemyGroup(progressionSeconds: number) {
         if (!this.currentWorld) return
 
-        // Scaling: spawn count increases very gradually over time
-        const count = Math.floor(this.baseSpawnCount + (progressionSeconds / 300))
+        // Scaling: spawn count increases moderately over time
+        const count = Math.floor(this.baseSpawnCount + (progressionSeconds / 120))
 
         for (let i = 0; i < count; i++) {
             const angle = this.rng.next() * Math.PI * 2
@@ -78,8 +78,8 @@ export class SpawnSystem {
             const typeIndex = Math.floor(this.rng.next() * pool.length)
             const type = pool[typeIndex] as EnemyType
 
-            // Elite chance: 1% base, increases very slowly over time up to 10%
-            const eliteChance = Math.min(0.1, (0.01 + (progressionSeconds / 3600)) * this.eliteChanceMultiplier)
+            // Elite chance: 1% base, increases moderately over time up to 10%
+            const eliteChance = Math.min(0.1, (0.01 + (progressionSeconds / 2400)) * this.eliteChanceMultiplier)
             const isElite = this.rng.next() < eliteChance
 
             this.entityManager.spawnEnemy(type, x, z, isElite)
