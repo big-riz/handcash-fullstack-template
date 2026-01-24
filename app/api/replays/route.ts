@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { replays } from "@/lib/schema"
+import { getUserById } from "@/lib/users-storage"
 
 export async function POST(req: NextRequest) {
     try {
@@ -11,6 +12,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
         }
 
+        // Verify user exists if userId is provided, otherwise set to null
+        let validUserId: string | null = null
+        if (userId) {
+            const user = await getUserById(userId)
+            if (user) {
+                validUserId = userId
+            } else {
+                console.warn(`[Replays] User ${userId} not found in database, saving replay without user_id`)
+            }
+        }
+
         // Insert into database
         const result = await db.insert(replays).values({
             playerName,
@@ -19,7 +31,7 @@ export async function POST(req: NextRequest) {
             finalLevel,
             finalTime,
             gameVersion,
-            userId: userId || null,
+            userId: validUserId,
             handle: handle || null,
             avatarUrl: avatarUrl || null,
             characterId: characterId || null,

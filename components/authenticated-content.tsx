@@ -5,6 +5,7 @@ import { AppFooter } from "@/components/app-footer"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ShoppingBag, Package, BarChart2, Gamepad2 } from "lucide-react"
 import { SlavicSurvivors } from "@/components/game/SlavicSurvivors"
+import { DevLog } from "@/components/game/DevLog"
 
 interface AuthenticatedContentProps {
   activeTab: string
@@ -43,8 +44,9 @@ export function AuthenticatedContent({ activeTab, onTabChange }: AuthenticatedCo
           </TabsContent>
 
           <TabsContent value="game" className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-0">
-            <div className="w-full max-w-7xl mx-auto px-2 sm:px-4">
+            <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 space-y-6">
               <SlavicSurvivors />
+              <DevLog />
             </div>
           </TabsContent>
         </Tabs>

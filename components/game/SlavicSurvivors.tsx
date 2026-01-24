@@ -1628,35 +1628,35 @@ export function SlavicSurvivors() {
                 )}
 
                 {gameState === "gameVictory" && (
-                    <div className="absolute inset-0 bg-yellow-950/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 z-50 animate-in fade-in zoom-in duration-700">
-                        <div className="bg-black/60 border-4 border-yellow-500/30 p-12 md:p-16 rounded-[4rem] flex flex-col items-center shadow-2xl ring-2 ring-yellow-500/10 max-w-4xl w-full">
-                            <Trophy className="w-24 h-24 text-yellow-500 mb-6 animate-bounce drop-shadow-[0_0_30px_rgba(234,179,8,1)]" />
-                            <h2 className="text-6xl md:text-[8rem] font-black italic uppercase tracking-tighter text-white mb-4 drop-shadow-[0_0_60px_rgba(234,179,8,1)] text-center leading-none">VICTORY</h2>
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-950 via-orange-950 to-amber-950 backdrop-blur-xl flex flex-col items-center justify-center p-8 z-50 animate-in fade-in zoom-in duration-700" style={{background: 'radial-gradient(circle, rgba(120,53,15,0.3) 0%, rgba(154,52,18,0.5) 50%, rgba(120,53,15,0.8) 100%)'}}>
+                        <div className="bg-black/80 border-4 border-yellow-400 shadow-[0_0_40px_rgba(234,179,8,0.6)] p-12 md:p-16 rounded-[4rem] flex flex-col items-center shadow-2xl max-w-4xl w-full relative">
+                            <Trophy className="w-24 h-24 text-yellow-400 mb-6 animate-bounce drop-shadow-[0_0_30px_rgba(234,179,8,1)]" />
+                            <h2 className="text-6xl md:text-[8rem] font-black italic uppercase tracking-tighter text-white mb-4 drop-shadow-[0_0_60px_rgba(255,255,255,0.8)] text-center leading-none">VICTORY</h2>
 
                             {!showScoreInput ? (
                                 <>
                                     <div className="flex flex-col items-center gap-2 mb-12">
-                                        <div className="text-white/40 font-black uppercase tracking-[0.3em] text-sm">Task Completed</div>
-                                        <div className="text-4xl md:text-6xl text-yellow-400 font-black italic uppercase tracking-tighter">Legendary Survival</div>
-                                        <div className="text-sm md:text-base text-yellow-200 font-black uppercase tracking-[0.3em] mt-2">Victory grants a leaderboard spot</div>
-                                        <div className="text-xl text-white/60 font-mono mt-2">{Math.floor(gameTime / 60)}m {(gameTime % 60).toFixed(0)}s - Final Level {playerLevel}</div>
+                                        <div className="text-white/40 font-black uppercase tracking-[0.3em] text-sm md:text-base">TASK COMPLETED</div>
+                                        <div className="text-4xl md:text-6xl text-yellow-400 font-black italic uppercase tracking-tighter drop-shadow-[0_0_40px_rgba(234,179,8,0.8)]">LEGENDARY SURVIVAL</div>
+                                        <div className="text-sm md:text-base text-white font-black uppercase tracking-[0.3em] mt-2">VICTORY GRANTS A LEADERBOARD SPOT</div>
+                                        <div className="text-base md:text-lg text-white/60 font-mono mt-2">{Math.floor(gameTime / 60)}m {(gameTime % 60).toFixed(0)}s - Final Level {playerLevel}</div>
                                     </div>
 
-                                    <div className="flex gap-6 md:gap-10">
+                                    <div className="flex gap-6 md:gap-10 justify-center">
                                         <Button onClick={() => {
                                             allowPostVictoryRef.current = true
                                             setGameState("playing")
-                                        }} size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-white/5 border-white/20 text-white hover:bg-white/10 font-black text-xl md:text-3xl uppercase tracking-widest transition-all">CONTINUE</Button>
+                                        }} size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-black/80 border-2 border-white/20 text-white hover:bg-black/90 font-black text-xl md:text-3xl uppercase tracking-widest transition-all">CONTINUE</Button>
                                         <Button onClick={() => {
                                             setTotalRuns(r => r + 1);
                                             resetGame(false);
                                             setGameState("playing")
-                                        }} size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-yellow-500 text-black hover:bg-yellow-400 font-black text-xl md:text-3xl uppercase tracking-widest shadow-yellow-500/30 shadow-2xl transition-all active:scale-95">ANOTHER RUN</Button>
+                                        }} size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-yellow-400 text-black hover:bg-yellow-300 font-black text-xl md:text-3xl uppercase tracking-widest shadow-[0_0_30px_rgba(234,179,8,0.8)] transition-all active:scale-95">ANOTHER RUN</Button>
                                         <Button onClick={() => {
                                             setTotalRuns(r => r + 1);
                                             resetGame(false);
                                             setGameState("menu");
-                                        }} variant="outline" size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-white/5 border-white/20 text-white hover:bg-white/10 font-black text-xl md:text-3xl uppercase tracking-widest transition-all">RETIRE</Button>
+                                        }} variant="outline" size="lg" className="h-20 md:h-24 px-12 md:px-20 rounded-[2.5rem] bg-black/80 border-2 border-white/20 text-white hover:bg-black/90 font-black text-xl md:text-3xl uppercase tracking-widest transition-all">RETIRE</Button>
                                     </div>
                                 </>
                             ) : (

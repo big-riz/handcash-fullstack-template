@@ -1,0 +1,8 @@
+# Slavic Survivors Development Log
+# Format: [YYYY-MM-DD] [TYPE] Description
+# Types: ADD (addition), FIX (bug fix), REM (removal), UPD (update)
+# ═══════════════════════════════════════════════════════════════════════════
+
+[2026-01-23] [ADD] Initial devlog system created with CLI script support
+[2026-01-24] [ADD] Devlog section with UI component and CLI script for feature tracking
+[2026-01-24] [UPD] Reduced difficulty scaling progression, boss at 5min is main challenge
