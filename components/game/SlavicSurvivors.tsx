@@ -1215,7 +1215,7 @@ export function SlavicSurvivors() {
 
             {/* FULL WIDTH Game Viewport Container */}
             <div className="relative bg-[#1a1e1a] border-y-8 border-card overflow-hidden shadow-2xl w-full translate-x-0">
-                <div ref={containerRef} className={`w-full ${isMobile ? 'h-[100vh]' : 'h-[960px]'}`} />
+                <div ref={containerRef} className={`w-full ${isMobile ? 'h-[100vh]' : 'h-[960px]'}`} style={{ touchAction: 'none', userSelect: 'none' }} />
 
                 {/* HUD Overlay */}
                 {/* HUD Overlay */}
