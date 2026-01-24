@@ -46,7 +46,7 @@ export class DaggerWeapon {
         for (let i = 0; i < this.count; i++) {
             const targetIdx = Math.min(i, enemies.length - 1)
             const target = enemies[targetIdx]
-            
+
             const dir = target.position.clone().sub(this.player.position).normalize()
             const dx = dir.x
             const dz = dir.z
@@ -54,12 +54,18 @@ export class DaggerWeapon {
             // Add slight spread for multiple projectiles at same target
             const spread = i > 0 && targetIdx === enemies.length - 1 ? (this.rng.next() - 0.5) * 0.3 : 0
 
+            // Crit check
+            const isCrit = this.rng.next() < this.player.stats.critRate
+            const finalDamage = isCrit
+                ? this.damage * this.player.stats.damageMultiplier * this.player.stats.critDamage
+                : this.damage * this.player.stats.damageMultiplier
+
             this.entityManager.spawnProjectile(
                 this.player.position.x,
                 this.player.position.z,
                 (dx + spread) * this.projectileSpeed,
                 (dz + spread) * this.projectileSpeed,
-                this.damage * this.player.stats.damageMultiplier
+                finalDamage
             )
         }
     }

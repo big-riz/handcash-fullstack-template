@@ -69,8 +69,14 @@ export class GarlicAura {
                 const effectiveDamage = this.damage * this.player.stats.damageMultiplier
 
                 if (dist <= effectiveRadius + enemy.radius) {
-                    enemy.takeDamage(effectiveDamage, this.vfx)
-                    this.vfx.createEmoji(enemy.position.x, enemy.position.z, '🧄')
+                    // Crit check
+                    const isCrit = this.rng.next() < this.player.stats.critRate
+                    const finalDamage = isCrit
+                        ? effectiveDamage * this.player.stats.critDamage
+                        : effectiveDamage
+
+                    enemy.takeDamage(finalDamage, this.vfx)
+                    this.vfx.createEmoji(enemy.position.x, enemy.position.z, isCrit ? '🎯' : '🧄')
                 }
             }
         }

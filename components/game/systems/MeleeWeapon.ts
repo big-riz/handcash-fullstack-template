@@ -59,16 +59,22 @@ export class MeleeWeapon {
             }
         }
 
+        // Crit check
+        const isCrit = this.rng.next() < this.player.stats.critRate
+        const finalDamage = isCrit
+            ? this.damage * this.player.stats.damageMultiplier * this.player.stats.critDamage
+            : this.damage * this.player.stats.damageMultiplier
+
         // Spawn the melee swing arc
         this.entityManager.spawnMeleeSwing(
             this.player.position.x,
             this.player.position.z,
             facingAngle,
-            this.damage * this.player.stats.damageMultiplier,
+            finalDamage,
             this.radius,
             this.swingDuration,
             this.arcAngle,
-            this.color
+            isCrit ? 0xff0000 : this.color // Red swing for crits
         )
     }
 

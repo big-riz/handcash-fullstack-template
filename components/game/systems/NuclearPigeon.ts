@@ -26,7 +26,8 @@ export class NuclearPigeon {
         private scene: THREE.Scene,
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any // SeededRandom
     ) {
         this.createMesh()
     }
@@ -73,16 +74,22 @@ export class NuclearPigeon {
         const target = enemies[0]
         const dir = target.position.clone().sub(this.mesh.position).normalize()
 
+        // Crit check
+        const isCrit = this.rng.next() < this.player.stats.critRate
+        const finalDamage = isCrit
+            ? this.damage * this.player.stats.damageMultiplier * this.player.stats.critDamage
+            : this.damage * this.player.stats.damageMultiplier
+
         this.entityManager.spawnProjectile(
             this.mesh.position.x,
             this.mesh.position.z,
             dir.x * 20,
             dir.z * 20,
-            this.damage * this.player.stats.damageMultiplier
+            finalDamage
         )
 
         if (this.vfx) {
-            this.vfx.createEmoji(this.mesh.position.x, this.mesh.position.z, '🐦', 0.4)
+            this.vfx.createEmoji(this.mesh.position.x, this.mesh.position.z, isCrit ? '☢️' : '🐦', 0.4)
         }
     }
 

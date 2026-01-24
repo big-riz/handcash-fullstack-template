@@ -56,12 +56,18 @@ export class TT33Weapon {
             }
         }
 
+        // Crit check
+        const isCrit = this.rng.next() < this.player.stats.critRate
+        const finalDamage = isCrit
+            ? this.damage * this.player.stats.damageMultiplier * this.player.stats.critDamage
+            : this.damage * this.player.stats.damageMultiplier
+
         this.entityManager.spawnProjectile(
             this.player.position.x,
             this.player.position.z,
             dx * this.speed,
             dz * this.speed,
-            this.damage * this.player.stats.damageMultiplier
+            finalDamage
         )
     }
 

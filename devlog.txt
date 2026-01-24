@@ -41,3 +41,4 @@
 [2026-01-24] [ADD] Implemented Luck-based rarity weighting for level-up upgrades
 [2026-01-24] [UPD] Consolidated world weapon pools to exactly 5 base weapons
 [2026-01-24] [REM] Removed Knuckles from the Dark Forest item pool
+[2026-01-24] [ADD] Enabled critical hit system for all core weapons (TT33, Melee, Dagger, Garlic, Pigeon)
