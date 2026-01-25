@@ -12,6 +12,7 @@ import { SeededRandom } from '../../../lib/SeededRandom'
 
 export class SpawnSystem {
     private spawnTimer = 0
+    private lastBossSpawnTime = 0
     private elapsedSeconds = 0
     private progressionSeconds = 0
     public spawnInterval = 1.25 // Base spawn interval (increased from 1.0 to reduce density)
@@ -57,16 +58,21 @@ export class SpawnSystem {
             this.spawnEnemyGroup(this.progressionSeconds)
         }
 
-        // BOSS SPAWN at 5 minutes (300s)
-        const bossCheckTrigger = 300
-        if (this.progressionSeconds >= bossCheckTrigger && this.progressionSeconds < bossCheckTrigger + 0.1) {
-            const angle = this.rng.next() * Math.PI * 2
-            this.entityManager.spawnEnemy('leshy',
-                Math.cos(angle) * this.spawnRadius + this.player.position.x,
-                Math.sin(angle) * this.spawnRadius + this.player.position.z
-            )
-            // Push it past the trigger window
-            this.progressionSeconds += 0.2
+        // BOSS SPAWN - Every 5 minutes (300s)
+        const bossInterval = 300
+        if (this.progressionSeconds - this.lastBossSpawnTime >= bossInterval) {
+            // Check if boss (leshy) is already alive to prevent stacking bosses
+            if (!isBossAlive) {
+                const angle = this.rng.next() * Math.PI * 2
+                this.entityManager.spawnEnemy('leshy',
+                    Math.cos(angle) * this.spawnRadius + this.player.position.x,
+                    Math.sin(angle) * this.spawnRadius + this.player.position.z
+                )
+                this.lastBossSpawnTime = this.progressionSeconds
+            } else {
+                // If boss is still alive, delay the next check slightly without resetting time
+                // so it pops as soon as the current one is dead if 5 mins have passed
+            }
         }
     }
 
@@ -76,15 +82,54 @@ export class SpawnSystem {
         // Scaling: spawn count increases moderately over time
         const count = Math.floor(this.baseSpawnCount + (progressionSeconds / 120))
 
+        // Level requirements for harder enemies - Staggered throughout early-to-mid game
+        const levelRequirements: Record<string, number> = {
+            'werewolf': 5,
+            'forest_wraith': 10,
+            'guardian_golem': 15
+        }
+
+        // Limit number of harder enemies per group based on player level
+        // Start with 1 at level 5, and increase slowly (e.g., +1 every 5 levels)
+        const playerLevel = this.player.stats.level || 1
+        const maxHardInGroup = Math.max(1, Math.floor(playerLevel / 5))
+        let hardSpawnedInGroup = 0
+
         for (let i = 0; i < count; i++) {
             const angle = this.rng.next() * Math.PI * 2
             const x = this.player.position.x + Math.cos(angle) * this.spawnRadius
             const z = this.player.position.z + Math.sin(angle) * this.spawnRadius
 
-            // Decide type based on World Pool
+            // Decide type based on World Pool and level requirements
             const pool = this.currentWorld.availableEnemies
-            const typeIndex = Math.floor(this.rng.next() * pool.length)
-            const type = pool[typeIndex] as EnemyType
+
+            // Separate available pool into common and hard (that meet level req)
+            const commonEnemies = pool.filter(type => !levelRequirements[type]) as EnemyType[]
+            const eligibleHard = pool.filter(type => {
+                const req = levelRequirements[type]
+                return req && playerLevel >= req
+            }) as EnemyType[]
+
+            let type: EnemyType
+
+            // Decide if we spawn a hard enemy:
+            // 1. Must have eligible hard enemies
+            // 2. Must be under the group limit
+            // 3. 40% chance for a slot to be hard if allowed (to keep variety)
+            const canSpawnHard = eligibleHard.length > 0 && hardSpawnedInGroup < maxHardInGroup
+
+            if (canSpawnHard && this.rng.next() < 0.4) {
+                const typeIndex = Math.floor(this.rng.next() * eligibleHard.length)
+                type = eligibleHard[typeIndex]
+                hardSpawnedInGroup++
+            } else if (commonEnemies.length > 0) {
+                const typeIndex = Math.floor(this.rng.next() * commonEnemies.length)
+                type = commonEnemies[typeIndex]
+            } else {
+                // Fallback to anything in the pool if common is empty (unlikely)
+                const typeIndex = Math.floor(this.rng.next() * pool.length)
+                type = pool[typeIndex] as EnemyType
+            }
 
             // Elite chance: 1% base, increases moderately over time up to 10%
             const eliteChance = Math.min(0.1, (0.01 + (progressionSeconds / 2400)) * this.eliteChanceMultiplier)

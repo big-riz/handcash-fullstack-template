@@ -110,12 +110,16 @@ export class EntityManager {
             else if (type === 'domovoi') color = 0x66ff66
             else if (type === 'kikimora') color = 0xaa00ff
             else if (type === 'leshy') color = 0x1a2e1a
+            else if (type === 'werewolf') color = 0x5d4037 // Dark Brown
+            else if (type === 'forest_wraith') color = 0x00bcd4 // Cyan
+            else if (type === 'guardian_golem') color = 0x455a64 // Blue Gray (Stone)
 
             enemy.createMesh(this.scene, color)
 
-            // Apply scale for Boss
-            if (type === 'leshy' && enemy.mesh) {
-                enemy.mesh.scale.set(3, 3, 3)
+            // Apply scale for Boss and Golem
+            if (enemy.mesh) {
+                if (type === 'leshy') enemy.mesh.scale.set(3, 3, 3)
+                else if (type === 'guardian_golem') enemy.mesh.scale.set(1.5, 1.5, 1.5)
             }
 
             // Wire up drops and effects

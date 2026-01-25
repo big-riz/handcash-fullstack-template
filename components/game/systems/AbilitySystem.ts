@@ -424,7 +424,7 @@ export class AbilitySystem {
         if (type === 'battle_scarf') return nextLevel === 1 ? "+3 Armor." : `+3 armor.`
         if (type === 'holy_cheese') return nextLevel === 1 ? "+2.0 HP/sec Regen." : `+2.0 HP/s regen.`
         if (type === 'spy_hat') return nextLevel === 1 ? "+20% Crit Chance." : `+20% crit.`
-        if (type === 'infinity_purse') return nextLevel === 1 ? "+50% Gold Gain." : `+50% gold.`
+        if (type === 'infinity_purse') return nextLevel === 1 ? "+20% Experience Gain." : `+20% exp.`
         if (type === 'ruby_ushanka') return nextLevel === 1 ? "+2 Armor, +15% Damage." : `+2 armor, +15% damage.`
         if (type === 'sunflower_pouch') return nextLevel === 1 ? "+1 Projectile to all weapons." : `+1 projectile.`
         if (type === 'pickled_gpu') return nextLevel === 1 ? "-20% Cooldowns." : `-20% cooldowns.`

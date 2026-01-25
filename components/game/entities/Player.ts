@@ -66,7 +66,7 @@ export class Player {
             moveSpeed: 8.0,
             level: 1,
             xp: 0,
-            xpToNextLevel: 25,
+            xpToNextLevel: 50,
             magnet: 2.5,
             armor: 0,
             areaMultiplier: 1.0,
@@ -193,7 +193,8 @@ export class Player {
     }
 
     addXp(amount: number) {
-        this.stats.xp += amount
+        const multipliedXp = amount * (this.stats.growth || 1.0)
+        this.stats.xp += multipliedXp
         if (this.stats.xp >= this.stats.xpToNextLevel) {
             this.levelUp()
         }
@@ -202,7 +203,7 @@ export class Player {
     private levelUp() {
         this.stats.level++
         this.stats.xp -= this.stats.xpToNextLevel
-        this.stats.xpToNextLevel = Math.floor(this.stats.xpToNextLevel * 1.4)
+        this.stats.xpToNextLevel = Math.floor(this.stats.xpToNextLevel * 1.2)
     }
 
 

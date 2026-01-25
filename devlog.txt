@@ -42,3 +42,14 @@
 [2026-01-24] [UPD] Consolidated world weapon pools to exactly 5 base weapons
 [2026-01-24] [REM] Removed Knuckles from the Dark Forest item pool
 [2026-01-24] [ADD] Enabled critical hit system for all core weapons (TT33, Melee, Dagger, Garlic, Pigeon)
+[2026-01-24] [UPD] Shifted leveling curve multiplier to 1.3 and fully implemented Growth stat functionality
+[2026-01-24] [UPD] Further refined leveling curve multiplier to 1.2
+[2026-01-24] [UPD] Balanced initial XP requirement to 50 with a 1.2x growth curve
+[2026-01-24] [ADD] Implemented localStorage persistence for unlocked characters
+[2026-01-24] [UPD] Increased all item minimum level requirements by 2x for harder early-game progression
+[2026-01-24] [UPD] Reverted passive item level requirements while maintaining 2x requirement for active weapons
+[2026-01-24] [UPD] Updated level-up UI to display all 5 reward cards in a single horizontal row
+[2026-01-24] [FIX] Prevented right-click context menu on the game canvas
+[2026-01-24] [ADD] Implemented three tiers of harder enemies for the Dark Forest: Werewolf, Forest Wraith, and Guardian Golem
+[2026-01-24] [UPD] Staggered harder enemy spawns by level and implemented recurring 5-minute boss encounters
+[2026-01-24] [UPD] Scaled harder enemy spawns to start with 1 and increase every 5 levels

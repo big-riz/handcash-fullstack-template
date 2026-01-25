@@ -157,6 +157,33 @@ export function SlavicSurvivors() {
     useEffect(() => { replaySpeedRef.current = replaySpeed }, [replaySpeed])
 
     const { user } = useAuth()
+    const [isLoaded, setIsLoaded] = useState(false)
+
+    // Persistence: Unlocked Characters
+    useEffect(() => {
+        const saved = localStorage.getItem('slavic_survivors_unlocked_heros')
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved)
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    // Always ensure 'gopnik' is in the set even if storage is old/missing it
+                    const newSet = new Set(['gopnik', ...parsed])
+                    setUnlockedCharacters(newSet)
+                }
+            } catch (e) {
+                console.error("Failed to parse unlocked heroes", e)
+            }
+        }
+        setIsLoaded(true)
+    }, [])
+
+    useEffect(() => {
+        // Only save after we've confirmed loading is complete AND we have data
+        // This prevents overwriting existing storage with a default/empty state on mount
+        if (isLoaded && unlockedCharacters.size > 0) {
+            localStorage.setItem('slavic_survivors_unlocked_heros', JSON.stringify(Array.from(unlockedCharacters)))
+        }
+    }, [unlockedCharacters, isLoaded])
 
     // Three.js refs
     const sceneRef = useRef<THREE.Scene | null>(null)
@@ -450,6 +477,10 @@ export function SlavicSurvivors() {
 
         container.innerHTML = ""
         container.appendChild(renderer.domElement)
+
+        // Prevent right-click context menu on the game canvas
+        renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault())
+
         rendererRef.current = renderer
 
         // Brighter Ground 
@@ -1647,14 +1678,46 @@ export function SlavicSurvivors() {
 
                                         {/* Stats List */}
                                         <div className="bg-black/40 rounded-3xl p-4 border border-white/5 space-y-2 mb-4">
-                                            {Object.entries(char.stats || {}).map(([key, val]: [string, any]) => (
-                                                <div key={key} className="flex justify-between text-sm items-center">
-                                                    <span className="uppercase text-white/40 font-black text-[10px] tracking-[0.2em]">{key}</span>
-                                                    <span className={`font-mono font-black text-xs ${val > 1 ? 'text-green-400' : val < 0 ? 'text-red-400' : val < 1 && key !== 'cooldownMultiplier' ? 'text-red-400' : val < 1 && key === 'cooldownMultiplier' ? 'text-green-400' : 'text-white/20'}`}>
-                                                        {val === 1 ? '-' : val > 1 ? `+${Math.round((val - 1) * 100)}%` : val < 0 ? `${val}/s` : `-${Math.round((1 - val) * 100)}%`}
-                                                    </span>
-                                                </div>
-                                            ))}
+                                            {Object.entries(char.stats || {}).map(([key, val]: [string, any]) => {
+                                                const labels: Record<string, string> = {
+                                                    maxHp: 'Health',
+                                                    moveSpeed: 'Speed',
+                                                    might: 'Might',
+                                                    area: 'Area',
+                                                    luck: 'Luck',
+                                                    regen: 'Regen',
+                                                    cooldownMultiplier: 'Cooldown'
+                                                }
+
+                                                let displayValue = "";
+                                                let isGood = true;
+
+                                                if (key === 'maxHp') {
+                                                    displayValue = `${val}`;
+                                                    isGood = val >= 100;
+                                                } else if (key === 'regen') {
+                                                    displayValue = `${val > 0 ? '+' : ''}${val}/s`;
+                                                    isGood = val > 0;
+                                                } else if (key === 'cooldownMultiplier') {
+                                                    const reduced = Math.round((1 - val) * 100);
+                                                    displayValue = reduced === 0 ? '-' : `-${reduced}%`;
+                                                    isGood = val < 1;
+                                                } else {
+                                                    // Standard multipliers (Might, Speed, Area, Luck)
+                                                    const percent = Math.round((val - 1) * 100);
+                                                    displayValue = percent === 0 ? '-' : (percent > 0 ? `+${percent}%` : `${percent}%`);
+                                                    isGood = val >= 1;
+                                                }
+
+                                                return (
+                                                    <div key={key} className="flex justify-between text-sm items-center">
+                                                        <span className="uppercase text-white/40 font-black text-[10px] tracking-[0.2em]">{labels[key] || key}</span>
+                                                        <span className={`font-mono font-black text-xs ${displayValue === '-' ? 'text-white/20' : isGood ? 'text-green-400' : 'text-red-400'}`}>
+                                                            {displayValue}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
 
                                         {/* Lock Overlay */}
@@ -1896,8 +1959,8 @@ export function SlavicSurvivors() {
                             <p className="text-white/40 font-bold tracking-[0.3em] uppercase text-xs mt-4 font-mono">LEVEL {playerLevel} ACCOMPLISHED</p>
                         </div>
 
-                        {/* Card Container - Adjusted for 5 slots and better presentation */}
-                        <div className="flex flex-wrap justify-center gap-4 md:gap-8 max-w-7xl w-full mx-auto mb-16 px-4">
+                        {/* Card Container - Single Row Scrollable */}
+                        <div className="flex flex-nowrap justify-start lg:justify-center gap-4 md:gap-6 w-full mx-auto mb-16 px-10 overflow-x-auto scrollbar-hide no-scrollbar pb-8">
                             {levelUpChoices.current.map((choice, index) => (
                                 <div
                                     key={choice.id}
@@ -2327,7 +2390,7 @@ function UpgradeCard({ title, desc, imageUrl, onClick }: { title: string, desc: 
         <div className="relative group">
             <button
                 onClick={onClick}
-                className="relative bg-black/60 border-4 border-white/5 p-8 md:p-10 rounded-[3rem] md:rounded-[4rem] text-left transition-all hover:bg-white/10 hover:border-primary/50 hover:scale-[1.02] active:scale-95 shadow-2xl overflow-hidden ring-1 ring-white/10 w-[320px] md:w-[380px] h-[320px] md:h-[380px] flex flex-col"
+                className="relative bg-black/60 border-4 border-white/5 p-6 md:p-8 rounded-[3rem] md:rounded-[4rem] text-left transition-all hover:bg-white/10 hover:border-primary/50 hover:scale-[1.02] active:scale-95 shadow-2xl overflow-hidden ring-1 ring-white/10 w-[240px] md:w-[280px] h-[300px] md:h-[340px] flex flex-col shrink-0"
             >
                 <div className="mb-6 md:mb-8 w-16 md:w-24 h-16 md:h-24 rounded-[1.5rem] md:rounded-[2rem] bg-white/5 flex items-center justify-center group-hover:bg-primary/30 transition-all group-hover:rotate-12 group-hover:scale-110 overflow-hidden shrink-0">
                     {imageUrl ? (
@@ -2342,8 +2405,8 @@ function UpgradeCard({ title, desc, imageUrl, onClick }: { title: string, desc: 
                         </div>
                     )}
                 </div>
-                <h3 className="text-3xl md:text-4xl font-black italic uppercase text-white mb-2 md:mb-3 group-hover:text-primary transition-colors tracking-tighter leading-tight">{title}</h3>
-                <p className="text-sm md:text-lg text-white/50 font-black leading-tight tracking-tight opacity-70 line-clamp-4">{desc}</p>
+                <h3 className="text-2xl md:text-3xl font-black italic uppercase text-white mb-1 md:mb-2 group-hover:text-primary transition-colors tracking-tighter leading-tight">{title}</h3>
+                <p className="text-xs md:text-sm text-white/50 font-black leading-tight tracking-tight opacity-70 line-clamp-4">{desc}</p>
                 <div className="absolute top-8 right-10 text-[10px] font-black uppercase text-white/5 tracking-[0.5em] group-hover:text-primary/40 transition-colors">Ancient Relic</div>
 
             </button>

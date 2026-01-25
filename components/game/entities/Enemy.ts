@@ -18,7 +18,7 @@ export interface EnemyStats {
     isRanged?: boolean
 }
 
-export type EnemyType = 'drifter' | 'screecher' | 'bruiser' | 'zmora' | 'domovoi' | 'kikimora' | 'leshy' | 'vodnik'
+export type EnemyType = 'drifter' | 'screecher' | 'bruiser' | 'zmora' | 'domovoi' | 'kikimora' | 'leshy' | 'vodnik' | 'werewolf' | 'forest_wraith' | 'guardian_golem'
 
 export class Enemy {
     position: THREE.Vector3
@@ -94,6 +94,18 @@ export class Enemy {
                 this.stats = { maxHp: 16, currentHp: 16, moveSpeed: 3.0, damage: 8, xpValue: 2, isRanged: true }
                 this.radius = 0.35
                 break;
+            case 'werewolf': // Hard Tier 1: Fast & Aggressive
+                this.stats = { maxHp: 120, currentHp: 120, moveSpeed: 4.8, damage: 25, xpValue: 5 }
+                this.radius = 0.45
+                break;
+            case 'forest_wraith': // Hard Tier 2: Toughened Ghost
+                this.stats = { maxHp: 200, currentHp: 200, moveSpeed: 3.5, damage: 30, xpValue: 8 }
+                this.radius = 0.5
+                break;
+            case 'guardian_golem': // Hard Tier 3: Behemoth
+                this.stats = { maxHp: 800, currentHp: 800, moveSpeed: 2.0, damage: 50, xpValue: 20 }
+                this.radius = 1.0
+                break;
         }
     }
 
@@ -132,7 +144,7 @@ export class Enemy {
         if (!this.healthBarFill || !this.healthBarBg) return
 
         const hpPercent = Math.max(0, this.stats.currentHp / this.stats.maxHp)
-        
+
         // Scale the fill bar based on HP
         this.healthBarFill.scale.x = hpPercent
         // Offset to keep it left-aligned
@@ -161,14 +173,15 @@ export class Enemy {
         if (!this.isActive) return
 
         // Behavior Logic
-        if (this.type === 'zmora') {
+        if (this.type === 'zmora' || this.type === 'forest_wraith') {
             this.flickerTimer += deltaTime
-            if (this.flickerTimer >= 2.0) {
+            const flickerInterval = this.type === 'forest_wraith' ? 1.5 : 2.0
+            if (this.flickerTimer >= flickerInterval) {
                 this.flickerTimer = 0
                 this.isInvulnerable = !this.isInvulnerable
                 if (this.mesh) {
                     const mat = this.mesh.material as THREE.MeshStandardMaterial
-                    mat.opacity = this.isInvulnerable ? 0.2 : 0.6
+                    mat.opacity = this.isInvulnerable ? 0.2 : (this.type === 'forest_wraith' ? 0.4 : 0.6)
                 }
             }
         }
@@ -240,7 +253,7 @@ export class Enemy {
         // Hide health bar
         if (this.healthBarBg) this.healthBarBg.visible = false
         if (this.healthBarFill) this.healthBarFill.visible = false
-        
+
         if (this.onDie) {
             this.onDie(this.position.x, this.position.z, this.stats.xpValue)
         }
@@ -273,7 +286,7 @@ export class Enemy {
         this.healthBarWidth = Math.max(0.4, this.radius * 1.5)
         const barHeight = 0.08
         const bgGeo = new THREE.PlaneGeometry(this.healthBarWidth, barHeight)
-        const bgMat = new THREE.MeshBasicMaterial({ 
+        const bgMat = new THREE.MeshBasicMaterial({
             color: 0x222222,
             side: THREE.DoubleSide,
             depthTest: false
@@ -286,7 +299,7 @@ export class Enemy {
 
         // Create health bar (fill - green to red)
         const fillGeo = new THREE.PlaneGeometry(this.healthBarWidth, barHeight * 0.8)
-        const fillMat = new THREE.MeshBasicMaterial({ 
+        const fillMat = new THREE.MeshBasicMaterial({
             color: 0x00ff00,
             side: THREE.DoubleSide,
             depthTest: false

@@ -71,7 +71,7 @@ export class MeleeWeapon {
             this.player.position.z,
             facingAngle,
             finalDamage,
-            this.radius,
+            this.radius * this.player.stats.areaMultiplier,
             this.swingDuration,
             this.arcAngle,
             isCrit ? 0xff0000 : this.color // Red swing for crits

@@ -25,7 +25,8 @@ export class MushroomAKWeapon {
         private scene: THREE.Scene,
         private player: Player,
         private entityManager: EntityManager,
-        private vfx: VFXManager
+        private vfx: VFXManager,
+        private rng: any // SeededRandom
     ) { }
 
     update(deltaTime: number) {

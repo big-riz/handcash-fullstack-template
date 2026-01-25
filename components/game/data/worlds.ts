@@ -20,9 +20,9 @@ export const WORLDS: WorldData[] = [
         id: 'dark_forest',
         name: 'Dark Forest',
         description: 'The ancient woods where Perun strikes.',
-        maxLevel: 10,
+        maxLevel: 30,
         winCondition: 'level',
-        winValue: 10,
+        winValue: 30,
         allowedUpgrades: [
             // Actives (Exactly 5 per world)
             'tt33', 'shank', 'stilleto', 'peppermill', 'soviet_stick',
@@ -32,7 +32,7 @@ export const WORLDS: WorldData[] = [
             // Evolutions
             'soul_siphon'
         ],
-        availableEnemies: ['drifter', 'screecher', 'bruiser', 'domovoi'],
+        availableEnemies: ['drifter', 'screecher', 'bruiser', 'domovoi', 'werewolf', 'forest_wraith', 'guardian_golem'],
         difficultyMultiplier: 1.0,
         lootThemeName: 'ANCIENT RELICS',
         theme: {
@@ -44,9 +44,9 @@ export const WORLDS: WorldData[] = [
         id: 'frozen_waste',
         name: 'Frozen Siberian Waste',
         description: 'A cold hell where only the strongest survive.',
-        maxLevel: 20,
+        maxLevel: 50,
         winCondition: 'level',
-        winValue: 15,
+        winValue: 50,
         allowedUpgrades: [
             // Actives (Exactly 5 per world)
             'gzhel_smg', 'skull_screen', 'visors', 'kvass_reactor', 'haunted_lada',
