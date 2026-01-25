@@ -53,3 +53,5 @@
 [2026-01-24] [ADD] Implemented three tiers of harder enemies for the Dark Forest: Werewolf, Forest Wraith, and Guardian Golem
 [2026-01-24] [UPD] Staggered harder enemy spawns by level and implemented recurring 5-minute boss encounters
 [2026-01-24] [UPD] Scaled harder enemy spawns to start with 1 and increase every 5 levels
+[2026-01-24] [UPD] Optimized character progression with world star system and improved stats
+[2026-01-24] [UPD] Implemented star rating system, character progression with starting items, and improved victory thresholds

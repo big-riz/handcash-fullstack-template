@@ -40,7 +40,8 @@ import {
     FastForward,
     Minimize2,
     Maximize2,
-    Lock
+    Lock,
+    Star
 } from "lucide-react"
 import * as THREE from "three"
 import { GameLoop } from "./core/GameLoop"
@@ -67,6 +68,8 @@ interface CharacterInfo {
     sprite: string
     unlockPrice?: number
     isUnlocked?: boolean
+    startingActives?: string[]
+    startingPassives?: string[]
     stats?: {
         maxHp?: number
         moveSpeed?: number
@@ -77,6 +80,9 @@ interface CharacterInfo {
         greed?: number
         regen?: number
         cooldownMultiplier?: number
+        armor?: number
+        amount?: number
+        growth?: number
     }
 }
 
@@ -149,6 +155,7 @@ export function SlavicSurvivors() {
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [banishedItems, setBanishedItems] = useState<Set<string>>(new Set())
     const [unlockedCharacters, setUnlockedCharacters] = useState<Set<string>>(new Set(['gopnik']))
+    const [worldStars, setWorldStars] = useState<Record<string, number>>({})
     const [newHeroUnlocked, setNewHeroUnlocked] = useState<string | null>(null)
 
     const replayPausedRef = useRef(false)
@@ -726,10 +733,26 @@ export function SlavicSurvivors() {
                 // Win Condition Check
                 else if (gameStateRef.current === "playing") {
                     const currentWorld = WORLDS.find(w => w.id === selectedWorldId) || WORLDS[0]
-                    if (currentWorld.winCondition === 'level' && p.stats.level >= currentWorld.maxLevel && !allowPostVictoryRef.current) {
+
+                    // Star Rating Check
+                    const currentStars = worldStars[selectedWorldId] || 0
+                    let earnedStars = 0
+                    if (p.stats.level >= 30) earnedStars = 3
+                    else if (p.stats.level >= 20) earnedStars = 2
+                    else if (p.stats.level >= 10) earnedStars = 1
+
+                    if (earnedStars > currentStars) {
+                        setWorldStars(prev => ({
+                            ...prev,
+                            [selectedWorldId]: earnedStars
+                        }))
+                    }
+
+                    // VICTORY at Level 10 (1 Star)
+                    if (currentWorld.winCondition === 'level' && p.stats.level >= 10 && !allowPostVictoryRef.current) {
                         setGameState("gameVictory")
 
-                        // Sequential Unlock: Unlock the next character in the array
+                        // Unlock next character if we have at least 1 star
                         const currentIndex = characterData.findIndex(c => c.id === selectedCharacterId);
                         if (currentIndex !== -1 && currentIndex < characterData.length - 1) {
                             const nextChar = characterData[currentIndex + 1];
@@ -861,8 +884,10 @@ export function SlavicSurvivors() {
                 }
             })
             .catch(err => console.error("[ItemTemplates] Failed to fetch:", err))
+    }, [])
 
-        // Load Meta Progression
+    // Load Meta Progression
+    useEffect(() => {
         const savedChars = localStorage.getItem('slavic_unlocked_chars')
         if (savedChars) {
             try {
@@ -870,11 +895,22 @@ export function SlavicSurvivors() {
                 if (Array.isArray(charArray)) setUnlockedCharacters(new Set(charArray))
             } catch (e) { }
         }
+
+        const savedStars = localStorage.getItem('slavic_world_stars')
+        if (savedStars) {
+            try {
+                setWorldStars(JSON.parse(savedStars))
+            } catch (e) { }
+        }
     }, [])
 
     useEffect(() => {
         localStorage.setItem('slavic_unlocked_chars', JSON.stringify(Array.from(unlockedCharacters)))
     }, [unlockedCharacters])
+
+    useEffect(() => {
+        localStorage.setItem('slavic_world_stars', JSON.stringify(worldStars))
+    }, [worldStars])
 
     const fetchUserHistory = async () => {
         if (!user) return
@@ -1091,6 +1127,9 @@ export function SlavicSurvivors() {
                 p.stats.curse = character.stats.curse || 1.0
                 p.stats.regen = character.stats.regen || 0
                 p.stats.cooldownMultiplier = character.stats.cooldownMultiplier || 1.0
+                p.stats.armor = character.stats.armor || 0
+                p.stats.amount = character.stats.amount || 0
+                p.stats.growth = character.stats.growth || 0
             }
 
             setPlayerHp(p.stats.currentHp)
@@ -1109,9 +1148,12 @@ export function SlavicSurvivors() {
 
             rngRef.current = uiRNG
 
-            // Pass starting weapon from character
+            // Pass starting items from character
             const startingWeapon = character.startingWeapon as any
-            abilitySystemRef.current = new AbilitySystem(scene, p, em, vm, gameRNG, startingWeapon)
+            const startingActives = [startingWeapon, ...(character.startingActives || [])] as any[]
+            const startingPassives = (character.startingPassives || []) as any[]
+
+            abilitySystemRef.current = new AbilitySystem(scene, p, em, vm, gameRNG, startingActives, startingPassives)
 
             const currentWorldTemplate = WORLDS.find(w => w.id === (overrideWorldId || selectedWorldId)) || WORLDS[0]
             // Create a local run-time world object to avoid modifying the global template
@@ -1600,7 +1642,18 @@ export function SlavicSurvivors() {
                                             : 'border-white/10 bg-black/40 hover:border-white/40 grayscale hover:grayscale-0'}`}
                                 >
                                     <div className={`absolute top-0 right-0 ${isMobile ? 'p-2' : 'p-4'} opacity-50 text-[10px] font-mono border-b border-l border-white/20 rounded-bl-xl`}>ID: {world.id.toUpperCase()}</div>
-                                    <h3 className={`font-black italic uppercase ${isMobile ? 'text-2xl mb-2' : 'text-3xl mb-4'} text-white leading-none ${isMobile ? 'mt-2' : 'mt-4'}`}>{world.name}</h3>
+
+                                    {/* Star Rating */}
+                                    <div className="flex gap-1 mb-2 mt-4 ml-1">
+                                        {[1, 2, 3].map(star => (
+                                            <Star
+                                                key={star}
+                                                className={`w-4 h-4 ${star <= (worldStars[world.id] || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-white/20'}`}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    <h3 className={`font-black italic uppercase ${isMobile ? 'text-2xl mb-2' : 'text-3xl mb-4'} text-white leading-none mt-2`}>{world.name}</h3>
                                     <p className={`${isMobile ? 'text-xs' : 'text-sm'} uppercase font-bold text-white/50 ${isMobile ? 'mb-4 h-8' : 'mb-8 h-12'} leading-relaxed`}>{world.description}</p>
 
                                     <div className="space-y-3 font-mono text-xs">
@@ -2381,7 +2434,7 @@ export function SlavicSurvivors() {
                 </div>
             </div>
 
-        </div>
+        </div >
     )
 }
 

@@ -66,14 +66,17 @@ export class AbilitySystem {
         private entityManager: EntityManager,
         private vfx: VFXManager,
         private rng: any, // SeededRandom
-        startingWeapon: AbilityType = 'tt33'
+        startingWeapons: AbilityType[] = ['tt33'],
+        startingPassives: PassiveType[] = []
     ) {
         // Safety check for RNG
         if (!this.rng || typeof this.rng.next !== 'function') {
             console.warn("AbilitySystem: Invalid RNG provided, falling back to Math.random wrapper");
             this.rng = { next: () => Math.random() };
         }
-        this.addAbility(startingWeapon)
+
+        startingWeapons.forEach(w => this.addAbility(w));
+        startingPassives.forEach(p => this.addPassive(p));
     }
 
     addAbility(type: AbilityType) {
