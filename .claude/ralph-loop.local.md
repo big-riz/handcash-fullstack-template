@@ -63,6 +63,11 @@ Modified `getLevelUpChoices()` function to:
   - Duration: 5.0s → 4.0s
   - Cooldown: 4.0s → 5.0s
   - Tick rate: 0.5s → 0.7s
+- Fixed replay system to ensure deterministic playback:
+  - Added pendingReplaySeed ref to store replay seed
+  - Modified startReplay() to store the seed for later initialization
+  - Modified gameState useEffect to call resetGame with replay seed before starting
+  - This ensures RNG is properly seeded, making replays precise and deterministic
 
 ## Testing Checklist
 - [ ] Test each character can only see their arsenal items during level-up

@@ -131,6 +131,7 @@ export function useGameEngine({
     const rngRef = useRef<SeededRandom | null>(null)
     // replayRef passed from prop
     const replayPlayerRef = useRef<ReplayPlayer | null>(null)
+    const pendingReplaySeed = useRef<string | null>(null) // Stores seed for replay that needs to be initialized
     const allowPostVictoryRef = useRef(false) // Legacy - allows continuing after final victory
     const shownVictoryMilestonesRef = useRef<Set<number>>(new Set()) // Tracks which victory levels (10, 20, 30) have been shown
     const pendingLevelUpAfterVictoryRef = useRef(false) // Tracks if level-up should show after victory screen
@@ -428,11 +429,13 @@ export function useGameEngine({
 
     const startReplay = (score: any) => {
         if (score.seed && score.events) {
-            // 1. Set the state to trigger the world/character rebuild via the main useEffect.
+            pendingReplaySeed.current = score.seed
+
+            // 2. Set the state to trigger the world/character rebuild via the main useEffect.
             if (score.characterId) setSelectedCharacterId(score.characterId)
             if (score.worldId) setSelectedWorldId(score.worldId)
 
-            // 2. Prepare the replay player data.
+            // 3. Prepare the replay player data.
             const replayData: ReplayData = {
                 seed: score.seed,
                 startTime: Date.now(),
@@ -447,7 +450,7 @@ export function useGameEngine({
             replayPlayerRef.current = new ReplayPlayer(replayData)
             replayFrameRef.current = 0
 
-            // 3. Set the game state to begin playback on the next render.
+            // 4. Set the game state to begin playback on the next render.
             setGameState("replaying")
         }
     }
@@ -812,8 +815,10 @@ export function useGameEngine({
                             allowPostVictoryRef.current = true
                         }
 
-                        // DON'T finish replay here - keep recording for continuation or death
-                        // Replay will be finished only on actual game over
+                        // Update replay stats at victory milestone (without adding DEATH event, to allow continuation)
+                        if (replayRef.current) {
+                            replayRef.current.updateFinalStats(p.stats.level, Math.floor(gameTimeRef.current))
+                        }
 
                         checkHighScore(p.stats.level)
                         break
@@ -882,6 +887,12 @@ export function useGameEngine({
 
     useEffect(() => {
         if (gameState === "playing" || gameState === "replaying") {
+            // If we have a pending replay, initialize it with the correct seed
+            if (gameState === "replaying" && pendingReplaySeed.current) {
+                const seed = pendingReplaySeed.current
+                pendingReplaySeed.current = null // Clear the pending seed
+                resetGame(true, seed) // forReplay = true, overrideSeed = seed
+            }
             gameLoopRef.current?.start()
         } else {
             gameLoopRef.current?.stop()

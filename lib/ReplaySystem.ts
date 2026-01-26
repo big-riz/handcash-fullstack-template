@@ -75,9 +75,13 @@ export class ReplayRecorder {
         this.currentFrame++;
     }
 
-    finish(level: number, time: number) {
+    updateFinalStats(level: number, time: number) {
         this.data.finalLevel = level;
         this.data.finalTime = time;
+    }
+
+    finish(level: number, time: number) {
+        this.updateFinalStats(level, time);
         this.data.events.push([
             ReplayEventType.DEATH,
             this.currentFrame,
