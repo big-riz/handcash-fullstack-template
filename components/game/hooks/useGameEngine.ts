@@ -429,6 +429,7 @@ export function useGameEngine({
 
     const startReplay = (score: any) => {
         if (score.seed && score.events) {
+            // 1. Store the replay seed for initialization after systems are rebuilt
             pendingReplaySeed.current = score.seed
 
             // 2. Set the state to trigger the world/character rebuild via the main useEffect.
