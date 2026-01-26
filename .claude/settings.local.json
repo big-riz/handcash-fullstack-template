@@ -10,7 +10,10 @@
       "Bash(findstr:*)",
       "WebFetch(domain:docs.handcash.io)",
       "Bash(npm run build:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(test:*)",
+      "Bash(find:*)"
     ]
   }
 }

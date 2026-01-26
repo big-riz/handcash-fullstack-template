@@ -24,18 +24,39 @@ export async function GET(request: NextRequest) {
     // Use business client for operations
     const client = getBusinessClient()
 
-    const { data: items, error } = await Connect.getItemsInventory({
-      client,
-      body: {},
-    })
+    // Fetch ALL items using pagination (batch size 500)
+    const allItems: any[] = []
+    const batchSize = 500
+    let from = 0
 
-    if (error) {
-      throw new Error(error.message || "Failed to get inventory")
+    while (true) {
+      const { data, error } = await Connect.getItemsInventory({
+        client,
+        body: {
+          from,
+          to: from + batchSize,
+          fetchAttributes: true,
+        },
+      })
+
+      if (error) {
+        throw new Error(error.message || "Failed to get inventory")
+      }
+
+      const batchItems = (data as any)?.items || (Array.isArray(data) ? data : [])
+      allItems.push(...batchItems)
+
+      // Stop if we've received fewer items than requested (last batch)
+      if (!batchItems.length || batchItems.length < batchSize) {
+        break
+      }
+
+      from += batchSize
     }
 
     return NextResponse.json({
       success: true,
-      items: items?.items || items || [],
+      items: allItems,
     })
   } catch (error) {
     console.error("[v0] Business inventory error:", error)

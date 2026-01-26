@@ -79,9 +79,10 @@ export class AudioManager {
     }
 
     // --- Volume Reference ---
-    // UI sounds: 0.08-0.15 (subtle)
-    // Combat sounds: 0.1-0.2 (noticeable but not overwhelming)
-    // Event sounds: 0.2-0.3 (important moments)
+    // UI sounds: 0.08-0.15 (subtle - buttons, hovers, clicks)
+    // Combat sounds: 0.1-0.2 (noticeable but not overwhelming - attacks, hits)
+    // Event sounds: 0.15-0.2 (important moments - level up, victory, game over)
+    // Special sounds: 0.25-0.35 (very important - player hurt, explosions)
     // All durations kept short: 0.03-0.15s for most sounds
 
     // --- UI Sound Effects ---
@@ -132,14 +133,14 @@ export class AudioManager {
     // --- Game Event Sounds ---
     public playLevelUp() {
         if (!this.audioContext) return;
-        this.playSfx('sine', 440, 0.08, 0.2);
-        setTimeout(() => this.playSfx('sine', 660, 0.08, 0.2), 80);
-        setTimeout(() => this.playSfx('sine', 880, 0.1, 0.25), 160);
+        this.playSfx('sine', 440, 0.08, 0.15);
+        setTimeout(() => this.playSfx('sine', 660, 0.08, 0.15), 80);
+        setTimeout(() => this.playSfx('sine', 880, 0.1, 0.18), 160);
     }
 
     public playGameOver() {
-        this.playSfx('sawtooth', 220, 0.15, 0.12);
-        setTimeout(() => this.playSfx('sawtooth', 110, 0.2, 0.08), 100);
+        this.playSfx('sawtooth', 220, 0.15, 0.08);
+        setTimeout(() => this.playSfx('sawtooth', 110, 0.2, 0.06), 100);
     }
 
     // --- Combat Sounds ---
@@ -483,9 +484,9 @@ export class AudioManager {
     public playAchievementUnlock() {
         if (!this.audioContext || !this.sfxGain) return;
         // Triumphant sound
-        this.playSfx('sine', 523.25, 0.08, 0.2); // C5
-        setTimeout(() => this.playSfx('sine', 659.25, 0.08, 0.2), 80); // E5
-        setTimeout(() => this.playSfx('sine', 783.99, 0.1, 0.25), 160); // G5
+        this.playSfx('sine', 523.25, 0.08, 0.15); // C5
+        setTimeout(() => this.playSfx('sine', 659.25, 0.08, 0.15), 80); // E5
+        setTimeout(() => this.playSfx('sine', 783.99, 0.1, 0.18), 160); // G5
     }
 
     public playPrestige() {
