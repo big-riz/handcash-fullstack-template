@@ -38,7 +38,7 @@ const passives = [
     },
     {
         "id": "garlic_ring",
-        "name": "Garlic Ring",
+        "name": "Garlic Charm",
         "description": "+15% Ability Area. Smells powerful.",
         "category": "Passive",
         "rarity": "Uncommon",
@@ -48,14 +48,14 @@ const passives = [
         }
     },
 
-    // === RARE PASSIVES (minLevel 3-5) ===
+    // === RARE PASSIVES (minLevel 2-5) ===
     {
         "id": "holy_bread",
         "name": "Holy Bread",
         "description": "+40 Max Health. Blessed sustenance.",
         "category": "Passive",
         "rarity": "Rare",
-        "minLevel": 3,
+        "minLevel": 2,
         "statBonus": {
             "maxHp": 40
         }
@@ -66,7 +66,7 @@ const passives = [
         "description": "+3 Armor. Warm and protective.",
         "category": "Passive",
         "rarity": "Rare",
-        "minLevel": 4,
+        "minLevel": 2,
         "statBonus": {
             "armor": 3.0
         }

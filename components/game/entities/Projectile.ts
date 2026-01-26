@@ -15,21 +15,46 @@ export class Projectile {
     mesh: THREE.Mesh | null = null
     lifeTime = 3.0 // Seconds before despawning
     currentLife = 0
+    isEnemyProjectile = false // Track if this projectile is from an enemy
+    appliesSlow = false // Track if this projectile slows on hit
+    slowDuration = 3.0 // How long the slow lasts
+    appliesCurse = false // Track if this projectile curses on hit
+    curseDuration = 5.0 // How long the curse lasts
 
     constructor() { }
 
-    spawn(x: number, z: number, vx: number, vz: number, damage: number) {
+    spawn(x: number, z: number, vx: number, vz: number, damage: number, isEnemyProjectile: boolean = false, appliesSlow: boolean = false, appliesCurse: boolean = false) {
         this.position.set(x, 0.5, z)
         this.velocity.set(vx, 0, vz)
         this.damage = damage
         this.isActive = true
         this.currentLife = 0
+        this.isEnemyProjectile = isEnemyProjectile
+        this.appliesSlow = appliesSlow
+        this.appliesCurse = appliesCurse
         if (this.mesh) {
             this.mesh.position.copy(this.position)
             this.mesh.visible = true
             // Rotate to face velocity
             const angle = Math.atan2(vx, vz)
             this.mesh.rotation.y = angle
+            // Color projectiles based on type
+            const mat = this.mesh.material as THREE.MeshStandardMaterial
+            if (appliesCurse) {
+                // Purple for curse projectiles
+                mat.color.setHex(0x8800ff)
+                mat.emissive.setHex(0x8800ff)
+            } else if (appliesSlow) {
+                // Blue for slow projectiles
+                mat.color.setHex(0x0066ff)
+                mat.emissive.setHex(0x0066ff)
+            } else if (isEnemyProjectile) {
+                mat.color.setHex(0xff4444)
+                mat.emissive.setHex(0xff0000)
+            } else {
+                mat.color.setHex(0xcccccc)
+                mat.emissive.setHex(0x00ffff)
+            }
         }
     }
 

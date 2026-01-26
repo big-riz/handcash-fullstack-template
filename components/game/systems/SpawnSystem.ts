@@ -1,28 +1,23 @@
-/**
- * SpawnSystem.ts
- * 
- * Handles periodic spawning of enemies in a ring around the player.
- */
-
 import { EntityManager } from '../entities/EntityManager'
 import { Player } from '../entities/Player'
 import { EnemyType } from '../entities/Enemy'
 import { WorldData } from '@/components/game/data/worlds'
 import { SeededRandom } from '../../../lib/SeededRandom'
+import { darkForestTimeline, TimelineEvent } from '../data/dark_forest_timeline'
 
 export class SpawnSystem {
-    private spawnTimer = 0
-    private lastBossSpawnTime = 0
     private elapsedSeconds = 0
-    private progressionSeconds = 0
-    public spawnInterval = 1.25 // Base spawn interval (increased from 1.0 to reduce density)
-    public spawnRadius = 22 // Increased spawn radius for off-screen
-    public baseSpawnCount = 2
-    public spawnRateMultiplier = 1.0
-    public progressionRateMultiplier = 1.0
-    public eliteChanceMultiplier = 1.0
+    private timelineIndex = 0
+    private backgroundSpawnTimer = 0
+    private baseSpawnInterval = 5.0 // Base interval between spawns
+    private minSpawnInterval = 0.8 // Minimum interval (caps at very high levels)
 
     private currentWorld: WorldData | null = null
+
+    // Dynamic difficulty
+    private difficultyMultiplier = 1.0
+    private difficultyCheckInterval = 120 // Check every 2 minutes
+    private timeSinceLastCheck = 0
 
     constructor(
         private entityManager: EntityManager,
@@ -32,110 +27,106 @@ export class SpawnSystem {
 
     setWorld(world: WorldData) {
         this.currentWorld = world
-        this.spawnRateMultiplier = world.id === 'frozen_waste' ? 0.5 : 1.0
-        this.progressionRateMultiplier = world.id === 'frozen_waste' ? 0.5 : 1.0
+        // Reset state for the new world
+        this.elapsedSeconds = 0
+        this.timelineIndex = 0
+        this.backgroundSpawnTimer = 0
+        this.difficultyMultiplier = 1.0
+        this.timeSinceLastCheck = 0
+    }
+
+    // Public getter for difficulty
+    getDifficultyMultiplier(): number {
+        return this.difficultyMultiplier
+    }
+
+    // Called from game engine with performance metrics
+    updateDifficulty(playerDPS: number, timeSurvived: number, damageTaken: number) {
+        // Dynamic difficulty disabled - difficulty stays at 1.0x (100%)
+        return
     }
 
     update(deltaTime: number) {
+        if (!this.currentWorld) return
+
         this.elapsedSeconds += deltaTime
-        this.progressionSeconds += deltaTime * this.progressionRateMultiplier
-        this.spawnTimer += deltaTime
 
-        // Scaling: spawn interval decreases moderately over time and with Curse
-        const currentCurse = this.player.stats.curse || 1.0
-
-        // Check if boss (leshy) is alive to stop other spawns
-        const isBossAlive = this.entityManager.enemies.some(e => e.isActive && e.type === 'leshy')
-        if (isBossAlive) {
-            this.spawnTimer = 0 // Keep timer reset so they don't all pop at once when boss dies
-            return
+        // --- Timeline-based Spawning ---
+        while (this.timelineIndex < darkForestTimeline.length && this.elapsedSeconds >= darkForestTimeline[this.timelineIndex].time) {
+            const event = darkForestTimeline[this.timelineIndex]
+            this.executeTimelineEvent(event)
+            this.timelineIndex++
         }
 
-        const interval = Math.max(0.1, (this.spawnInterval - (this.progressionSeconds / 900)) / (this.spawnRateMultiplier * currentCurse))
+        // --- Background Spawning ---
+        // Spawn enemies periodically with exponential scaling
+        this.backgroundSpawnTimer += deltaTime
 
-        if (this.spawnTimer >= interval) {
-            this.spawnTimer = 0
-            this.spawnEnemyGroup(this.progressionSeconds)
-        }
+        // Calculate dynamic spawn interval (decreases over time, exponentially)
+        // Starts at 5s, decreases to 0.8s minimum
+        const minutesElapsed = this.elapsedSeconds / 60
+        const intervalScale = Math.max(0.16, Math.pow(0.85, minutesElapsed)) // 0.85^minutes, min 0.16
+        const currentInterval = Math.max(this.minSpawnInterval, this.baseSpawnInterval * intervalScale)
 
-        // BOSS SPAWN - Every 5 minutes (300s)
-        const bossInterval = 300
-        if (this.progressionSeconds - this.lastBossSpawnTime >= bossInterval) {
-            // Check if boss (leshy) is already alive to prevent stacking bosses
-            if (!isBossAlive) {
-                const angle = this.rng.next() * Math.PI * 2
-                this.entityManager.spawnEnemy('leshy',
-                    Math.cos(angle) * this.spawnRadius + this.player.position.x,
-                    Math.sin(angle) * this.spawnRadius + this.player.position.z
-                )
-                this.lastBossSpawnTime = this.progressionSeconds
-            } else {
-                // If boss is still alive, delay the next check slightly without resetting time
-                // so it pops as soon as the current one is dead if 5 mins have passed
+        if (this.backgroundSpawnTimer >= currentInterval) {
+            this.backgroundSpawnTimer = 0
+
+            // Exponential count scaling: starts at 3, grows exponentially
+            // Formula: base * (1 + growthRate)^minutes
+            const baseCount = 3
+            const growthRate = 0.25 // 25% more enemies per minute
+            const timeBasedCount = baseCount * Math.pow(1 + growthRate, minutesElapsed)
+
+            // Add bonus enemies based on elapsed time in larger chunks
+            const chunkBonus = Math.floor(minutesElapsed / 3) * 5 // +5 every 3 minutes
+
+            const count = Math.floor(timeBasedCount + chunkBonus)
+
+            // After 5 minutes, occasionally spawn elites in background waves
+            const shouldSpawnElite = minutesElapsed > 5 && this.rng.next() < Math.min(0.4, minutesElapsed / 30)
+
+            // Select enemy type based on progression
+            let enemyType: EnemyType = 'drifter'
+            if (minutesElapsed > 15) {
+                // Late game: spawn tougher enemies more often
+                const roll = this.rng.next()
+                if (roll < 0.3) enemyType = 'hulk'
+                else if (roll < 0.6) enemyType = 'specter'
+                else enemyType = 'drifter'
+            } else if (minutesElapsed > 8) {
+                // Mid game: mix in some variety
+                const roll = this.rng.next()
+                if (roll < 0.2) enemyType = 'hulk'
+                else if (roll < 0.4) enemyType = 'specter'
+                else enemyType = 'drifter'
+            }
+
+            // Spawn closer (16 units) to maintain pressure
+            this.spawnGroup(enemyType, count, 16, shouldSpawnElite)
+
+            // Log for debugging high-level spawn rates
+            if (minutesElapsed > 10) {
+                console.log(`[SPAWN] Level ${Math.floor(minutesElapsed)}: ${count} enemies every ${currentInterval.toFixed(2)}s (Elite: ${shouldSpawnElite})`)
             }
         }
     }
 
-    private spawnEnemyGroup(progressionSeconds: number) {
-        if (!this.currentWorld) return
-
-        // Scaling: spawn count increases moderately over time
-        const count = Math.floor(this.baseSpawnCount + (progressionSeconds / 120))
-
-        // Level requirements for harder enemies - Staggered throughout early-to-mid game
-        const levelRequirements: Record<string, number> = {
-            'werewolf': 5,
-            'forest_wraith': 10,
-            'guardian_golem': 15
+    private executeTimelineEvent(event: TimelineEvent) {
+        console.log(`[SPAWN] Event @ ${this.elapsedSeconds.toFixed(1)}s: Spawning ${event.count} of ${event.enemyType}`)
+        if (event.message) {
+            // In a real game, you'd show this on the UI. For simulation, we log it.
+            console.log(`[SPAWN] Message: ${event.message}`)
         }
+        // Spawn closer to player (16 units) to increase pressure
+        this.spawnGroup(event.enemyType as EnemyType, event.count, 16, event.isElite)
+    }
 
-        // Limit number of harder enemies per group based on player level
-        // Start with 1 at level 5, and increase slowly (e.g., +1 every 5 levels)
-        const playerLevel = this.player.stats.level || 1
-        const maxHardInGroup = Math.max(1, Math.floor(playerLevel / 5))
-        let hardSpawnedInGroup = 0
-
+    private spawnGroup(type: EnemyType, count: number, radius: number, isElite: boolean = false) {
         for (let i = 0; i < count; i++) {
             const angle = this.rng.next() * Math.PI * 2
-            const x = this.player.position.x + Math.cos(angle) * this.spawnRadius
-            const z = this.player.position.z + Math.sin(angle) * this.spawnRadius
-
-            // Decide type based on World Pool and level requirements
-            const pool = this.currentWorld.availableEnemies
-
-            // Separate available pool into common and hard (that meet level req)
-            const commonEnemies = pool.filter(type => !levelRequirements[type]) as EnemyType[]
-            const eligibleHard = pool.filter(type => {
-                const req = levelRequirements[type]
-                return req && playerLevel >= req
-            }) as EnemyType[]
-
-            let type: EnemyType
-
-            // Decide if we spawn a hard enemy:
-            // 1. Must have eligible hard enemies
-            // 2. Must be under the group limit
-            // 3. 40% chance for a slot to be hard if allowed (to keep variety)
-            const canSpawnHard = eligibleHard.length > 0 && hardSpawnedInGroup < maxHardInGroup
-
-            if (canSpawnHard && this.rng.next() < 0.4) {
-                const typeIndex = Math.floor(this.rng.next() * eligibleHard.length)
-                type = eligibleHard[typeIndex]
-                hardSpawnedInGroup++
-            } else if (commonEnemies.length > 0) {
-                const typeIndex = Math.floor(this.rng.next() * commonEnemies.length)
-                type = commonEnemies[typeIndex]
-            } else {
-                // Fallback to anything in the pool if common is empty (unlikely)
-                const typeIndex = Math.floor(this.rng.next() * pool.length)
-                type = pool[typeIndex] as EnemyType
-            }
-
-            // Elite chance: 1% base, increases moderately over time up to 10%
-            const eliteChance = Math.min(0.1, (0.01 + (progressionSeconds / 2400)) * this.eliteChanceMultiplier)
-            const isElite = this.rng.next() < eliteChance
-
-            this.entityManager.spawnEnemy(type, x, z, isElite)
+            const x = this.player.position.x + Math.cos(angle) * radius
+            const z = this.player.position.z + Math.sin(angle) * radius
+            this.entityManager.spawnEnemy(type, x, z, isElite, this.difficultyMultiplier)
         }
     }
 }

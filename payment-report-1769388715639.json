@@ -1,0 +1,17 @@
+[
+  {
+    "handle": "brandonc",
+    "success": false,
+    "error": "\"instrumentCurrencyCode\" must be one of [MNEE, BSV]"
+  },
+  {
+    "handle": "bigriz",
+    "success": false,
+    "error": "\"instrumentCurrencyCode\" must be one of [MNEE, BSV]"
+  },
+  {
+    "handle": "lexssit",
+    "success": false,
+    "error": "\"instrumentCurrencyCode\" must be one of [MNEE, BSV]"
+  }
+]

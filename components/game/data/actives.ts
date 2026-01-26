@@ -36,6 +36,60 @@ const actives = [
         "minLevel": 2,
         "tags": ["projectile"]
     },
+    {
+        "id": "dagger",
+        "name": "Throwing Dagger",
+        "description": "Basic projectile weapon. Reliable damage.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 2,
+        "tags": ["projectile"]
+    },
+    {
+        "id": "holywater",
+        "name": "Holy Water",
+        "description": "Creates damaging puddles on the ground.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 2,
+        "tags": ["area"]
+    },
+    {
+        "id": "cross",
+        "name": "Holy Cross",
+        "description": "Boomerang cross that returns to you.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 2,
+        "tags": ["projectile"]
+    },
+    {
+        "id": "salt",
+        "name": "Salt Line",
+        "description": "Creates protective barriers of salt.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 2,
+        "tags": ["area"]
+    },
+    {
+        "id": "stake",
+        "name": "Aspen Stake",
+        "description": "Thrown wooden stakes. High damage.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 2,
+        "tags": ["projectile"]
+    },
+    {
+        "id": "ak_radioactive",
+        "name": "Radioactive AK",
+        "description": "Toxic bullets that pierce enemies.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 2,
+        "tags": ["projectile", "gun"]
+    },
 
     // === UNCOMMON WEAPONS (minLevel 4-6) ===
     {
@@ -62,7 +116,7 @@ const actives = [
         "description": "Companion that scurries and bites enemies.",
         "category": "Companion",
         "rarity": "Uncommon",
-        "minLevel": 6,
+        "minLevel": 2,
         "tags": ["companion"]
     },
     {
@@ -71,7 +125,7 @@ const actives = [
         "description": "Companion that drops health pickups.",
         "category": "Companion",
         "rarity": "Uncommon",
-        "minLevel": 6,
+        "minLevel": 2,
         "tags": ["companion"]
     },
 
@@ -100,7 +154,7 @@ const actives = [
         "description": "Deploy towers that damage and slow enemies.",
         "category": "Deployable",
         "rarity": "Rare",
-        "minLevel": 10,
+        "minLevel": 2,
         "tags": ["deployable"]
     },
     {
@@ -109,7 +163,7 @@ const actives = [
         "description": "Slow armored vehicle. High defense.",
         "category": "Vehicle",
         "rarity": "Rare",
-        "minLevel": 12,
+        "minLevel": 2,
         "tags": ["vehicle"]
     },
     {
@@ -118,7 +172,7 @@ const actives = [
         "description": "Armored transport. Crushes enemies.",
         "category": "Vehicle",
         "rarity": "Rare",
-        "minLevel": 12,
+        "minLevel": 2,
         "tags": ["vehicle"]
     },
 
@@ -138,7 +192,7 @@ const actives = [
         "description": "Deploy healing zones that boost speed.",
         "category": "Deployable",
         "rarity": "Epic",
-        "minLevel": 14,
+        "minLevel": 2,
         "tags": ["deployable"]
     },
     {
@@ -194,7 +248,7 @@ const actives = [
         "description": "Gold tank. Generates coins while ramming.",
         "category": "Vehicle",
         "rarity": "Legendary",
-        "minLevel": 28,
+        "minLevel": 2,
         "tags": ["vehicle"]
     }
 ];

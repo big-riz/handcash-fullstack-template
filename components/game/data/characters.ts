@@ -2,7 +2,7 @@ const characters = [
     {
         "id": "gopnik",
         "name": "Boris the Gopnik",
-        "description": "Squatting champion. Starts with the trusty TT33 Pistol. High survival and speed.",
+        "description": "Squatting champion. Master of street fighting. High survival and speed.",
         "startingWeapon": "tt33",
         "startingPassives": [],
         "sprite": "gopnik",
@@ -13,27 +13,37 @@ const characters = [
             "area": 1.0,
             "armor": 2,
             "regen": 0.5
+        },
+        "arsenal": {
+            "weapons": ["tt33", "knuckles", "peppermill", "gzhel_smg", "ak_radioactive"],
+            "passives": ["beer_coin", "dove_coin", "spy_hat", "battle_scarf", "sunflower_pouch"]
         }
     },
     {
         "id": "babushka",
         "name": "Babushka Zina",
-        "description": "Don't mess with grandma. Starts with her trusty Shank and Holy Bread. Massive area effects.",
+        "description": "Don't mess with grandma. Master of melee and healing. Massive area effects.",
         "startingWeapon": "shank",
         "startingPassives": ["holy_bread"],
         "sprite": "babushka",
         "stats": {
-            "maxHp": 80,
-            "moveSpeed": 0.8,
+            "maxHp": 120,
+            "moveSpeed": 1.0,
             "might": 1.2,
             "area": 1.5,
+            "armor": 2,
+            "regen": 0.3,
             "luck": 1.2
+        },
+        "arsenal": {
+            "weapons": ["shank", "soviet_stick", "kabar", "grail", "holywater"],
+            "passives": ["holy_bread", "garlic_ring", "holy_cheese", "ruby_ushanka", "infinity_purse"]
         }
     },
     {
         "id": "hunter",
         "name": "Vadim Hunter",
-        "description": "Professional monster slayer. Starts with Stilleto and Battle Scarf. Fast attacks.",
+        "description": "Professional monster slayer. Fast and precise with projectiles. Speed demon.",
         "startingWeapon": "stilleto",
         "startingPassives": ["battle_scarf"],
         "sprite": "hunter",
@@ -43,12 +53,16 @@ const characters = [
             "might": 1.1,
             "area": 0.9,
             "cooldownMultiplier": 0.8
+        },
+        "arsenal": {
+            "weapons": ["stilleto", "kabar", "peppermill", "visors", "dagger"],
+            "passives": ["battle_scarf", "boss_shoe", "spy_hat", "pickled_gpu", "sunflower_pouch"]
         }
     },
     {
         "id": "biz_man",
         "name": "Big Biznisman",
-        "description": "Time is money. Starts with Pig Luggage and Beer Coin. Rich and lucky.",
+        "description": "Time is money. Companion specialist with high luck. Rich and greedy.",
         "startingWeapon": "pig_luggage",
         "startingPassives": ["beer_coin"],
         "sprite": "biz_man",
@@ -58,12 +72,16 @@ const characters = [
             "might": 1.0,
             "luck": 2.0,
             "greed": 2.0
+        },
+        "arsenal": {
+            "weapons": ["pig_luggage", "vampire_rat", "nuclear_pigeon", "propaganda_tower", "haunted_lada"],
+            "passives": ["beer_coin", "infinity_purse", "ruby_ushanka", "sunflower_pouch", "pickled_gpu"]
         }
     },
     {
         "id": "oligarch",
         "name": "The Oligarch",
-        "description": "Wealth is the ultimate armor. Starts with Lada and Infinity Purse. Tanky but slow.",
+        "description": "Wealth is the ultimate armor. Vehicle master. Tanky but slow.",
         "startingWeapon": "big_biz_lada",
         "startingPassives": ["infinity_purse"],
         "sprite": "oligarch",
@@ -73,12 +91,16 @@ const characters = [
             "might": 0.7,
             "luck": 1.5,
             "armor": 10
+        },
+        "arsenal": {
+            "weapons": ["big_biz_lada", "tank_stroller", "dadushka_chair", "gopnik_gondola", "haunted_lada"],
+            "passives": ["infinity_purse", "holy_bread", "ruby_ushanka", "garlic_ring", "holy_cheese"]
         }
     },
     {
         "id": "chernobyl",
         "name": "Chernobyl Ghost",
-        "description": "A remnant of the exclusion zone. Starts with Reactor, Pigeon, and Pickled GPU. Massive power, dying fast.",
+        "description": "A remnant of the exclusion zone. Nuclear damage specialist. Massive power, dying fast.",
         "startingWeapon": "kvass_reactor",
         "startingActives": ["nuclear_pigeon"],
         "startingPassives": ["pickled_gpu"],
@@ -90,12 +112,16 @@ const characters = [
             "area": 3.0,
             "regen": -2.0,
             "curse": 1.5
+        },
+        "arsenal": {
+            "weapons": ["kvass_reactor", "nuclear_pigeon", "skull_screen", "gzhel_smg", "ak_radioactive"],
+            "passives": ["pickled_gpu", "garlic_ring", "ruby_ushanka", "sunflower_pouch", "holy_cheese"]
         }
     },
     {
         "id": "spirit",
         "name": "Slavic Spirit",
-        "description": "Pure energy and magic. Starts with Grail, Cross, and Ruby Ushanka. Infinite magic, zero armor.",
+        "description": "Pure energy and magic. Orbital and area specialist. Infinite magic, zero armor.",
         "startingWeapon": "grail",
         "startingActives": ["cross"],
         "startingPassives": ["ruby_ushanka"],
@@ -107,6 +133,10 @@ const characters = [
             "cooldownMultiplier": 0.2,
             "armor": -5,
             "amount": 2
+        },
+        "arsenal": {
+            "weapons": ["grail", "cross", "skull_screen", "visors", "salt"],
+            "passives": ["ruby_ushanka", "garlic_ring", "pickled_gpu", "sunflower_pouch", "holy_cheese"]
         }
     }
 ];

@@ -7,24 +7,25 @@
 import * as THREE from 'three'
 import { Player } from '../entities/Player'
 import { EntityManager } from '../entities/EntityManager'
-import { GarlicAura } from './GarlicAura'
-import { DaggerWeapon } from './DaggerWeapon'
-import { MeleeWeapon } from './MeleeWeapon'
-import { HolyWaterWeapon } from './HolyWaterWeapon'
-import { AspenStakeWeapon } from './AspenStakeWeapon'
-import { CrossWeapon } from './CrossWeapon'
-import { SaltLineWeapon } from './SaltLineWeapon'
-import { TT33Weapon } from './TT33Weapon'
-import { RadioactiveAKWeapon } from './RadioactiveAKWeapon'
-import { GhzelAKWeapon } from './GhzelAKWeapon'
-import { CorruptedAKWeapon } from './CorruptedAKWeapon'
-import { MushroomAKWeapon } from './MushroomAKWeapon'
-import { NuclearPigeon } from './NuclearPigeon'
-import { LadaVehicle } from './LadaVehicle'
-import { PropagandaTower } from './PropagandaTower'
+import { DaggerWeapon } from '../content/weapons/DaggerWeapon'
+import { MeleeWeapon } from '../content/weapons/MeleeWeapon'
+import { HolyWaterWeapon } from '../content/weapons/HolyWaterWeapon'
+import { AspenStakeWeapon } from '../content/weapons/AspenStakeWeapon'
+import { CrossWeapon } from '../content/weapons/CrossWeapon'
+import { SaltLineWeapon } from '../content/weapons/SaltLineWeapon'
+import { TT33Weapon } from '../content/weapons/TT33Weapon'
+import { RadioactiveAKWeapon } from '../content/weapons/RadioactiveAKWeapon'
+import { GhzelAKWeapon } from '../content/weapons/GhzelAKWeapon'
+import { CorruptedAKWeapon } from '../content/weapons/CorruptedAKWeapon'
+import { MushroomAKWeapon } from '../content/weapons/MushroomAKWeapon'
+import { NuclearPigeon } from '../content/weapons/NuclearPigeon'
+import { LadaVehicle } from '../content/weapons/LadaVehicle'
+import { PropagandaTower } from '../content/weapons/PropagandaTower'
+import { GarlicAura } from '../content/weapons/GarlicAura'
 import { VFXManager } from './VFXManager'
+import { AudioManager } from '../core/AudioManager'
 
-export type AbilityType = 'garlic' | 'dagger' | 'holywater' | 'stake' | 'cross' | 'salt' | 'tt33' | 'propaganda_tower' |
+export type AbilityType = 'dagger' | 'holywater' | 'stake' | 'cross' | 'salt' | 'tt33' | 'propaganda_tower' |
     'ak_radioactive' | 'ak_ghzel' | 'ak_corrupted' | 'ak_mushroom' | 'nuclear_pigeon' | 'lada' |
     'peppermill' | 'shank' | 'kabar' | 'knuckles' | 'stilleto' | 'grail' | 'soviet_stick' | 'skull_screen' | 'visors' |
     'kvass_reactor' | 'vampire_rat' | 'pig_luggage' | 'big_biz_lada' | 'dadushka_chair' | 'gopnik_gondola' | 'tank_stroller' | 'haunted_lada' | 'gzhel_smg' |
@@ -46,6 +47,14 @@ export interface EvolutionRule {
     evolvedAbility: AbilityType
 }
 
+export interface ItemSynergy {
+    id: string
+    name: string
+    description: string
+    requiredItems: string[] // IDs of items required (active or passive)
+    bonusEffect: (stats: any) => void
+}
+
 export class AbilitySystem {
     private abilities: Map<AbilityType, any> = new Map()
     private passives: Map<PassiveType, number> = new Map() // type -> level
@@ -60,12 +69,80 @@ export class AbilitySystem {
         { baseAbility: 'gzhel_smg', requiredPassive: 'pickled_gpu', evolvedAbility: 'melter' }
     ]
 
+    private readonly synergies: ItemSynergy[] = [
+        {
+            id: 'soviet_arsenal',
+            name: 'Soviet Arsenal',
+            description: '+30% cooldown reduction',
+            requiredItems: ['tt33', 'battle_scarf', 'propaganda_tower'],
+            bonusEffect: (stats) => { stats.cooldownMultiplier *= 0.7; }
+        },
+        {
+            id: 'gopnik_gang',
+            name: 'Gopnik Gang',
+            description: '+2 melee range',
+            requiredItems: ['shank', 'beer_coin', 'boss_shoe'],
+            bonusEffect: (stats) => { stats.areaMultiplier *= 1.2; }
+        },
+        {
+            id: 'nuclear_winter',
+            name: 'Nuclear Winter',
+            description: 'Radiation aura damages nearby enemies',
+            requiredItems: ['nuclear_pigeon', 'pickled_gpu', 'ruby_ushanka'],
+            bonusEffect: (stats) => { stats.damageMultiplier *= 1.25; stats.areaMultiplier *= 1.15; }
+        },
+        {
+            id: 'speed_demon',
+            name: 'Speed Demon',
+            description: '+40% movement speed',
+            requiredItems: ['boss_shoe', 'beer_coin', 'dove_coin'],
+            bonusEffect: (stats) => { stats.moveSpeed *= 1.4; }
+        },
+        {
+            id: 'tank_build',
+            name: 'Tank Build',
+            description: '+10 armor, +50 max HP',
+            requiredItems: ['battle_scarf', 'holy_bread', 'ruby_ushanka'],
+            bonusEffect: (stats) => { stats.armor += 10; stats.maxHp += 50; stats.currentHp += 50; }
+        },
+        {
+            id: 'lucky_charm',
+            name: 'Lucky Charm',
+            description: '+100% luck, +50% XP gain',
+            requiredItems: ['dove_coin', 'infinity_purse', 'sunflower_pouch'],
+            bonusEffect: (stats) => { stats.luck *= 2.0; stats.growth *= 1.5; }
+        },
+        {
+            id: 'undead_hunter',
+            name: 'Undead Hunter',
+            description: '+35% damage, +1 projectile',
+            requiredItems: ['stake', 'spy_hat', 'dove_coin'],
+            bonusEffect: (stats) => { stats.damageMultiplier *= 1.35; stats.amount += 1; }
+        }
+    ]
+
+    private readonly passiveEffects: Record<PassiveType, (stats: any) => void> = {
+        'beer_coin': (stats) => { stats.moveSpeed += 0.3; stats.armor += 1.0; },
+        'boss_shoe': (stats) => { stats.moveSpeed += 0.5; },
+        'dove_coin': (stats) => { stats.luck += 0.2; },
+        'garlic_ring': (stats) => { stats.areaMultiplier *= 1.15; },
+        'holy_bread': (stats) => { stats.maxHp += 40; stats.currentHp += 40; },
+        'battle_scarf': (stats) => { stats.armor += 3.0; },
+        'holy_cheese': (stats) => { stats.regen += 2.0; },
+        'spy_hat': (stats) => { stats.critRate += 0.2; },
+        'infinity_purse': (stats) => { stats.growth += 0.2; },
+        'ruby_ushanka': (stats) => { stats.armor += 2.0; stats.damageMultiplier *= 1.15; },
+        'sunflower_pouch': (stats) => { stats.amount += 1; },
+        'pickled_gpu': (stats) => { stats.cooldownMultiplier *= 0.80; },
+    };
+
     constructor(
         private scene: THREE.Scene,
         private player: Player,
         private entityManager: EntityManager,
         private vfx: VFXManager,
         private rng: any, // SeededRandom
+        private audioManager: AudioManager | null,
         startingWeapons: AbilityType[] = ['tt33'],
         startingPassives: PassiveType[] = []
     ) {
@@ -91,26 +168,26 @@ export class AbilitySystem {
         if (this.abilities.size >= this.MAX_ACTIVES) return
 
         this.createAbilityInstance(type)
+        this.applySynergyBonuses()
     }
 
     private createAbilityInstance(type: AbilityType) {
         let ability: any
 
         // Existing Mappings
-        if (type === 'garlic') ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'dagger') ability = new DaggerWeapon(this.player, this.entityManager, this.rng)
+        if (type === 'dagger') ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
         else if (type === 'holywater') ability = new HolyWaterWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'stake') ability = new AspenStakeWeapon(this.player, this.entityManager, this.rng)
+        else if (type === 'stake') ability = new AspenStakeWeapon(this.player, this.entityManager, this.rng, this.audioManager)
         else if (type === 'cross') ability = new CrossWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
         else if (type === 'salt') ability = new SaltLineWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'tt33') ability = new TT33Weapon(this.player, this.entityManager, this.rng)
-        else if (type === 'ak_radioactive') ability = new RadioactiveAKWeapon(this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'ak_ghzel') ability = new GhzelAKWeapon(this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'ak_corrupted') ability = new CorruptedAKWeapon(this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'ak_mushroom') ability = new MushroomAKWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'nuclear_pigeon') ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'lada') ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'propaganda_tower') ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+        else if (type === 'tt33') ability = new TT33Weapon(this.player, this.entityManager, this.rng, this.audioManager)
+        else if (type === 'ak_radioactive') ability = new RadioactiveAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+        else if (type === 'ak_ghzel') ability = new GhzelAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+        else if (type === 'ak_corrupted') ability = new CorruptedAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+        else if (type === 'ak_mushroom') ability = new MushroomAKWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+        else if (type === 'nuclear_pigeon') ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+        else if (type === 'lada') ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+        else if (type === 'propaganda_tower') ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
 
         // ============================================
         // WEAPON DIFFERENTIATION - DPS BALANCED
@@ -125,7 +202,7 @@ export class AbilitySystem {
 
         // BABUSHKA'S SHANK - Fast melee (12 dmg / 0.4s = 30 DPS)
         else if (type === 'shank') {
-            ability = new MeleeWeapon(this.player, this.entityManager, this.rng)
+            ability = new MeleeWeapon(this.player, this.entityManager, this.rng, this.audioManager)
             ability.radius = 1.5 // Short reach
             ability.cooldown = 0.4 // Fast
             ability.damage = 12
@@ -135,7 +212,7 @@ export class AbilitySystem {
 
         // CERAMIC KNUCKLES - Slow power hits (30 dmg / 1.0s = 30 DPS)
         else if (type === 'knuckles') {
-            ability = new MeleeWeapon(this.player, this.entityManager, this.rng)
+            ability = new MeleeWeapon(this.player, this.entityManager, this.rng, this.audioManager)
             ability.radius = 1.2 // Very close range
             ability.cooldown = 1.0 // Slow
             ability.damage = 30
@@ -146,7 +223,7 @@ export class AbilitySystem {
 
         // STILLETO - Multi-target knives (10 dmg * 2 / 0.67s = 30 DPS)
         else if (type === 'stilleto') {
-            ability = new DaggerWeapon(this.player, this.entityManager, this.rng)
+            ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
             ability.projectileSpeed = 20
             ability.projectileLife = 1.0 // Good range
             ability.cooldown = 0.67
@@ -158,14 +235,14 @@ export class AbilitySystem {
 
         // PEPPERMILL GUN - Spray (7 dmg / 0.2s = 35 DPS)
         else if (type === 'peppermill') {
-            ability = new TT33Weapon(this.player, this.entityManager, this.rng)
+            ability = new TT33Weapon(this.player, this.entityManager, this.rng, this.audioManager)
             ability.cooldown = 0.2
             ability.damage = 7
         }
 
         // SOVIET STICK - Heavy hits (35 dmg / 1.0s = 35 DPS)
         else if (type === 'soviet_stick') {
-            ability = new MeleeWeapon(this.player, this.entityManager, this.rng)
+            ability = new MeleeWeapon(this.player, this.entityManager, this.rng, this.audioManager)
             ability.radius = 2.5 // Good reach with a stick
             ability.cooldown = 1.0
             ability.damage = 35
@@ -176,7 +253,7 @@ export class AbilitySystem {
 
         // VAMPIRE RAT - Companion (minLevel 3, ~40 DPS equivalent)
         else if (type === 'vampire_rat') {
-            ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.orbitSpeed = 3.0
             ability.orbitRadius = 2.5
             ability.damage = 16 // 16 dmg / 0.4 tick = 40 DPS
@@ -184,7 +261,7 @@ export class AbilitySystem {
 
         // PIG LUGGAGE - Utility companion (minLevel 3, lower DPS but drops pickups)
         else if (type === 'pig_luggage') {
-            ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.orbitSpeed = 2.0
             ability.orbitRadius = 3.0
             ability.damage = 12 // 12 dmg / 0.4 tick = 30 DPS (utility focused)
@@ -194,7 +271,7 @@ export class AbilitySystem {
 
         // KABAR KNIFE - Armor piercer (27 dmg / 0.6s = 45 DPS)
         else if (type === 'kabar') {
-            ability = new DaggerWeapon(this.player, this.entityManager, this.rng)
+            ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
             ability.projectileSpeed = 14
             ability.projectileLife = 0.6
             ability.cooldown = 0.6
@@ -203,7 +280,7 @@ export class AbilitySystem {
 
         // GOPNIK GRAIL - Holy aura (18 dmg / 0.4s = 45 DPS per enemy)
         else if (type === 'grail') {
-            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.radius = 3.5
             ability.damage = 18
         }
@@ -213,13 +290,13 @@ export class AbilitySystem {
 
         // DADUSHKA CHAIR - Vehicle (minLevel 6, ~55 DPS)
         else if (type === 'dadushka_chair') {
-            ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.damage = 55
         }
 
         // TANK STROLLER - Vehicle (minLevel 6, ~55 DPS)
         else if (type === 'tank_stroller') {
-            ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.damage = 55
         }
 
@@ -227,7 +304,7 @@ export class AbilitySystem {
 
         // GZHEL SMG - Burst fire (15 dmg / 0.25s = 60 DPS)
         else if (type === 'gzhel_smg') {
-            ability = new GhzelAKWeapon(this.player, this.entityManager, this.vfx, this.rng)
+            ability = new GhzelAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.cooldown = 0.25
             ability.damage = 15
         }
@@ -240,7 +317,7 @@ export class AbilitySystem {
 
         // SKULL SCREEN - Orbital (26 dmg / 0.4s = 65 DPS per enemy)
         else if (type === 'skull_screen') {
-            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.radius = 4.0
             ability.damage = 26
         }
@@ -255,7 +332,7 @@ export class AbilitySystem {
 
         // ORTHODOX VISORS - Laser (38 dmg / 0.5s = 76 DPS)
         else if (type === 'visors') {
-            ability = new TT33Weapon(this.player, this.entityManager, this.rng)
+            ability = new TT33Weapon(this.player, this.entityManager, this.rng, this.audioManager)
             ability.damage = 38
             ability.cooldown = 0.5
         }
@@ -278,17 +355,17 @@ export class AbilitySystem {
 
         // Evolutions (Reuse existing classes with boosted stats or new effects)
         else if (type === 'soul_siphon') {
-            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.level = 8 // Special level for evo
             ability.damage *= 4
             ability.radius *= 1.6
         } else if (type === 'silver_tt33') {
-            ability = new TT33Weapon(this.player, this.entityManager, this.rng)
+            ability = new TT33Weapon(this.player, this.entityManager, this.rng, this.audioManager)
             ability.level = 8
             ability.damage *= 3
             ability.cooldown *= 0.5
         } else if (type === 'melter') {
-            ability = new RadioactiveAKWeapon(this.player, this.entityManager, this.vfx, this.rng)
+            ability = new RadioactiveAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.level = 8
             ability.damage *= 5
             ability.cooldown *= 0.4
@@ -305,6 +382,7 @@ export class AbilitySystem {
             base.cleanup()
             this.abilities.delete(rule.baseAbility)
             this.createAbilityInstance(rule.evolvedAbility)
+            this.audioManager?.playEvolution()
             if (this.vfx) {
                 this.vfx.createEmoji(this.player.position.x, this.player.position.z, '🌟', 2.0)
             }
@@ -320,37 +398,55 @@ export class AbilitySystem {
         const nextLevel = currentLevel + 1
         this.passives.set(type, nextLevel)
         this.applyPassiveEffect(type, nextLevel)
+        this.applySynergyBonuses()
     }
 
     private applyPassiveEffect(type: PassiveType, level: number) {
-        const p = this.player
-        if (type === 'beer_coin') {
-            p.stats.moveSpeed += 0.3
-            p.stats.armor += 1.0
-        } else if (type === 'boss_shoe') {
-            p.stats.moveSpeed += 0.5
-        } else if (type === 'dove_coin') {
-            p.stats.luck += 0.2
-        } else if (type === 'garlic_ring') {
-            p.stats.areaMultiplier *= 1.15
-        } else if (type === 'holy_bread') {
-            p.stats.maxHp += 40
-            p.stats.currentHp += 40
-        } else if (type === 'battle_scarf') {
-            p.stats.armor += 3.0
-        } else if (type === 'holy_cheese') {
-            p.stats.regen += 2.0
-        } else if (type === 'spy_hat') {
-            p.stats.critRate += 0.2
-        } else if (type === 'infinity_purse') {
-            p.stats.growth += 0.2
-        } else if (type === 'ruby_ushanka') {
-            p.stats.armor += 2.0
-            p.stats.damageMultiplier *= 1.15
-        } else if (type === 'sunflower_pouch') {
-            p.stats.amount += 1
-        } else if (type === 'pickled_gpu') {
-            p.stats.cooldownMultiplier *= 0.80
+        const effect = this.passiveEffects[type];
+        if (effect) {
+            effect(this.player.stats);
+        }
+    }
+
+    /**
+     * Get currently active synergies based on player's items
+     */
+    getActiveSynergies(): ItemSynergy[] {
+        const activeSynergies: ItemSynergy[] = []
+
+        // Collect all item IDs player has
+        const playerItems = new Set<string>()
+
+        // Add all active abilities
+        for (const abilityId of this.abilities.keys()) {
+            playerItems.add(abilityId)
+        }
+
+        // Add all passives
+        for (const passiveId of this.passives.keys()) {
+            playerItems.add(passiveId)
+        }
+
+        // Check each synergy
+        for (const synergy of this.synergies) {
+            const hasAllItems = synergy.requiredItems.every(itemId => playerItems.has(itemId))
+            if (hasAllItems) {
+                activeSynergies.push(synergy)
+            }
+        }
+
+        return activeSynergies
+    }
+
+    /**
+     * Apply all active synergy bonuses to player stats
+     * Call this whenever items change
+     */
+    applySynergyBonuses() {
+        const activeSynergies = this.getActiveSynergies()
+
+        for (const synergy of activeSynergies) {
+            synergy.bonusEffect(this.player.stats)
         }
     }
 

@@ -312,8 +312,8 @@ export function PaymentRequestManagement() {
     if (!dateString) return ""
     try {
       const date = new Date(dateString)
-      // Use a consistent format that works the same on server and client
-      return date.toLocaleString("en-US", {
+      // Use user's locale for date/time display
+      return date.toLocaleString(undefined, {
         year: "numeric",
         month: "short",
         day: "numeric",

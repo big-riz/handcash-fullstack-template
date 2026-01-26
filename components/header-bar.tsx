@@ -129,7 +129,7 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
               className="rounded-md md:rounded-lg px-3 md:px-6 h-full data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm font-bold transition-all gap-1.5 md:gap-2"
             >
               <Gamepad2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              Survivor
+              Game
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -196,7 +196,7 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
                   }}
                   className={`text-lg font-medium text-left ${activeTab === "game" ? "text-primary" : ""}`}
                 >
-                  Survivor Game
+                  Game
                 </button>
               </>
             ) : (
@@ -273,7 +273,7 @@ export function HeaderBar({ activeTab, onTabChange }: HeaderBarProps) {
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 rounded-2xl">
+                <DropdownMenuContent align="end" sideOffset={8} className="w-56 rounded-2xl">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-bold leading-none">{user.publicProfile.displayName}</p>

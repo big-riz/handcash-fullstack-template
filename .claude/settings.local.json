@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:retrodiffusion.ai)",
+      "Bash(npm install:*)",
+      "Bash(npx tsx:*)",
+      "Bash(ls:*)",
+      "Bash(findstr:*)",
+      "WebFetch(domain:docs.handcash.io)",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}
