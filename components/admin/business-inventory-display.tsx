@@ -51,9 +51,13 @@ export function BusinessInventoryDisplay() {
   const [collections, setCollections] = useState<Array<{ id: string; name?: string }>>([])
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped")
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set())
+  const [collectionPages, setCollectionPages] = useState<Map<string, number>>(new Map())
+  const [flatPage, setFlatPage] = useState(0)
   const [burnItem, setBurnItem] = useState<InventoryItem | null>(null)
   const [isBurnDialogOpen, setIsBurnDialogOpen] = useState(false)
   const [isBurning, setIsBurning] = useState(false)
+
+  const ITEMS_PER_PAGE = 12 // Show 12 items per page (6 rows of 2)
 
   // Group items by collection
   const groupedItems = useMemo(() => {
@@ -77,9 +81,37 @@ export function BusinessInventoryDisplay() {
         next.delete(collectionId)
       } else {
         next.add(collectionId)
+        // Reset to first page when opening
+        setCollectionPages((pages) => {
+          const newPages = new Map(pages)
+          newPages.set(collectionId, 0)
+          return newPages
+        })
       }
       return next
     })
+  }
+
+  const getCollectionPage = (collectionId: string) => {
+    return collectionPages.get(collectionId) || 0
+  }
+
+  const setCollectionPage = (collectionId: string, page: number) => {
+    setCollectionPages((prev) => {
+      const next = new Map(prev)
+      next.set(collectionId, page)
+      return next
+    })
+  }
+
+  const getPaginatedItems = (items: InventoryItem[], page: number) => {
+    const start = page * ITEMS_PER_PAGE
+    const end = start + ITEMS_PER_PAGE
+    return items.slice(start, end)
+  }
+
+  const getTotalPages = (itemCount: number) => {
+    return Math.ceil(itemCount / ITEMS_PER_PAGE)
   }
 
   const fetchInventory = async () => {
@@ -204,7 +236,14 @@ export function BusinessInventoryDisplay() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setViewMode(viewMode === "grouped" ? "flat" : "grouped")}
+                onClick={() => {
+                  const newMode = viewMode === "grouped" ? "flat" : "grouped"
+                  setViewMode(newMode)
+                  // Reset pagination when switching modes
+                  if (newMode === "flat") {
+                    setFlatPage(0)
+                  }
+                }}
                 className="rounded-full"
               >
                 <Layers className="w-4 h-4 mr-2" />
@@ -234,7 +273,7 @@ export function BusinessInventoryDisplay() {
         ) : viewMode === "flat" ? (
           <>
             <div className="grid grid-cols-2 gap-4">
-              {items.map((item) => (
+              {getPaginatedItems(items, flatPage).map((item) => (
                 <div
                   key={item.id || item.origin}
                   className="group relative overflow-hidden rounded-2xl border border-border bg-card hover:shadow-lg transition-all"
@@ -322,6 +361,33 @@ export function BusinessInventoryDisplay() {
                 </div>
               ))}
             </div>
+            {getTotalPages(items.length) > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFlatPage(Math.max(0, flatPage - 1))}
+                  disabled={flatPage === 0}
+                  className="rounded-full"
+                >
+                  <ChevronUp className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground px-4">
+                  Page {flatPage + 1} of {getTotalPages(items.length)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFlatPage(Math.min(getTotalPages(items.length) - 1, flatPage + 1))}
+                  disabled={flatPage >= getTotalPages(items.length) - 1}
+                  className="rounded-full"
+                >
+                  Next
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            )}
           </>
         ) : (
           <div className="space-y-4">
@@ -329,6 +395,9 @@ export function BusinessInventoryDisplay() {
               const collectionName =
                 collectionItems[0]?.collection?.name || collections.find((c) => c.id === collectionId)?.name || "No Collection"
               const isExpanded = expandedCollections.has(collectionId)
+              const currentPage = getCollectionPage(collectionId)
+              const totalPages = getTotalPages(collectionItems.length)
+              const paginatedItems = getPaginatedItems(collectionItems, currentPage)
 
               return (
                 <Card key={collectionId} className="rounded-2xl border-border overflow-hidden">
@@ -355,7 +424,7 @@ export function BusinessInventoryDisplay() {
                   {isExpanded && (
                     <div className="border-t border-border p-4">
                       <div className="grid grid-cols-2 gap-4">
-                        {collectionItems.map((item) => (
+                        {paginatedItems.map((item) => (
                           <div
                             key={item.id || item.origin}
                             className="group relative overflow-hidden rounded-2xl border border-border bg-card hover:shadow-lg transition-all"
@@ -438,6 +507,33 @@ export function BusinessInventoryDisplay() {
                           </div>
                         ))}
                       </div>
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-border">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCollectionPage(collectionId, Math.max(0, currentPage - 1))}
+                            disabled={currentPage === 0}
+                            className="rounded-full"
+                          >
+                            <ChevronUp className="w-4 h-4 mr-1" />
+                            Previous
+                          </Button>
+                          <span className="text-sm text-muted-foreground px-4">
+                            Page {currentPage + 1} of {totalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCollectionPage(collectionId, Math.min(totalPages - 1, currentPage + 1))}
+                            disabled={currentPage >= totalPages - 1}
+                            className="rounded-full"
+                          >
+                            Next
+                            <ChevronDown className="w-4 h-4 ml-1" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </Card>
