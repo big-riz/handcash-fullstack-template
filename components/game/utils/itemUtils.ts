@@ -100,7 +100,6 @@ export const getItemEmoji = (id: string): string | undefined => {
 export const resolveItemIcon = (id: string, templates: ItemTemplate[]): string | undefined => {
     // If templates aren't loaded yet, return undefined
     if (!templates || !templates.length) {
-        console.warn('[resolveItemIcon] No templates loaded for:', id)
         return DEFAULT_ITEM_IMAGES[id]
     }
 
@@ -111,19 +110,15 @@ export const resolveItemIcon = (id: string, templates: ItemTemplate[]): string |
     const normalizeName = (n: string) => n.toLowerCase().replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
     const normalizedSearchName = normalizeName(name)
 
-    console.log(`[resolveItemIcon] Looking for "${id}" with name "${name}" (normalized: "${normalizedSearchName}")`)
-
     // Try exact match first
     let match = templates.find(t => normalizeName(t.name) === normalizedSearchName)
     if (match) {
-        console.log(`[resolveItemIcon] ✓ Exact match found for "${id}": ${match.imageUrl}`)
         return match.imageUrl
     }
 
     // Try matching by ID directly
     match = templates.find(t => t.name.toLowerCase().includes(id.toLowerCase()) || id.toLowerCase().includes(t.name.toLowerCase()))
     if (match) {
-        console.log(`[resolveItemIcon] ✓ ID match found for "${id}": ${match.imageUrl}`)
         return match.imageUrl
     }
 
@@ -133,7 +128,6 @@ export const resolveItemIcon = (id: string, templates: ItemTemplate[]): string |
         return templateName.includes(normalizedSearchName) || normalizedSearchName.includes(templateName)
     })
     if (match) {
-        console.log(`[resolveItemIcon] ✓ Partial match found for "${id}": ${match.imageUrl}`)
         return match.imageUrl
     }
 
@@ -144,13 +138,8 @@ export const resolveItemIcon = (id: string, templates: ItemTemplate[]): string |
         return searchWords.some(sw => templateWords.some(tw => tw.includes(sw) || sw.includes(tw)))
     })
     if (match) {
-        console.log(`[resolveItemIcon] ✓ Keyword match found for "${id}": ${match.imageUrl}`)
         return match.imageUrl
     }
-
-    // No match found - log available templates for debugging
-    console.warn(`[resolveItemIcon] ✗ No match found for "${id}" (name: "${name}")`)
-    console.log('[resolveItemIcon] Available templates:', templates.map(t => t.name))
 
     return DEFAULT_ITEM_IMAGES[id]
 }

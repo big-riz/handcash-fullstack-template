@@ -4,6 +4,7 @@ import { comments } from "@/lib/schema"
 import { desc } from "drizzle-orm"
 import { handcashService } from "@/lib/handcash-service"
 import { requireAuth } from "@/lib/auth-middleware"
+import { getSetting } from "@/lib/settings-storage"
 
 export async function GET() {
     try {
@@ -22,6 +23,31 @@ export async function POST(req: NextRequest) {
         }
 
         const { privateKey } = authResult
+
+        // Check if user has required collection item (if configured)
+        const requiredCollectionId = await getSetting("access_collection_id")
+        if (requiredCollectionId) {
+            try {
+                const inventory = await handcashService.getInventory(privateKey)
+                const hasItem = inventory.some((item: any) =>
+                    item.collection?.id === requiredCollectionId
+                )
+
+                if (!hasItem) {
+                    return NextResponse.json(
+                        { error: "Missing required collection item to post comments" },
+                        { status: 403 }
+                    )
+                }
+            } catch (error) {
+                console.error("Failed to check collection access:", error)
+                return NextResponse.json(
+                    { error: "Failed to verify collection access" },
+                    { status: 500 }
+                )
+            }
+        }
+
         const profile = await handcashService.getUserProfile(privateKey)
         const userId = profile.userId || profile.publicProfile.userId || profile.publicProfile.handle
 

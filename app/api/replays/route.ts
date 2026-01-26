@@ -1,29 +1,65 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { replays } from "@/lib/schema"
-import { getUserById } from "@/lib/users-storage"
+import { getUserByPrivateKey } from "@/lib/users-storage"
+import { requireAuth } from "@/lib/auth-middleware"
+import { getSetting } from "@/lib/settings-storage"
+import { handcashService } from "@/lib/handcash-service"
 
 export async function POST(req: NextRequest) {
     try {
+        // Require authentication - no anonymous score submissions
+        const authResult = await requireAuth(req)
+        if (!authResult.success) {
+            return NextResponse.json(
+                { error: "Authentication required to submit scores" },
+                { status: 401 }
+            )
+        }
+
+        const { privateKey } = authResult
+
+        // Check if user has required collection item (if configured)
+        const requiredCollectionId = await getSetting("access_collection_id")
+        if (requiredCollectionId) {
+            try {
+                const inventory = await handcashService.getInventory(privateKey)
+                const hasItem = inventory.some((item: any) =>
+                    item.collection?.id === requiredCollectionId
+                )
+
+                if (!hasItem) {
+                    return NextResponse.json(
+                        { error: "Missing required collection item to submit scores" },
+                        { status: 403 }
+                    )
+                }
+            } catch (error) {
+                console.error("Failed to check collection access:", error)
+                return NextResponse.json(
+                    { error: "Failed to verify collection access" },
+                    { status: 500 }
+                )
+            }
+        }
+
+        // Get authenticated user from database
+        const user = await getUserByPrivateKey(privateKey)
+        if (!user) {
+            return NextResponse.json(
+                { error: "User not found" },
+                { status: 404 }
+            )
+        }
+
         const body = await req.json()
-        const { playerName, seed, events, finalLevel, finalTime, gameVersion, userId, handle, avatarUrl, characterId, worldId } = body
+        const { playerName, seed, events, finalLevel, finalTime, gameVersion, handle, avatarUrl, characterId, worldId } = body
 
         if (!playerName || !seed || !events || finalLevel === undefined || finalTime === undefined || !gameVersion) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
         }
 
-        // Verify user exists if userId is provided, otherwise set to null
-        let validUserId: string | null = null
-        if (userId) {
-            const user = await getUserById(userId)
-            if (user) {
-                validUserId = userId
-            } else {
-                console.warn(`[Replays] User ${userId} not found in database, saving replay without user_id`)
-            }
-        }
-
-        // Insert into database
+        // Insert into database with authenticated user's ID
         const result = await db.insert(replays).values({
             playerName,
             seed,
@@ -31,7 +67,7 @@ export async function POST(req: NextRequest) {
             finalLevel,
             finalTime,
             gameVersion,
-            userId: validUserId,
+            userId: user.id, // Always use authenticated user's ID
             handle: handle || null,
             avatarUrl: avatarUrl || null,
             characterId: characterId || null,

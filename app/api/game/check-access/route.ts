@@ -14,13 +14,30 @@ export async function GET(request: NextRequest) {
     try {
         const requiredCollectionId = await getSetting("access_collection_id")
 
-        // If no collection ID is set, access is granted by default (or you can change this)
+        console.log("[Access Check] Required Collection ID:", requiredCollectionId)
+
+        // If no collection ID is set, deny access
         if (!requiredCollectionId) {
-            return NextResponse.json({ success: true, authorized: true })
+            return NextResponse.json({
+                success: true,
+                authorized: false,
+                reason: "No collection requirement configured. Please contact admin."
+            })
         }
 
         const inventory = await handcashService.getInventory(privateKey)
-        const hasItem = inventory.some((item: any) => item.collection?.id === requiredCollectionId)
+        console.log("[Access Check] User inventory item count:", inventory.length)
+        console.log("[Access Check] Collection IDs in inventory:", inventory.map((item: any) => item.collection?.id).filter(Boolean))
+
+        const hasItem = inventory.some((item: any) => {
+            const matches = item.collection?.id === requiredCollectionId
+            if (matches) {
+                console.log("[Access Check] Found matching item:", item.name, "from collection:", item.collection?.name)
+            }
+            return matches
+        })
+
+        console.log("[Access Check] Has required item:", hasItem)
 
         return NextResponse.json({
             success: true,
@@ -28,7 +45,8 @@ export async function GET(request: NextRequest) {
             requiredCollectionId,
             reason: hasItem ? null : "Missing required item from collection"
         })
-    } catch (error) {
-        return NextResponse.json({ success: false, authorized: false, error: "Failed to check access" }, { status: 500 })
+    } catch (error: any) {
+        console.error("[Access Check] Error:", error)
+        return NextResponse.json({ success: false, authorized: false, error: "Failed to check access", details: error.message }, { status: 500 })
     }
 }
