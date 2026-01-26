@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { replays } from "@/lib/schema"
-import { getUserByPrivateKey } from "@/lib/users-storage"
 import { requireAuth } from "@/lib/auth-middleware"
 import { getSetting } from "@/lib/settings-storage"
 import { handcashService } from "@/lib/handcash-service"
+import { desc, sql, eq, and } from "drizzle-orm"
 
 export async function POST(req: NextRequest) {
     try {
@@ -43,20 +43,32 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Get authenticated user from database
-        const user = await getUserByPrivateKey(privateKey)
-        if (!user) {
-            return NextResponse.json(
-                { error: "User not found" },
-                { status: 404 }
-            )
-        }
+        // Get user profile from HandCash
+        const profile = await handcashService.getUserProfile(privateKey)
+        const userId = profile.userId || profile.publicProfile.userId || profile.publicProfile.handle
 
         const body = await req.json()
         const { playerName, seed, events, finalLevel, finalTime, gameVersion, handle, avatarUrl, characterId, worldId } = body
 
         if (!playerName || !seed || !events || finalLevel === undefined || finalTime === undefined || !gameVersion) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+        }
+
+        // Check for duplicate replay (same user, seed, character, and world)
+        const existingReplay = await db.select().from(replays)
+            .where(and(
+                eq(replays.userId, userId),
+                eq(replays.seed, seed),
+                characterId ? eq(replays.characterId, characterId) : sql`${replays.characterId} IS NULL`,
+                worldId ? eq(replays.worldId, worldId) : sql`${replays.worldId} IS NULL`
+            ))
+            .limit(1)
+
+        if (existingReplay.length > 0) {
+            return NextResponse.json(
+                { error: "Duplicate replay - you have already submitted a replay for this seed, character, and world combination" },
+                { status: 409 }
+            )
         }
 
         // Insert into database with authenticated user's ID
@@ -67,7 +79,7 @@ export async function POST(req: NextRequest) {
             finalLevel,
             finalTime,
             gameVersion,
-            userId: user.id, // Always use authenticated user's ID
+            userId, // Always use authenticated user's ID
             handle: handle || null,
             avatarUrl: avatarUrl || null,
             characterId: characterId || null,
@@ -80,8 +92,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
-
-import { desc, sql, eq } from "drizzle-orm"
 
 export async function GET(req: NextRequest) {
     try {
