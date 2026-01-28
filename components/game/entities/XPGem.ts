@@ -21,7 +21,7 @@ export class XPGem {
     }
 
     spawn(x: number, z: number, value: number) {
-        this.position.set(x, 0.1, z)
+        this.position.set(x, 0.3, z)
         this.value = value
         this.isActive = true
         if (this.mesh) {

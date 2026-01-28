@@ -176,24 +176,35 @@ export class VFXManager {
 
     createFloatingText(x: number, z: number, text: string, color: string | number = 'white', scale: number = 1.0) {
         const canvas = document.createElement('canvas')
-        canvas.width = 512
-        canvas.height = 64
         const context = canvas.getContext('2d')
         if (!context) return
 
-        context.font = 'Bold 40px Arial'
+        const font = 'Bold 40px Arial'
+        context.font = font
+
+        // Measure text and set canvas size dynamically
+        const textMetrics = context.measureText(text)
+        const padding = 10
+        canvas.width = textMetrics.width + padding * 2
+        canvas.height = 64 // Height can remain fixed
+
+        // Redraw with new dimensions
+        context.font = font // Font is reset when canvas is resized
         context.fillStyle = typeof color === 'number' ? '#' + color.toString(16).padStart(6, '0') : color
         context.textAlign = 'center'
         context.shadowColor = 'rgba(0,0,0,0.5)'
         context.shadowBlur = 4
-        context.fillText(text, 256, 45) // Centered at 256, slightly lower y for descenders
+        context.fillText(text, canvas.width / 2, 45) // Centered
 
         const texture = new THREE.CanvasTexture(canvas)
         const material = new THREE.SpriteMaterial({ map: texture, transparent: true })
         const sprite = new THREE.Sprite(material)
 
         sprite.position.set(x, 2, z)
-        const baseScale = new THREE.Vector3(6.0 * scale, 0.75 * scale, 1)
+
+        // Adjust scale based on new canvas aspect ratio
+        const aspectRatio = canvas.width / canvas.height
+        const baseScale = new THREE.Vector3(aspectRatio * 1.0 * scale, 1.0 * scale, 1) // Keep height consistent, adjust width by aspect
         sprite.scale.copy(baseScale)
 
         this.scene.add(sprite)

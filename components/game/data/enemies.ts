@@ -2,24 +2,24 @@ const enemies = [
     {
         "id": "drifter",
         "name": "Upiór Drifter",
-        "hp": 10,
-        "damage": 10,
+        "hp": 15,
+        "damage": 15,
         "speed": 3.0,
         "description": "Basic chaser"
     },
     {
         "id": "screecher",
         "name": "Strzyga Screecher",
-        "hp": 20,
-        "damage": 15,
+        "hp": 35,
+        "damage": 22,
         "speed": 5.0,
         "description": "Fast flanker"
     },
     {
         "id": "bruiser",
         "name": "Vurdalak Bruiser",
-        "hp": 50,
-        "damage": 25,
+        "hp": 90,
+        "damage": 35,
         "speed": 2.0,
         "description": "Slow tank"
     },
@@ -50,7 +50,7 @@ const enemies = [
     {
         "id": "leshy",
         "name": "Leshy",
-        "hp": 5000,
+        "hp": 15000,
         "damage": 50,
         "speed": 4.5,
         "description": "Forest Boss"
@@ -75,16 +75,16 @@ const enemies = [
     {
         "id": "stone_golem",
         "name": "Stone Golem",
-        "hp": 100,
-        "damage": 30,
+        "hp": 200,
+        "damage": 45,
         "speed": 1.5,
         "description": "Extremely tough and slow. Hard to take down."
     },
     {
         "id": "spirit_wolf",
         "name": "Spirit Wolf",
-        "hp": 40,
-        "damage": 20,
+        "hp": 80,
+        "damage": 30,
         "speed": 6.0,
         "description": "Very fast, can pass through obstacles."
     },
@@ -99,7 +99,7 @@ const enemies = [
     {
         "id": "ancient_treant",
         "name": "Ancient Treant",
-        "hp": 2500,
+        "hp": 6000,
         "damage": 60,
         "speed": 1.0,
         "description": "Mini-boss. Summons saplings and has a stomp attack."
@@ -115,7 +115,7 @@ const enemies = [
     {
         "id": "golem_destroyer",
         "name": "Golem Destroyer",
-        "hp": 4000,
+        "hp": 8000,
         "damage": 75,
         "speed": 2.0,
         "description": "Mini-boss. Periodically charges at the player."
@@ -131,15 +131,15 @@ const enemies = [
     {
         "id": "forest_wraith",
         "name": "Forest Wraith",
-        "hp": 120,
-        "damage": 30,
+        "hp": 250,
+        "damage": 45,
         "speed": 3.0,
         "description": "Elite enemy. Curses the player, reducing their defense."
     },
     {
         "id": "guardian_golem",
         "name": "Guardian Golem",
-        "hp": 3000,
+        "hp": 6000,
         "damage": 70,
         "speed": 2.2,
         "description": "Mini-boss. Creates rock walls to trap the player."
@@ -147,8 +147,8 @@ const enemies = [
     {
         "id": "werewolf",
         "name": "Werewolf Alpha",
-        "hp": 800,
-        "damage": 40,
+        "hp": 1200,
+        "damage": 50,
         "speed": 6.5,
         "description": "Elite enemy. Heals itself and enrages at low health."
     },
@@ -164,10 +164,76 @@ const enemies = [
     {
         "id": "chernobog",
         "name": "Chernobog",
-        "hp": 15000,
+        "hp": 30000,
         "damage": 100,
         "speed": 3.0,
         "description": "Lord of Darkness. Summons minions and casts powerful spells."
+    },
+    // --- CATACOMBS ENEMIES ---
+    {
+        "id": "frost_bat",
+        "name": "Frost Bat",
+        "hp": 15,
+        "damage": 8,
+        "speed": 7.0,
+        "description": "Fast flying creature. Hard to hit but fragile."
+    },
+    {
+        "id": "bone_crawler",
+        "name": "Bone Crawler",
+        "hp": 45,
+        "damage": 22,
+        "speed": 3.0,
+        "description": "Skeletal horror that burrows and resurfaces near the player."
+    },
+    {
+        "id": "flame_wraith",
+        "name": "Flame Wraith",
+        "hp": 70,
+        "damage": 28,
+        "speed": 5.0,
+        "description": "Burning spirit that leaves fire trails."
+    },
+    {
+        "id": "crypt_guardian",
+        "name": "Crypt Guardian",
+        "hp": 12000,
+        "damage": 80,
+        "speed": 1.8,
+        "description": "Ancient underground boss. Summons bone crawlers and slams the ground."
+    },
+    // --- FROZEN WASTE ENEMIES ---
+    {
+        "id": "frost_elemental",
+        "name": "Frost Elemental",
+        "hp": 55,
+        "damage": 22,
+        "speed": 4.0,
+        "description": "Living ice that creates slowing patches on the ground."
+    },
+    {
+        "id": "snow_wraith",
+        "name": "Snow Wraith",
+        "hp": 180,
+        "damage": 48,
+        "speed": 5.5,
+        "description": "Ghostly blizzard spirit that phases through obstacles."
+    },
+    {
+        "id": "ice_golem",
+        "name": "Ice Golem",
+        "hp": 7000,
+        "damage": 65,
+        "speed": 1.5,
+        "description": "Mini-boss. Massive frozen construct with devastating slam attacks."
+    },
+    {
+        "id": "blizzard_wolf",
+        "name": "Blizzard Wolf",
+        "hp": 35,
+        "damage": 16,
+        "speed": 6.5,
+        "description": "Fast frost-touched pack hunter. Attacks in groups."
     }
 ];
 

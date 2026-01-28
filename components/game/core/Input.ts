@@ -1,20 +1,21 @@
 /**
  * Input.ts
- * 
+ *
  * Handles keyboard and touch input for player movement and game controls
- * 
- * Keyboard: WASD and arrow keys for movement, ESC for pause
+ *
+ * Keyboard: WASD and arrow keys for movement, ESC for pause, Q/E or +/- for zoom
  * Touch: Direct position control
  *   - Tap and hold anywhere on screen to move in that direction
  *   - Player moves towards the tapped position
  *   - Simple, intuitive mobile controls
+ * Zoom: Mouse wheel or Q/E keys
  */
 
 export class InputManager {
     private keys = new Map<string, boolean>()
     private keyDownHandler: (e: KeyboardEvent) => void
     private keyUpHandler: (e: KeyboardEvent) => void
-    
+
     // Touch/pointer input - Direct position control
     private touchActive = false
     private touchX = 0
@@ -23,23 +24,31 @@ export class InputManager {
     private pointerMoveHandler: (e: PointerEvent) => void
     private pointerUpHandler: (e: PointerEvent) => void
 
+    // Zoom input
+    private zoomDelta = 0
+    private wheelHandler: (e: WheelEvent) => void
+
     constructor() {
         this.keyDownHandler = this.onKeyDown.bind(this)
         this.keyUpHandler = this.onKeyUp.bind(this)
         this.pointerDownHandler = this.onPointerDown.bind(this)
         this.pointerMoveHandler = this.onPointerMove.bind(this)
         this.pointerUpHandler = this.onPointerUp.bind(this)
+        this.wheelHandler = this.onWheel.bind(this)
     }
 
     start() {
         window.addEventListener('keydown', this.keyDownHandler)
         window.addEventListener('keyup', this.keyUpHandler)
-        
+
         // Use non-passive event listeners for touch to allow preventDefault
         window.addEventListener('pointerdown', this.pointerDownHandler, { passive: false })
         window.addEventListener('pointermove', this.pointerMoveHandler, { passive: false })
         window.addEventListener('pointerup', this.pointerUpHandler, { passive: false })
         window.addEventListener('pointercancel', this.pointerUpHandler, { passive: false })
+
+        // Wheel listener for zoom
+        window.addEventListener('wheel', this.wheelHandler, { passive: false })
     }
 
     stop() {
@@ -49,8 +58,10 @@ export class InputManager {
         window.removeEventListener('pointermove', this.pointerMoveHandler)
         window.removeEventListener('pointerup', this.pointerUpHandler)
         window.removeEventListener('pointercancel', this.pointerUpHandler)
+        window.removeEventListener('wheel', this.wheelHandler)
         this.keys.clear()
         this.touchActive = false
+        this.zoomDelta = 0
     }
 
     private onKeyDown(e: KeyboardEvent) {
@@ -62,9 +73,14 @@ export class InputManager {
     }
 
     private onPointerDown(e: PointerEvent) {
-        // Ignore if clicking on UI elements (buttons, etc)
+        // Ignore if clicking on UI elements (buttons, inputs, etc)
         const target = e.target as HTMLElement
-        if (target.closest('button') || target.closest('[role="button"]') || target.closest('input')) {
+        if (target.closest('button') || 
+            target.closest('[role="button"]') || 
+            target.closest('input') || 
+            target.closest('select') || 
+            target.closest('textarea') ||
+            target.closest('a')) {
             return
         }
 
@@ -91,6 +107,18 @@ export class InputManager {
         this.touchActive = false
         this.touchX = 0
         this.touchY = 0
+    }
+
+    private onWheel(e: WheelEvent) {
+        // Ignore if hovering over UI elements
+        const target = e.target as HTMLElement
+        if (target.closest('button') || target.closest('[role="button"]') || target.closest('input')) {
+            return
+        }
+
+        e.preventDefault()
+        // Normalize wheel delta (different browsers have different values)
+        this.zoomDelta += Math.sign(e.deltaY)
     }
 
     isKeyDown(code: string): boolean {
@@ -147,6 +175,25 @@ export class InputManager {
     }
 
     /**
+     * Get zoom input (mouse wheel + keyboard)
+     * Returns delta value: negative = zoom in, positive = zoom out
+     */
+    getZoomInput(): number {
+        let delta = this.zoomDelta
+        this.zoomDelta = 0 // Reset delta after reading
+
+        // Keyboard zoom: Q = zoom in, E = zoom out (or +/-)
+        if (this.isKeyDown('KeyQ') || this.isKeyDown('Minus')) {
+            delta -= 0.5 // Zoom in
+        }
+        if (this.isKeyDown('KeyE') || this.isKeyDown('Equal')) {
+            delta += 0.5 // Zoom out
+        }
+
+        return delta
+    }
+
+    /**
      * Check if pause key (ESC) was just pressed
      */
     isPausePressed(): boolean {
@@ -161,5 +208,6 @@ export class InputManager {
         this.touchActive = false
         this.touchX = 0
         this.touchY = 0
+        this.zoomDelta = 0
     }
 }

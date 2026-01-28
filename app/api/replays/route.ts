@@ -4,7 +4,7 @@ import { replays } from "@/lib/schema"
 import { requireAuth } from "@/lib/auth-middleware"
 import { getSetting } from "@/lib/settings-storage"
 import { handcashService } from "@/lib/handcash-service"
-import { desc, sql, eq, and } from "drizzle-orm"
+import { desc, eq, and } from "drizzle-orm"
 
 export async function POST(req: NextRequest) {
     try {
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
         // Get user profile from HandCash
         const profile = await handcashService.getUserProfile(privateKey)
-        const userId = profile.userId || profile.publicProfile.userId || profile.publicProfile.handle
+        const userId = profile?.publicProfile?.id || profile?.publicProfile?.handle || 'unknown'
 
         const body = await req.json()
         const { playerName, seed, events, finalLevel, finalTime, gameVersion, handle, avatarUrl, characterId, worldId } = body
@@ -54,24 +54,54 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
         }
 
-        // Check for duplicate replay (same user, seed, character, and world)
-        const existingReplay = await db.select().from(replays)
+        // Normalize worldId - default to 'dark_forest' if not provided
+        const normalizedWorldId = worldId || 'dark_forest'
+
+        // Check for existing score for this user on this world
+        // Each player can only have ONE entry per world on the leaderboard
+        const existingScore = await db.select().from(replays)
             .where(and(
                 eq(replays.userId, userId),
-                eq(replays.seed, seed),
-                characterId ? eq(replays.characterId, characterId) : sql`${replays.characterId} IS NULL`,
-                worldId ? eq(replays.worldId, worldId) : sql`${replays.worldId} IS NULL`
+                eq(replays.worldId, normalizedWorldId)
             ))
             .limit(1)
 
-        if (existingReplay.length > 0) {
-            return NextResponse.json(
-                { error: "Duplicate replay - you have already submitted a replay for this seed, character, and world combination" },
-                { status: 409 }
-            )
+        if (existingScore.length > 0) {
+            const existing = existingScore[0]
+            // Determine if new score is better
+            // Better = higher level, or same level with faster time
+            const isBetterScore = finalLevel > existing.finalLevel ||
+                (finalLevel === existing.finalLevel && finalTime < existing.finalTime)
+
+            if (isBetterScore) {
+                // Update existing entry with new best score
+                await db.update(replays)
+                    .set({
+                        playerName,
+                        seed,
+                        events,
+                        finalLevel,
+                        finalTime,
+                        gameVersion,
+                        handle: handle || null,
+                        avatarUrl: avatarUrl || null,
+                        characterId: characterId || null,
+                    })
+                    .where(eq(replays.id, existing.id))
+
+                return NextResponse.json({ success: true, id: existing.id, updated: true })
+            } else {
+                // Score is not better, don't update
+                return NextResponse.json({
+                    success: true,
+                    id: existing.id,
+                    updated: false,
+                    message: "Existing score is better or equal"
+                })
+            }
         }
 
-        // Insert into database with authenticated user's ID
+        // No existing score for this world, insert new entry
         const result = await db.insert(replays).values({
             playerName,
             seed,
@@ -83,7 +113,7 @@ export async function POST(req: NextRequest) {
             handle: handle || null,
             avatarUrl: avatarUrl || null,
             characterId: characterId || null,
-            worldId: worldId || null,
+            worldId: normalizedWorldId,
         }).returning()
 
         return NextResponse.json({ success: true, id: result[0].id })
@@ -98,6 +128,7 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url)
         const limit = parseInt(searchParams.get("limit") || "10")
         const handle = searchParams.get("handle")
+        const worldId = searchParams.get("worldId")
 
         let mapped = []
 
@@ -107,7 +138,31 @@ export async function GET(req: NextRequest) {
                 .where(eq(replays.handle, handle))
                 .orderBy(desc(replays.createdAt))
                 .limit(limit)
-            
+
+            mapped = result.map(r => ({
+                id: r.id,
+                userId: r.userId,
+                playerName: r.playerName,
+                handle: r.handle,
+                avatarUrl: r.avatarUrl,
+                seed: r.seed,
+                events: r.events,
+                finalLevel: r.finalLevel,
+                finalTime: r.finalTime,
+                gameVersion: r.gameVersion,
+                characterId: r.characterId,
+                worldId: r.worldId,
+                createdAt: r.createdAt
+            }))
+        } else if (worldId) {
+            // Fetch leaderboard for a specific world
+            // Each player appears only once per world (enforced by POST logic)
+            // Sort by level DESC, then time ASC (faster is better at same level)
+            const result = await db.select().from(replays)
+                .where(eq(replays.worldId, worldId))
+                .orderBy(desc(replays.finalLevel), replays.finalTime)
+                .limit(limit)
+
             mapped = result.map(r => ({
                 id: r.id,
                 userId: r.userId,
@@ -124,36 +179,27 @@ export async function GET(req: NextRequest) {
                 createdAt: r.createdAt
             }))
         } else {
-            // Use raw SQL to handle DISTINCT ON and ensure we get the best run per player
-            const result = await db.execute(sql`
-                SELECT * FROM (
-                    SELECT DISTINCT ON (${replays.playerName}) *
-                    FROM ${replays}
-                    ORDER BY ${replays.playerName}, ${replays.finalLevel} DESC, ${replays.finalTime} DESC
-                ) t
-                ORDER BY final_level DESC, final_time DESC
-                LIMIT ${limit}
-            `);
+            // Fetch all scores (for backwards compatibility / global view)
+            // Returns all entries across all worlds, sorted by level then time
+            const result = await db.select().from(replays)
+                .orderBy(desc(replays.finalLevel), replays.finalTime)
+                .limit(limit)
 
-            // Handle result safely (array or object with rows)
-            const rows = Array.isArray(result) ? result : (result as any).rows || [];
-
-            // Map snake_case database results to CamelCase for frontend
-            mapped = (rows as any[]).map(r => ({
+            mapped = result.map(r => ({
                 id: r.id,
-                userId: r.user_id,
-                playerName: r.player_name,
+                userId: r.userId,
+                playerName: r.playerName,
                 handle: r.handle,
-                avatarUrl: r.avatar_url,
+                avatarUrl: r.avatarUrl,
                 seed: r.seed,
                 events: r.events,
-                finalLevel: r.final_level,
-                finalTime: r.final_time,
-                gameVersion: r.game_version,
-                characterId: r.character_id,
-                worldId: r.world_id,
-                createdAt: r.created_at
-            }));
+                finalLevel: r.finalLevel,
+                finalTime: r.finalTime,
+                gameVersion: r.gameVersion,
+                characterId: r.characterId,
+                worldId: r.worldId,
+                createdAt: r.createdAt
+            }))
         }
 
         return NextResponse.json(mapped)

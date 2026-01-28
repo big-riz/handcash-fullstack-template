@@ -286,6 +286,25 @@ See **[SECURITY.md](./SECURITY.md)** for detailed security documentation.
 - See `components/widgets/README.md` for widget usage examples
 - Review [SECURITY.md](./SECURITY.md) for security features
 
-## License
+## Development
 
-MIT
+### Running Tests
+
+The project includes Playwright tests for end-to-end testing:
+
+```bash
+npm run chaos-test    # Run chaos test on /play endpoint (Playwright script)
+npm run test          # Run Playwright tests (if working)
+npm run test:ui       # Run tests with Playwright UI mode
+npm run test:headed   # Run tests with browser windows visible
+```
+
+### Test Structure
+
+- **Playwright Tests**: Located in `e2e-tests/` directory
+- **Chaos Test**: `slavic-survivors-chaos.test.ts` - Comprehensive test that clicks through all game screens
+- **Configuration**: `playwright.config.ts` - Test configuration with dev server setup
+
+All tests run against `localhost:3000` with automatic dev server startup.
+
+## Resources

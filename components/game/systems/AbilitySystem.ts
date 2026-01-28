@@ -29,10 +29,14 @@ export type AbilityType = 'dagger' | 'holywater' | 'stake' | 'cross' | 'salt' | 
     'ak_radioactive' | 'ak_ghzel' | 'ak_corrupted' | 'ak_mushroom' | 'nuclear_pigeon' | 'lada' |
     'peppermill' | 'shank' | 'kabar' | 'knuckles' | 'stilleto' | 'grail' | 'soviet_stick' | 'skull_screen' | 'visors' |
     'kvass_reactor' | 'vampire_rat' | 'pig_luggage' | 'big_biz_lada' | 'dadushka_chair' | 'gopnik_gondola' | 'tank_stroller' | 'haunted_lada' | 'gzhel_smg' |
-    'soul_siphon' | 'silver_tt33' | 'melter'
+    'soul_siphon' | 'silver_tt33' | 'melter' |
+    'vodka_flamethrower' | 'phantom_blade' | 'orbital_tank' | 'death_pigeon' | 'immortal_lada' | 'propaganda_storm' |
+    'assassins_edge' | 'iron_fist' | 'blessed_flood' | 'divine_cross' |
+    'storm_blades' | 'bone_daggers' | 'blazing_stakes' | 'eternal_grail' | 'nuclear_spray'
 
 export type PassiveType = 'beer_coin' | 'boss_shoe' | 'dove_coin' | 'garlic_ring' | 'holy_bread' | 'battle_scarf' |
-    'holy_cheese' | 'spy_hat' | 'infinity_purse' | 'ruby_ushanka' | 'sunflower_pouch' | 'pickled_gpu'
+    'holy_cheese' | 'spy_hat' | 'infinity_purse' | 'ruby_ushanka' | 'sunflower_pouch' | 'pickled_gpu' |
+    'bone_charm' | 'crypt_lantern'
 
 export interface UpgradeInfo {
     id: string
@@ -66,7 +70,22 @@ export class AbilitySystem {
     private readonly evolutions: EvolutionRule[] = [
         { baseAbility: 'skull_screen', requiredPassive: 'garlic_ring', evolvedAbility: 'soul_siphon' },
         { baseAbility: 'tt33', requiredPassive: 'spy_hat', evolvedAbility: 'silver_tt33' },
-        { baseAbility: 'gzhel_smg', requiredPassive: 'pickled_gpu', evolvedAbility: 'melter' }
+        { baseAbility: 'gzhel_smg', requiredPassive: 'pickled_gpu', evolvedAbility: 'melter' },
+        { baseAbility: 'peppermill', requiredPassive: 'beer_coin', evolvedAbility: 'vodka_flamethrower' },
+        { baseAbility: 'shank', requiredPassive: 'dove_coin', evolvedAbility: 'phantom_blade' },
+        { baseAbility: 'tank_stroller', requiredPassive: 'ruby_ushanka', evolvedAbility: 'orbital_tank' },
+        { baseAbility: 'nuclear_pigeon', requiredPassive: 'spy_hat', evolvedAbility: 'death_pigeon' },
+        { baseAbility: 'haunted_lada', requiredPassive: 'holy_cheese', evolvedAbility: 'immortal_lada' },
+        { baseAbility: 'propaganda_tower', requiredPassive: 'pickled_gpu', evolvedAbility: 'propaganda_storm' },
+        { baseAbility: 'kabar', requiredPassive: 'battle_scarf', evolvedAbility: 'assassins_edge' },
+        { baseAbility: 'knuckles', requiredPassive: 'holy_bread', evolvedAbility: 'iron_fist' },
+        { baseAbility: 'holywater', requiredPassive: 'garlic_ring', evolvedAbility: 'blessed_flood' },
+        { baseAbility: 'cross', requiredPassive: 'holy_cheese', evolvedAbility: 'divine_cross' },
+        { baseAbility: 'stilleto', requiredPassive: 'boss_shoe', evolvedAbility: 'storm_blades' },
+        { baseAbility: 'dagger', requiredPassive: 'bone_charm', evolvedAbility: 'bone_daggers' },
+        { baseAbility: 'stake', requiredPassive: 'crypt_lantern', evolvedAbility: 'blazing_stakes' },
+        { baseAbility: 'grail', requiredPassive: 'infinity_purse', evolvedAbility: 'eternal_grail' },
+        { baseAbility: 'ak_radioactive', requiredPassive: 'sunflower_pouch', evolvedAbility: 'nuclear_spray' }
     ]
 
     private readonly synergies: ItemSynergy[] = [
@@ -118,6 +137,27 @@ export class AbilitySystem {
             description: '+35% damage, +1 projectile',
             requiredItems: ['stake', 'spy_hat', 'dove_coin'],
             bonusEffect: (stats) => { stats.damageMultiplier *= 1.35; stats.amount += 1; }
+        },
+        {
+            id: 'holy_crusade',
+            name: 'Holy Crusade',
+            description: '+50% damage, +20 max HP',
+            requiredItems: ['cross', 'holywater', 'holy_bread'],
+            bonusEffect: (stats) => { stats.damageMultiplier *= 1.5; stats.maxHp += 20; stats.currentHp += 20; }
+        },
+        {
+            id: 'crypt_raider',
+            name: 'Crypt Raider',
+            description: '+25% crit chance, +0.3 speed',
+            requiredItems: ['kabar', 'dagger', 'boss_shoe'],
+            bonusEffect: (stats) => { stats.critRate += 0.25; stats.moveSpeed += 0.3; }
+        },
+        {
+            id: 'skull_warrior',
+            name: 'Skull Warrior',
+            description: '+30% area, +20% damage',
+            requiredItems: ['skull_screen', 'knuckles', 'bone_charm'],
+            bonusEffect: (stats) => { stats.areaMultiplier *= 1.3; stats.damageMultiplier *= 1.2; }
         }
     ]
 
@@ -134,6 +174,8 @@ export class AbilitySystem {
         'ruby_ushanka': (stats) => { stats.armor += 2.0; stats.damageMultiplier *= 1.15; },
         'sunflower_pouch': (stats) => { stats.amount += 1; },
         'pickled_gpu': (stats) => { stats.cooldownMultiplier *= 0.80; },
+        'bone_charm': (stats) => { stats.damageMultiplier *= 1.10; stats.maxHp += 10; stats.currentHp += 10; },
+        'crypt_lantern': (stats) => { stats.areaMultiplier *= 1.15; stats.regen += 0.5; },
     };
 
     constructor(
@@ -369,6 +411,88 @@ export class AbilitySystem {
             ability.level = 8
             ability.damage *= 5
             ability.cooldown *= 0.4
+        } else if (type === 'vodka_flamethrower') {
+            ability = new TT33Weapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability.level = 8
+            ability.damage = 45
+            ability.cooldown = 0.1
+        } else if (type === 'phantom_blade') {
+            ability = new MeleeWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability.level = 8
+            ability.radius = 2.5
+            ability.cooldown = 0.2
+            ability.damage = 50
+            ability.swingDuration = 0.1
+            ability.color = 0x6633ff
+        } else if (type === 'orbital_tank') {
+            ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.level = 8
+            ability.damage = 200
+        } else if (type === 'death_pigeon') {
+            ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.level = 8
+            ability.damage *= 5
+        } else if (type === 'immortal_lada') {
+            ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.level = 8
+            ability.damage = 170
+            ability.speed = 1.5
+        } else if (type === 'propaganda_storm') {
+            ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.level = 8
+            ability.damage *= 4
+        } else if (type === 'assassins_edge') {
+            ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability.level = 8
+            ability.damage = 60
+            ability.cooldown = 0.3
+            ability.projectileSpeed = 22
+        } else if (type === 'iron_fist') {
+            ability = new MeleeWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability.level = 8
+            ability.radius = 2.0
+            ability.cooldown = 0.5
+            ability.damage = 80
+            ability.swingDuration = 0.25
+            ability.arcAngle = Math.PI * 0.6
+            ability.color = 0xffcc00
+        } else if (type === 'blessed_flood') {
+            ability = new HolyWaterWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability.level = 8
+            ability.damage *= 4
+        } else if (type === 'divine_cross') {
+            ability = new CrossWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability.level = 8
+            ability.damage *= 4
+        } else if (type === 'storm_blades') {
+            ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability.level = 8
+            ability.damage = 35
+            ability.cooldown = 0.15
+            ability.count = 5
+            ability.projectileSpeed = 28
+        } else if (type === 'bone_daggers') {
+            ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability.level = 8
+            ability.damage = 45
+            ability.cooldown = 0.35
+            ability.count = 4
+            ability.projectileSpeed = 18
+        } else if (type === 'blazing_stakes') {
+            ability = new AspenStakeWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability.level = 8
+            ability.damage *= 5
+            ability.cooldown *= 0.4
+        } else if (type === 'eternal_grail') {
+            ability = new GarlicAura(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.level = 8
+            ability.radius = 6.0
+            ability.damage = 40
+        } else if (type === 'nuclear_spray') {
+            ability = new RadioactiveAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.level = 8
+            ability.damage *= 4
+            ability.cooldown *= 0.3
         }
 
         if (ability) {
@@ -511,6 +635,21 @@ export class AbilitySystem {
         if (type === 'soul_siphon') return "Heals on kill, massive area."
         if (type === 'silver_tt33') return "Silver rounds crush bosses."
         if (type === 'melter') return "Melts enemy armor instantly."
+        if (type === 'vodka_flamethrower') return "Ignites enemies with burning vodka streams."
+        if (type === 'phantom_blade') return "Invisible strikes from the shadows."
+        if (type === 'orbital_tank') return "360-degree orbital devastation."
+        if (type === 'death_pigeon') return "Critical nuclear strikes from above."
+        if (type === 'immortal_lada') return "Self-healing cursed vehicle."
+        if (type === 'propaganda_storm') return "Rapid-fire mind control towers."
+        if (type === 'assassins_edge') return "Armor-shredding critical blade."
+        if (type === 'iron_fist') return "Devastating multi-hit punches."
+        if (type === 'blessed_flood') return "Healing pools that burn enemies."
+        if (type === 'divine_cross') return "Multi-bouncing holy projectiles."
+        if (type === 'storm_blades') return "Lightning-fast chain knives."
+        if (type === 'bone_daggers') return "Splitting necromantic daggers."
+        if (type === 'blazing_stakes') return "Burning stakes ignite the ground."
+        if (type === 'eternal_grail') return "Infinite holy aura of massive range."
+        if (type === 'nuclear_spray') return "Multi-projectile radioactive barrage."
 
         // ============================================
         // PASSIVES - descriptions without "Level X:" prefix (added by UI)
@@ -527,6 +666,8 @@ export class AbilitySystem {
         if (type === 'ruby_ushanka') return nextLevel === 1 ? "+2 Armor, +15% Damage." : `+2 armor, +15% damage.`
         if (type === 'sunflower_pouch') return nextLevel === 1 ? "+1 Projectile to all weapons." : `+1 projectile.`
         if (type === 'pickled_gpu') return nextLevel === 1 ? "-20% Cooldowns." : `-20% cooldowns.`
+        if (type === 'bone_charm') return nextLevel === 1 ? "+10% Damage, +10 Max HP." : `+10% damage, +10 HP.`
+        if (type === 'crypt_lantern') return nextLevel === 1 ? "+15% Area, +0.5 HP/sec." : `+15% area, +0.5 regen.`
 
         return "A powerful upgrade!"
     }

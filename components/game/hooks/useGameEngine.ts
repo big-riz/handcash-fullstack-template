@@ -1,8 +1,10 @@
 import { useRef, useEffect, useState, MutableRefObject } from "react"
 import * as THREE from "three"
-import { GameLoop } from "../core/GameLoop"
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
+import { ProfiledGameLoop } from "../core/ProfiledGameLoop"
+import { PerformanceProfiler, PerformanceMetrics, GameStatsHistory } from "../core/PerformanceProfiler"
 import { InputManager } from "../core/Input"
-import { BotController } from "../core/BotController" // New Import
+import { BotController } from "../core/BotController"
 import { Player } from "../entities/Player"
 import { EntityManager } from "../entities/EntityManager"
 import { SpawnSystem } from "../systems/SpawnSystem"
@@ -13,10 +15,18 @@ import { ReplayRecorder, ReplayPlayer, ReplayData, ReplayEventType } from "@/lib
 import { EventSystem } from "../systems/EventSystem"
 import { AudioManager } from "../core/AudioManager"
 import { SpriteSystem } from "../core/SpriteSystem"
+import { BenchmarkMode } from "../debug/BenchmarkMode"
 
 import { ItemTemplate } from "@/lib/item-templates-storage"
 import { CharacterInfo } from "../types"
 import { WORLDS } from "@/components/game/data/worlds"
+import { getCustomLevel } from "@/lib/custom-levels-storage"
+import { CustomLevelData, MeshPlacement, PaintedArea, SplinePath } from "@/components/game/debug/LevelEditor"
+import { generateScatterObject } from "@/components/game/utils/scatterUtils"
+import { generateMeshObject } from "@/components/game/utils/meshUtils"
+import { MESH_TYPES } from "@/components/game/data/meshes"
+import { generateProceduralMeshes } from "@/components/game/utils/proceduralMeshGenerator"
+import { PROCEDURAL_MESH_CONFIGS } from "@/components/game/data/proceduralMeshConfigs"
 import activeData from '@/components/game/data/actives'
 import passiveData from '@/components/game/data/passives'
 import evolutionData from '@/components/game/data/evolutions'
@@ -24,6 +34,46 @@ import characterDataImport from '@/components/game/data/characters'
 import { getItemInfo, resolveItemIcon } from "../utils/itemUtils"
 
 const characterData: CharacterInfo[] = characterDataImport as CharacterInfo[]
+
+// Global cache for custom levels (shared across all instances)
+let customLevelsCache: any[] = []
+
+// Helper function to get world data (including custom levels) - SYNCHRONOUS
+// Note: This is called very frequently, keep logging minimal
+let lastLoggedWorldId: string | null = null
+function getWorldData(worldId: string) {
+    // Try default worlds first
+    const defaultWorld = WORLDS.find(w => w.id === worldId)
+    if (defaultWorld) {
+        return defaultWorld
+    }
+
+    // Try custom levels from cache
+    const customLevel = customLevelsCache.find(l => l.id === worldId)
+    if (customLevel) {
+        // Only log once per world to avoid spam
+        if (worldId !== lastLoggedWorldId) {
+            console.log(`[GameEngine] Loaded custom level: ${customLevel.name} (${worldId})`)
+            lastLoggedWorldId = worldId
+        }
+        return customLevel
+    }
+
+    // Fallback to first world
+    console.warn(`[GameEngine] World ${worldId} not found, using default (cache has ${customLevelsCache.length} levels)`)
+    return WORLDS[0]
+}
+
+// Update custom levels cache (called from component)
+export function updateCustomLevelsCache(levels: any[]) {
+    customLevelsCache = levels
+    lastLoggedWorldId = null // Reset so next level load will log
+
+    if (levels.length > 0) {
+        console.log(`[GameEngine] Updated cache with ${levels.length} custom level(s):`,
+            levels.map(l => `${l.name} (${l.id})`).join(', '))
+    }
+}
 
 interface UseGameEngineProps {
     containerRef: MutableRefObject<HTMLDivElement | null>
@@ -63,6 +113,12 @@ interface UseGameEngineProps {
     replaySpeed: number
     gameSpeed: number
     isBotActive: boolean
+    setWaveNotification: (message: string | null) => void
+    // Performance Profiler
+    setProfilerMetrics: (metrics: PerformanceMetrics | null) => void
+    setProfilerWarnings: (warnings: string[]) => void
+    setFPSHistory: (history: number[]) => void
+    setGameStatsHistory: (history: GameStatsHistory) => void
     // External Refs
     playerRef: MutableRefObject<Player | null>
     abilitySystemRef: MutableRefObject<AbilitySystem | null>
@@ -108,6 +164,11 @@ export function useGameEngine({
     replaySpeed,
     gameSpeed,
     isBotActive,
+    setWaveNotification,
+    setProfilerMetrics,
+    setProfilerWarnings,
+    setFPSHistory,
+    setGameStatsHistory,
     playerRef,
     abilitySystemRef,
     replayRef,
@@ -118,9 +179,10 @@ export function useGameEngine({
     const sceneRef = useRef<THREE.Scene | null>(null)
     const cameraRef = useRef<THREE.OrthographicCamera | null>(null)
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
-    const gameLoopRef = useRef<GameLoop | null>(null)
+    const gameLoopRef = useRef<ProfiledGameLoop | null>(null)
     const inputManagerRef = useRef<InputManager | null>(null)
     const botControllerRef = useRef<BotController | null>(null)
+    const benchmarkRef = useRef<BenchmarkMode | null>(null)
     // playerRef passed from prop
     const entityManagerRef = useRef<EntityManager | null>(null)
     const spawnSystemRef = useRef<SpawnSystem | null>(null)
@@ -140,6 +202,9 @@ export function useGameEngine({
     const obstaclesRef = useRef<{ x: number, z: number, radius: number }[]>([])
     const levelUpChoices = useRef<any[]>([])
     const missingItemsRef = useRef<Set<string>>(new Set())
+    const gltfLoaderRef = useRef<GLTFLoader | null>(null)
+    const loadedModelsRef = useRef<Map<string, { model: THREE.Group, collisionRadius: number }>>(new Map())
+    const sceneGltfObjectsRef = useRef<THREE.Object3D[]>([])
 
     const gameStateRef = useRef(gameState)
     useEffect(() => { gameStateRef.current = gameState }, [gameState])
@@ -160,6 +225,9 @@ export function useGameEngine({
     const cameraTargetRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
     const cameraDistance = 35
     const cameraPitch = 55 * (Math.PI / 180)
+    const cameraZoomRef = useRef<number>(1.0) // Dynamic zoom level (1.0 = default)
+    const minZoom = 0.5 // Max zoom out (see more)
+    const maxZoom = 2.5 // Max zoom in (see less)
 
     // Logic Functions
     const getLevelUpChoices = () => {
@@ -167,7 +235,7 @@ export function useGameEngine({
         const as = abilitySystemRef.current
         if (!p || !as) return []
 
-        const currentWorld = WORLDS.find(w => w.id === selectedWorldId) || WORLDS[0]
+        const currentWorld = getWorldData(selectedWorldId)
         const allowed = [...(currentWorld.allowedUpgrades || ['all'])]
         const levelGateBonus = selectedWorldId === 'frozen_waste' ? 3 : 0
         const gatingLevel = p.stats.level + levelGateBonus
@@ -372,6 +440,12 @@ export function useGameEngine({
             setDamageTaken(0)
             gameTimeRef.current = 0
 
+            // Reset profiler for new game (preserves across level ups, resets on new game)
+            const loop = gameLoopRef.current
+            if (loop) {
+                loop.getProfiler().reset()
+            }
+
             const character = characterData.find(c => c.id === (overrideCharId || selectedCharacterId)) || characterData[0]
             if (character.stats) {
                 p.stats.maxHp = character.stats.maxHp || 100
@@ -409,7 +483,7 @@ export function useGameEngine({
 
             abilitySystemRef.current = new AbilitySystem(scene, p, em, vm, gameRNG, audioManagerRef.current, startingActives, startingPassives)
 
-            const currentWorldTemplate = WORLDS.find(w => w.id === (overrideWorldId || selectedWorldId)) || WORLDS[0]
+            const currentWorldTemplate = getWorldData(overrideWorldId || selectedWorldId)
             const currentWorld = {
                 ...currentWorldTemplate,
                 allowedUpgrades: [...currentWorldTemplate.allowedUpgrades]
@@ -419,9 +493,14 @@ export function useGameEngine({
                 currentWorld.allowedUpgrades.push(startingWeapon)
             }
 
-            replayRef.current = forReplay ? null : new ReplayRecorder(newSeed, (user?.publicProfile.displayName || playerName || 'ANON'), selectedCharacterId, selectedWorldId)
+            replayRef.current = forReplay ? null : new ReplayRecorder(newSeed, (user?.publicProfile.handle || ''), selectedCharacterId, selectedWorldId)
             spawnSystemRef.current = new SpawnSystem(em, p, gameRNG)
             spawnSystemRef.current.setWorld(currentWorld)
+            spawnSystemRef.current.setWaveMessageCallback((message: string) => {
+                setWaveNotification(message)
+                // Auto-clear notification after 4 seconds
+                setTimeout(() => setWaveNotification(null), 4000)
+            })
             eventSystemRef.current = new EventSystem({ spawnSystem: spawnSystemRef.current, entityManager: em, vfxManager: vm, player: p })
         }
         cameraTargetRef.current.set(0, 0, 0)
@@ -466,7 +545,7 @@ export function useGameEngine({
         scene.fog = new THREE.FogExp2(0x1a1e1a, 0.012)
         sceneRef.current = scene
 
-        const WorldPreset = WORLDS.find(w => w.id === selectedWorldId) || WORLDS[0]
+        const WorldPreset = getWorldData(selectedWorldId)
         const skyColor = WorldPreset.theme?.skyColor || 0x1a1e1a
         const groundColor = WorldPreset.theme?.groundColor || 0x3d453d
         scene.background = new THREE.Color(skyColor)
@@ -479,6 +558,8 @@ export function useGameEngine({
         const camera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, 0.1, 1000)
         camera.position.set(0, cameraDistance * Math.sin(cameraPitch), -cameraDistance * Math.cos(cameraPitch))
         camera.lookAt(0, 0, 0)
+        camera.zoom = cameraZoomRef.current
+        camera.updateProjectionMatrix()
         cameraRef.current = camera
 
         const renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -501,57 +582,377 @@ export function useGameEngine({
         ground.receiveShadow = true
         scene.add(ground)
 
-        const treeCount = 300
-        const objectRng = new SeededRandom("world_gen_" + selectedWorldId)
-        const currentObstacles: { x: number, z: number, radius: number }[] = []
+        let currentObstacles: { x: number, z: number, radius: number }[] = []
 
-        if (selectedWorldId === 'dark_forest') {
-            const trunkGeo = new THREE.CylinderGeometry(0.2, 0.4, 1.5)
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 1.0 })
-            const leavesGeo = new THREE.ConeGeometry(2, 6, 8)
-            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 0.8 })
+        // Check if built-in world with procedural config
+        if (PROCEDURAL_MESH_CONFIGS[selectedWorldId]) {
+            currentObstacles = generateProceduralMeshes(selectedWorldId, envGroup)
+        } else {
+            // Check for custom level data
+            const customWorld = getWorldData(selectedWorldId) as CustomLevelData
+            
+            // 1. Render Painted Areas (Ground detail)
+            if (customWorld.paintedAreas && customWorld.paintedAreas.length > 0) {
+                // Create a single canvas for the entire painted texture
+                const canvas = document.createElement('canvas')
+                canvas.width = 2048
+                canvas.height = 2048
+                const ctx = canvas.getContext('2d')
+                
+                if (ctx) {
+                    // Base layer: Ground Color
+                    ctx.fillStyle = `#${(customWorld.theme.groundColor || 0x3d453d).toString(16).padStart(6, '0')}`
+                    ctx.fillRect(0, 0, canvas.width, canvas.height)
+                    
+                    // Paint layer for compositing
+                    const paintCanvas = document.createElement('canvas')
+                    paintCanvas.width = canvas.width
+                    paintCanvas.height = canvas.height
+                    const pCtx = paintCanvas.getContext('2d')
 
-            for (let i = 0; i < treeCount; i++) {
-                const x = (objectRng.next() - 0.5) * 400
-                const z = (objectRng.next() - 0.5) * 400
-                if (Math.abs(x) < 15 && Math.abs(z) < 15) continue
-                const treeGroup = new THREE.Group()
-                treeGroup.position.set(x, 0, z)
-                const scale = 0.8 + objectRng.next() * 0.8
-                treeGroup.scale.set(scale, scale, scale)
-                treeGroup.rotation.y = objectRng.next() * Math.PI * 2
-                const trunk = new THREE.Mesh(trunkGeo, trunkMat)
-                trunk.position.y = 0.75
-                trunk.castShadow = true
-                trunk.receiveShadow = true
-                treeGroup.add(trunk)
-                const leaves = new THREE.Mesh(leavesGeo, leavesMat)
-                leaves.position.y = 3
-                leaves.castShadow = true
-                leaves.receiveShadow = true
-                treeGroup.add(leaves)
-                envGroup.add(treeGroup)
-                currentObstacles.push({ x, z, radius: 1.2 * scale })
+                    if (pCtx) {
+                        const scale = canvas.width / 3000
+                        const centerOffset = 1500
+
+                        customWorld.paintedAreas.forEach(area => {
+                            if (area.type === 'color' && area.color) {
+                                pCtx.save()
+                                
+                                if (area.isEraser) {
+                                    pCtx.globalCompositeOperation = 'destination-out'
+                                    pCtx.fillStyle = 'rgba(0,0,0,1)'
+                                } else {
+                                    pCtx.globalCompositeOperation = 'source-over'
+                                    pCtx.fillStyle = area.color
+                                }
+
+                                pCtx.globalAlpha = area.opacity ?? 1.0
+                                const blurAmount = (1.0 - (area.hardness ?? 1.0)) * 20
+                                if (blurAmount > 0) {
+                                    pCtx.shadowBlur = blurAmount
+                                    pCtx.shadowColor = area.isEraser ? 'rgba(0,0,0,1)' : area.color
+                                }
+
+                                const points = area.points.map(p => ({
+                                    x: (p.x + centerOffset) * scale,
+                                    y: (p.y + centerOffset) * scale
+                                }))
+
+                                if (area.shape === 'circle') {
+                                    const width = Math.abs(points[1].x - points[0].x)
+                                    const radius = width / 2
+                                    const centerX = (points[0].x + points[2].x) / 2
+                                    const centerY = (points[0].y + points[2].y) / 2
+                                    pCtx.beginPath()
+                                    pCtx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+                                    pCtx.fill()
+                                } else if (points.length >= 3) {
+                                    pCtx.beginPath()
+                                    pCtx.moveTo(points[0].x, points[0].y)
+                                    for (let i = 1; i < points.length; i++) {
+                                        pCtx.lineTo(points[i].x, points[i].y)
+                                    }
+                                    pCtx.closePath()
+                                    pCtx.fill()
+                                }
+                                
+                                pCtx.restore()
+                            }
+                        })
+                        // Composite paint onto base
+                        ctx.drawImage(paintCanvas, 0, 0)
+                    }
+
+                    // Apply the final texture to the ground material
+                    const texture = new THREE.CanvasTexture(canvas)
+                    texture.wrapS = THREE.RepeatWrapping
+                    texture.wrapT = THREE.RepeatWrapping
+                    texture.colorSpace = THREE.SRGBColorSpace
+                    if (ground.material instanceof THREE.MeshStandardMaterial) {
+                        if (ground.material.map) ground.material.map.dispose()
+                        ground.material.map = texture
+                        ground.material.needsUpdate = true
+                    }
+                }
+
+                // Render scatter objects on top of the texture
+                customWorld.paintedAreas.forEach(area => {
+                    if (area.type === 'scatter') {
+                        const group = new THREE.Group()
+                        const count = Math.floor((area.density || 50) / 5)
+                        let seed = 0;
+                        for (let i = 0; i < area.id.length; i++) {
+                            seed = ((seed << 5) - seed) + area.id.charCodeAt(i);
+                            seed |= 0;
+                        }
+
+                        for (let i = 0; i < count; i++) {
+                            const scatterObject = generateScatterObject(area.meshType || 'grass', seed + i)
+                            const points = area.points
+                            const minX = Math.min(...points.map(p => p.x))
+                            const maxX = Math.max(...points.map(p => p.x))
+                            const minZ = Math.min(...points.map(p => p.y))
+                            const maxZ = Math.max(...points.map(p => p.y))
+                            scatterObject.position.set(
+                                minX + Math.random() * (maxX - minX),
+                                0, 
+                                minZ + Math.random() * (maxZ - minZ)
+                            )
+                            group.add(scatterObject)
+                        }
+                        envGroup.add(group)
+                    }
+                })
             }
-        } else if (selectedWorldId === 'frozen_waste') {
-            const iceGeo = new THREE.ConeGeometry(1, 4, 4)
-            const iceMat = new THREE.MeshStandardMaterial({ color: 0xa5f3fc, roughness: 0.2, metalness: 0.8, emissive: 0xa5f3fc, emissiveIntensity: 0.2 })
-            for (let i = 0; i < treeCount; i++) {
-                const x = (objectRng.next() - 0.5) * 400
-                const z = (objectRng.next() - 0.5) * 400
-                if (Math.abs(x) < 15 && Math.abs(z) < 15) continue
-                const ice = new THREE.Mesh(iceGeo, iceMat)
-                ice.position.set(x, 0, z)
-                const scale = 0.5 + objectRng.next() * 1.5
-                ice.scale.set(scale, scale * (0.8 + objectRng.next()), scale)
-                ice.rotation.y = objectRng.next() * Math.PI * 2
-                ice.rotation.x = (objectRng.next() - 0.5) * 0.5
-                ice.rotation.z = (objectRng.next() - 0.5) * 0.5
-                ice.position.y = scale * 1.5
-                ice.castShadow = true
-                ice.receiveShadow = true
-                envGroup.add(ice)
-                currentObstacles.push({ x, z, radius: 1.8 * scale })
+
+            // 2. Render Mesh Placements (Obstacles)
+            if (customWorld.meshPlacements && customWorld.meshPlacements.length > 0) {
+                // Initialize GLTF loader if not already done
+                if (!gltfLoaderRef.current) {
+                    gltfLoaderRef.current = new GLTFLoader()
+                }
+
+                customWorld.meshPlacements.forEach(placement => {
+                    // Check if this is a custom mesh (GLB/GLTF)
+                    const customDef = customWorld.customMeshDefinitions?.find(d => d.id === placement.meshType)
+
+                    if (customDef) {
+                        // ... (same GLTF loading logic)
+                        const handleLoadSuccess = (gltfScene: THREE.Group | THREE.Scene, collisionRadius: number) => {
+                            // Clone and position the model (same positioning as built-in mesh types)
+                            const clone = gltfScene.clone(true)
+
+                            // Position using same logic as built-in mesh types (center at placement.position.y)
+                            clone.position.set(placement.position.x, placement.position.y, placement.position.z)
+                            clone.rotation.set(placement.rotation.x, placement.rotation.y, placement.rotation.z)
+                            clone.scale.set(
+                                placement.scale.x * (customDef.scale || 1),
+                                placement.scale.y * (customDef.scale || 1),
+                                placement.scale.z * (customDef.scale || 1)
+                            )
+
+                            // Enable shadows
+                            clone.traverse((child) => {
+                                if (child instanceof THREE.Mesh) {
+                                    child.castShadow = true
+                                    child.receiveShadow = true
+                                }
+                            })
+
+                            // Track for cleanup and add to scene
+                            sceneGltfObjectsRef.current.push(clone)
+                            envGroup.add(clone)
+
+                            // Add collision
+                            if (placement.hasCollision && collisionRadius > 0) {
+                                currentObstacles.push({
+                                    x: placement.position.x,
+                                    z: placement.position.z,
+                                    radius: collisionRadius * Math.max(placement.scale.x, placement.scale.z)
+                                })
+                            }
+                        }
+
+                        const handleLoadError = () => {
+                            console.warn('Failed to load GLB:', customDef.url)
+                            // Fallback to red cube
+                            const fallbackGeometry = new THREE.BoxGeometry(1, 1, 1)
+                            const fallbackMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 })
+                            const fallbackMesh = new THREE.Mesh(fallbackGeometry, fallbackMaterial)
+                            fallbackMesh.position.set(placement.position.x, placement.position.y + 0.5, placement.position.z)
+                            fallbackMesh.rotation.set(placement.rotation.x, placement.rotation.y, placement.rotation.z)
+                            fallbackMesh.scale.set(
+                                placement.scale.x,
+                                placement.scale.y,
+                                placement.scale.z
+                            )
+                            fallbackMesh.castShadow = true
+                            fallbackMesh.receiveShadow = true
+
+                            sceneGltfObjectsRef.current.push(fallbackMesh)
+                            envGroup.add(fallbackMesh)
+
+                            if (placement.hasCollision) {
+                                currentObstacles.push({
+                                    x: placement.position.x,
+                                    z: placement.position.z,
+                                    radius: 1.0
+                                })
+                            }
+                        }
+
+                        // Check cache first
+                        if (loadedModelsRef.current.has(customDef.url)) {
+                            // Use cached model
+                            const cached = loadedModelsRef.current.get(customDef.url)
+                            if (cached) {
+                                handleLoadSuccess(cached.model, cached.collisionRadius)
+                            }
+                        } else {
+                            // Load new GLB
+                            gltfLoaderRef.current?.load(
+                                customDef.url,
+                                (gltf) => {
+                                    const model = gltf.scene
+
+                                    // Center and calculate bounds
+                                    const box = new THREE.Box3().setFromObject(model)
+                                    const center = box.getCenter(new THREE.Vector3())
+                                    const size = box.getSize(new THREE.Vector3())
+
+                                    // Center the model horizontally but keep base at origin
+                                    model.position.x -= center.x
+                                    model.position.z -= center.z
+                                    model.position.y -= center.y
+
+                                    // Calculate collision radius
+                                    const collisionRadius = Math.max(size.x, size.z) * (customDef.scale || 1) * 0.5
+
+                                    // Cache the model
+                                    loadedModelsRef.current.set(customDef.url, {
+                                        model: model,
+                                        collisionRadius: collisionRadius
+                                    })
+
+                                    handleLoadSuccess(model, collisionRadius)
+                                },
+                                undefined,
+                                handleLoadError
+                            )
+                        }
+                    } else {
+                        // Handle built-in mesh types using our new utility
+                        const mesh = generateMeshObject(placement.meshType)
+
+                        // Apply scale first, then measure LOCAL bounding box before rotation
+                        mesh.scale.set(placement.scale.x, placement.scale.y, placement.scale.z)
+
+                        let localSize: THREE.Vector3 | null = null
+                        if (placement.hasCollision) {
+                            const localBox = new THREE.Box3().setFromObject(mesh)
+                            localSize = localBox.getSize(new THREE.Vector3())
+                        }
+
+                        // Now apply position and rotation for rendering
+                        mesh.position.set(placement.position.x, placement.position.y, placement.position.z)
+                        mesh.rotation.set(placement.rotation.x, placement.rotation.y, placement.rotation.z)
+
+                        envGroup.add(mesh)
+
+                        if (placement.hasCollision && localSize) {
+                            // Use LOCAL (pre-rotation) dimensions for collision shape
+                            const localLong = Math.max(localSize.x, localSize.z)
+                            const localShort = Math.min(localSize.x, localSize.z)
+                            const aspectRatio = localLong / (localShort || 0.1)
+                            const isLocalZLong = localSize.z >= localSize.x
+
+                            if (aspectRatio > 2.0 && localLong > 1.0) {
+                                // Elongated mesh: distribute circles along the local long axis,
+                                // then rotate circle positions by placement rotation
+                                const segCount = Math.ceil(localLong / localShort)
+                                const segSpacing = localLong / segCount
+                                const rotY = placement.rotation.y
+                                const cosR = Math.cos(rotY)
+                                const sinR = Math.sin(rotY)
+
+                                for (let s = 0; s < segCount; s++) {
+                                    const localOffset = -localLong / 2 + segSpacing * (s + 0.5)
+                                    // Place along local long axis, then rotate into world space
+                                    const localX = isLocalZLong ? 0 : localOffset
+                                    const localZ = isLocalZLong ? localOffset : 0
+                                    const wx = cosR * localX - sinR * localZ
+                                    const wz = sinR * localX + cosR * localZ
+                                    currentObstacles.push({
+                                        x: placement.position.x + wx,
+                                        z: placement.position.z + wz,
+                                        radius: localShort / 2 + 0.1
+                                    })
+                                }
+                            } else {
+                                currentObstacles.push({
+                                    x: placement.position.x,
+                                    z: placement.position.z,
+                                    radius: Math.max(localSize.x, localSize.z) / 2
+                                })
+                            }
+                        }
+                    }
+                })
+            }
+
+            // 3. Render Spline Paths (fences, walls, hedges along curves)
+            if (customWorld.splinePaths && customWorld.splinePaths.length > 0) {
+                customWorld.splinePaths.forEach((sp: SplinePath) => {
+                    if (!sp.controlPoints || sp.controlPoints.length < 2) return
+
+                    const points3D = sp.controlPoints.map((p: { x: number, z: number }) =>
+                        new THREE.Vector3(p.x, 0, p.z)
+                    )
+                    const curve = new THREE.CatmullRomCurve3(points3D, sp.closed)
+                    const totalLength = curve.getLength()
+                    const count = Math.max(1, Math.floor(totalLength / sp.spacing))
+
+                    for (let i = 0; i <= count; i++) {
+                        const t = i / count
+                        const point = curve.getPointAt(t)
+                        const tangent = curve.getTangentAt(t)
+                        const angle = Math.atan2(tangent.x, tangent.z)
+
+                        const mesh = generateMeshObject(sp.meshType)
+                        // Apply scale first, measure LOCAL bounding box before rotation
+                        mesh.scale.setScalar(sp.scale)
+
+                        let spLocalSize: THREE.Vector3 | null = null
+                        if (sp.hasCollision) {
+                            const localBox = new THREE.Box3().setFromObject(mesh)
+                            spLocalSize = localBox.getSize(new THREE.Vector3())
+                        }
+
+                        // Now apply position and rotation for rendering
+                        mesh.position.copy(point)
+                        mesh.rotation.y = angle
+                        mesh.traverse((child: THREE.Object3D) => {
+                            if (child instanceof THREE.Mesh) {
+                                child.castShadow = true
+                                child.receiveShadow = true
+                            }
+                        })
+                        envGroup.add(mesh)
+
+                        if (sp.hasCollision && spLocalSize) {
+                            const localLong = Math.max(spLocalSize.x, spLocalSize.z)
+                            const localShort = Math.min(spLocalSize.x, spLocalSize.z)
+                            const aspectRatio = localLong / (localShort || 0.1)
+                            const isLocalZLong = spLocalSize.z >= spLocalSize.x
+
+                            if (aspectRatio > 2.0 && localLong > 1.0) {
+                                const segCount = Math.ceil(localLong / localShort)
+                                const segSpacing = localLong / segCount
+                                const cosA = Math.cos(angle)
+                                const sinA = Math.sin(angle)
+
+                                for (let s = 0; s < segCount; s++) {
+                                    const localOff = -localLong / 2 + segSpacing * (s + 0.5)
+                                    const localX = isLocalZLong ? 0 : localOff
+                                    const localZ = isLocalZLong ? localOff : 0
+                                    const wx = cosA * localX - sinA * localZ
+                                    const wz = sinA * localX + cosA * localZ
+                                    currentObstacles.push({
+                                        x: point.x + wx,
+                                        z: point.z + wz,
+                                        radius: localShort / 2 + 0.1
+                                    })
+                                }
+                            } else {
+                                currentObstacles.push({
+                                    x: point.x,
+                                    z: point.z,
+                                    radius: Math.max(spLocalSize.x, spLocalSize.z) / 2
+                                })
+                            }
+                        }
+                    }
+                })
             }
         }
         obstaclesRef.current = currentObstacles
@@ -599,13 +1000,18 @@ export function useGameEngine({
 
             const rng = new SeededRandom(Date.now().toString())
             rngRef.current = rng
-            const replay = new ReplayRecorder(rng.next().toString(), playerName || 'ANON', selectedCharacterId, selectedWorldId)
+            const replay = new ReplayRecorder(rng.next().toString(), user?.publicProfile.handle || '', selectedCharacterId, selectedWorldId)
             replayRef.current = replay
 
             const spawnSystem = new SpawnSystem(entityManager, player, rng)
             spawnSystemRef.current = spawnSystem
+            spawnSystem.setWaveMessageCallback((message: string) => {
+                setWaveNotification(message)
+                // Auto-clear notification after 4 seconds
+                setTimeout(() => setWaveNotification(null), 4000)
+            })
 
-            const abilitySystem = new AbilitySystem(scene, player, entityManager, vfx, rng)
+            const abilitySystem = new AbilitySystem(scene, player, entityManager, vfx, rng, audioManagerRef.current)
             abilitySystemRef.current = abilitySystem
 
             const input = new InputManager()
@@ -644,6 +1050,16 @@ export function useGameEngine({
             if (gameStateRef.current !== "playing" && gameStateRef.current !== "replaying") return
             if (gameStateRef.current === "replaying" && replayPausedRef.current) return
 
+            // Handle zoom input (only during active gameplay)
+            if (gameStateRef.current === "playing" && im) {
+                const zoomDelta = im.getZoomInput()
+                if (zoomDelta !== 0) {
+                    // Adjust camera zoom (negative delta = zoom in, positive = zoom out)
+                    cameraZoomRef.current -= zoomDelta * 0.1 // 0.1 for smooth zoom increments
+                    cameraZoomRef.current = Math.max(minZoom, Math.min(maxZoom, cameraZoomRef.current))
+                }
+            }
+
             // Pre-filter entities once per frame for the bot
             const activeEnemies = isBotActiveRef.current ? em.enemies.filter(e => e.isActive) : []
             const activeGems = isBotActiveRef.current ? em.gems.filter(g => g.isActive) : []
@@ -674,11 +1090,25 @@ export function useGameEngine({
                 }
                 const prevLevel = p.stats.level
 
+                const loop = gameLoopRef.current
+
+                // Profile entity updates
+                if (loop) loop.mark('entityUpdate')
                 p.update(deltaTime, movement.x, movement.z)
                 ss.update(deltaTime)
                 em.update(deltaTime)
+                if (loop) loop.measureEnd('entityUpdate')
+
+                // Profile ability system
+                if (loop) loop.mark('abilityUpdate')
                 as.update(deltaTime)
+                if (loop) loop.measureEnd('abilityUpdate')
+
+                // Profile particle system
+                if (loop) loop.mark('particleSystem')
                 vm.update(deltaTime)
+                if (loop) loop.measureEnd('particleSystem')
+
                 eventSystemRef.current?.update(deltaTime)
 
                 // Update dynamic difficulty
@@ -711,7 +1141,7 @@ export function useGameEngine({
                 }
                 else if (p.stats.level > prevLevel && gameStateRef.current !== "replaying") {
                     // Check if this level-up is also a victory milestone
-                    const currentWorld = WORLDS.find(w => w.id === selectedWorldId) || WORLDS[0]
+                    const currentWorld = getWorldData(selectedWorldId)
                     const victoryMilestones = [10, 20, 30]
                     const isVictoryMilestone = currentWorld.winCondition === 'level' &&
                         victoryMilestones.includes(p.stats.level) &&
@@ -761,7 +1191,7 @@ export function useGameEngine({
                     }
                 }
                 else if (gameStateRef.current === "playing") {
-                    const currentWorld = WORLDS.find(w => w.id === selectedWorldId) || WORLDS[0]
+                    const currentWorld = getWorldData(selectedWorldId)
                     const currentStars = 0 // Optimization: we don't access worldStars state here to avoid dependency. Logic simplified.
                     // Wait, we need access to worldStars to update it. We passed setWorldStars.
                     // But we can't read current value easily without state.
@@ -857,19 +1287,131 @@ export function useGameEngine({
             moonLight.position.set(p.position.x + 20, 50, p.position.z - 30)
             moonLight.target.position.copy(p.position)
             cameraTargetRef.current.copy(p.position)
+
+            // Update profiler entity counts
+            const loop = gameLoopRef.current
+            if (loop && em && vm) {
+                const enemyCount = em.enemies?.filter(e => e.isActive).length ?? 0
+                const projectileCount = em.projectiles?.filter(p => p.isActive).length ?? 0
+                const xpGemCount = em.gems?.filter(g => g.isActive).length ?? 0
+                // VFXManager doesn't expose particle count, estimate from active enemies
+                const particleCount = Math.floor(enemyCount * 0.3) // Rough estimate
+
+                loop.updateEntityCounts({
+                    enemies: enemyCount,
+                    projectiles: projectileCount,
+                    particles: particleCount,
+                    xpGems: xpGemCount,
+                })
+
+                // Update game stats for profiler graphs
+                loop.updateGameStats({
+                    totalDamage: em.totalDamageDealt || 0,
+                    totalKills: em.totalKills || 0,
+                    totalXP: p.stats.xp || 0,
+                    gameTime: gameTimeRef.current,
+                    enemyCount: enemyCount,
+                })
+            }
+
+            // Update benchmark mode if active
+            if (benchmarkRef.current?.isActive()) {
+                benchmarkRef.current.update(deltaTime)
+            }
         }
 
         const render = (alpha: number) => {
             if (!scene || !camera || !renderer || !playerRef.current) return
+
+            const loop = gameLoopRef.current
+
+            // Profile billboard updates
+            if (loop) loop.mark('billboardUpdate')
             camera.position.x = cameraTargetRef.current.x
             camera.position.y = cameraDistance * Math.sin(cameraPitch)
             camera.position.z = cameraTargetRef.current.z - cameraDistance * Math.cos(cameraPitch)
             camera.lookAt(cameraTargetRef.current.x, 0, cameraTargetRef.current.z)
+
+            // Apply zoom
+            camera.zoom = cameraZoomRef.current
+            camera.updateProjectionMatrix()
+            if (loop) loop.measureEnd('billboardUpdate')
+
+            // Profile scene render
+            if (loop) loop.mark('sceneRender')
             renderer.render(scene, camera)
+            if (loop) loop.measureEnd('sceneRender')
+
+            // Update render stats for profiler
+            if (loop) {
+                loop.updateRenderStats({
+                    drawCalls: renderer.info.render.calls,
+                    triangles: renderer.info.render.triangles,
+                    geometries: renderer.info.memory.geometries,
+                    textures: renderer.info.memory.textures,
+                })
+
+                // Update profiler metrics for UI
+                const profiler = loop.getProfiler()
+                setProfilerMetrics(profiler.getMetrics())
+                setProfilerWarnings(profiler.getWarnings())
+                setFPSHistory(profiler.getFPSHistory())
+                setGameStatsHistory(profiler.getGameStatsHistory())
+            }
         }
 
-        const loop = new GameLoop(update, render, () => { })
+        const loop = new ProfiledGameLoop(update, render, () => { }, true)
         gameLoopRef.current = loop
+
+        // Initialize benchmark mode
+        if (entityManagerRef.current && spawnSystemRef.current && playerRef.current) {
+            benchmarkRef.current = new BenchmarkMode(
+                entityManagerRef.current,
+                spawnSystemRef.current,
+                playerRef.current
+            )
+
+            // Expose benchmark commands to console
+            if (typeof window !== 'undefined') {
+                (window as any).benchmark = {
+                    start: (preset: string) => benchmarkRef.current?.start(preset as any),
+                    stop: () => benchmarkRef.current?.stop(),
+                    spawn: (count: number, type: string) => benchmarkRef.current?.spawnWave(count, type),
+                    circle: (count: number, radius: number, type: string) =>
+                        benchmarkRef.current?.spawnCircle(count, radius, type),
+                    grid: (rows: number, cols: number, spacing: number, type: string) =>
+                        benchmarkRef.current?.spawnGrid(rows, cols, spacing, type),
+                    presets: {
+                        light: { enemyCount: 100 },
+                        medium: { enemyCount: 300 },
+                        heavy: { enemyCount: 500 },
+                        extreme: { enemyCount: 1000 },
+                    },
+                    help: () => {
+                        console.log(`
+=== Benchmark Commands ===
+
+benchmark.start(preset)  - Start benchmark mode
+  Presets: 'light' (100), 'medium' (300), 'heavy' (500), 'extreme' (1000), 'mixed' (400)
+
+benchmark.stop()         - Stop benchmark mode
+
+benchmark.spawn(count, type) - Spawn enemies in wave
+  Example: benchmark.spawn(100, 'drifter')
+
+benchmark.circle(count, radius, type) - Spawn in circle
+  Example: benchmark.circle(50, 30, 'screecher')
+
+benchmark.grid(rows, cols, spacing, type) - Spawn in grid
+  Example: benchmark.grid(10, 10, 5, 'bruiser')
+
+benchmark.presets        - List available presets
+                        `)
+                    },
+                }
+                console.log('🎮 Benchmark mode ready. Type "benchmark.help()" for commands.')
+            }
+        }
 
         return () => {
             window.removeEventListener("resize", handleResize)
@@ -879,6 +1421,15 @@ export function useGameEngine({
             entityManagerRef.current?.cleanup()
             vfxManagerRef.current?.cleanup()
             playerRef.current?.dispose()
+
+            // Cleanup GLB objects from previous scene
+            sceneGltfObjectsRef.current.forEach(obj => {
+                if (sceneRef.current?.children.includes(obj)) {
+                    sceneRef.current.remove(obj)
+                }
+            })
+            sceneGltfObjectsRef.current = []
+
             if (renderer) {
                 renderer.dispose()
                 if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement)

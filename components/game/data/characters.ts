@@ -16,7 +16,7 @@ const characters = [
         },
         "arsenal": {
             "weapons": ["tt33", "knuckles", "peppermill", "gzhel_smg", "ak_radioactive"],
-            "passives": ["beer_coin", "dove_coin", "spy_hat", "battle_scarf", "sunflower_pouch"]
+            "passives": ["beer_coin", "dove_coin", "spy_hat", "battle_scarf", "sunflower_pouch", "pickled_gpu", "holy_bread"]
         }
     },
     {
@@ -37,7 +37,7 @@ const characters = [
         },
         "arsenal": {
             "weapons": ["shank", "soviet_stick", "kabar", "grail", "holywater"],
-            "passives": ["holy_bread", "garlic_ring", "holy_cheese", "ruby_ushanka", "infinity_purse"]
+            "passives": ["holy_bread", "garlic_ring", "holy_cheese", "ruby_ushanka", "infinity_purse", "dove_coin", "battle_scarf"]
         }
     },
     {
@@ -55,8 +55,8 @@ const characters = [
             "cooldownMultiplier": 0.8
         },
         "arsenal": {
-            "weapons": ["stilleto", "kabar", "peppermill", "visors", "dagger"],
-            "passives": ["battle_scarf", "boss_shoe", "spy_hat", "pickled_gpu", "sunflower_pouch"]
+            "weapons": ["stilleto", "kabar", "peppermill", "visors", "dagger", "stake"],
+            "passives": ["battle_scarf", "boss_shoe", "spy_hat", "pickled_gpu", "sunflower_pouch", "beer_coin", "bone_charm", "crypt_lantern"]
         }
     },
     {
@@ -75,7 +75,7 @@ const characters = [
         },
         "arsenal": {
             "weapons": ["pig_luggage", "vampire_rat", "nuclear_pigeon", "propaganda_tower", "haunted_lada"],
-            "passives": ["beer_coin", "infinity_purse", "ruby_ushanka", "sunflower_pouch", "pickled_gpu"]
+            "passives": ["beer_coin", "infinity_purse", "ruby_ushanka", "sunflower_pouch", "pickled_gpu", "spy_hat", "holy_cheese"]
         }
     },
     {
@@ -87,10 +87,11 @@ const characters = [
         "sprite": "oligarch",
         "stats": {
             "maxHp": 250,
-            "moveSpeed": 0.6,
-            "might": 0.7,
+            "moveSpeed": 0.75,
+            "might": 0.85,
             "luck": 1.5,
-            "armor": 10
+            "armor": 10,
+            "regen": 0.5
         },
         "arsenal": {
             "weapons": ["big_biz_lada", "tank_stroller", "dadushka_chair", "gopnik_gondola", "haunted_lada"],
@@ -106,16 +107,16 @@ const characters = [
         "startingPassives": ["pickled_gpu"],
         "sprite": "chernobyl",
         "stats": {
-            "maxHp": 60,
+            "maxHp": 80,
             "moveSpeed": 1.1,
             "might": 2.5,
             "area": 3.0,
-            "regen": -2.0,
+            "regen": -1.0,
             "curse": 1.5
         },
         "arsenal": {
             "weapons": ["kvass_reactor", "nuclear_pigeon", "skull_screen", "gzhel_smg", "ak_radioactive"],
-            "passives": ["pickled_gpu", "garlic_ring", "ruby_ushanka", "sunflower_pouch", "holy_cheese"]
+            "passives": ["pickled_gpu", "garlic_ring", "ruby_ushanka", "sunflower_pouch", "holy_cheese", "spy_hat"]
         }
     },
     {
@@ -136,7 +137,28 @@ const characters = [
         },
         "arsenal": {
             "weapons": ["grail", "cross", "skull_screen", "visors", "salt"],
-            "passives": ["ruby_ushanka", "garlic_ring", "pickled_gpu", "sunflower_pouch", "holy_cheese"]
+            "passives": ["ruby_ushanka", "garlic_ring", "pickled_gpu", "sunflower_pouch", "holy_cheese", "infinity_purse"]
+        }
+    },
+    {
+        "id": "necromancer",
+        "name": "Koshchei the Deathless",
+        "description": "His death is hidden far away. Master of curses and bone magic. Area control specialist.",
+        "startingWeapon": "dagger",
+        "startingActives": ["holywater"],
+        "startingPassives": ["bone_charm"],
+        "sprite": "necromancer",
+        "stats": {
+            "maxHp": 70,
+            "moveSpeed": 1.0,
+            "might": 1.5,
+            "area": 2.0,
+            "armor": 0,
+            "regen": 0.2
+        },
+        "arsenal": {
+            "weapons": ["dagger", "holywater", "skull_screen", "cross", "grail", "salt", "stake"],
+            "passives": ["bone_charm", "crypt_lantern", "garlic_ring", "holy_cheese", "holy_bread", "spy_hat", "pickled_gpu", "infinity_purse"]
         }
     }
 ];

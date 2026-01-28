@@ -1,0 +1,48 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+      "openrouter": {
+        "models": {
+        "@preset/my-coding-setup": {}
+      }
+      }
+    
+    },
+  "mcp": {
+    
+"genmedia": {
+  "type": "local",
+  "command": ["/tmp/mcp-gemini-go"],
+  "environment": {
+    "PROJECT_ID": "gen-lang-client-0630954606",
+    "LOCATION": "us-central1"
+  },
+  "enabled": true
+},
+    "imagen": {
+      "type": "local",
+      "command": ["go", "run", "github.com/GoogleCloudPlatform/vertex-ai-creative-studio/experiments/mcp-genmedia/mcp-genmedia-go/mcp-imagen-go@latest"],
+      "environment": {
+        "PROJECT_ID": "gen-lang-client-0630954606",
+        "LOCATION": "us-central1"
+      },
+      "enabled": true
+    },
+    "veo": {
+      "type": "local",
+      "command": ["go", "run", "github.com/GoogleCloudPlatform/vertex-ai-creative-studio/experiments/mcp-genmedia/mcp-genmedia-go/mcp-veo-go@latest"],
+      "environment": {
+        "PROJECT_ID": "gen-lang-client-0630954606",
+        "LOCATION": "us-central1"
+      },
+      "enabled": true
+    },
+
+"playwright": {
+  "type": "local",
+  "command": ["npx", "-y", "@playwright/mcp@0.0.32"],
+  "enabled": true
+}
+
+  }
+}

@@ -48,6 +48,19 @@ const passives = [
         }
     },
 
+    {
+        "id": "bone_charm",
+        "name": "Bone Charm",
+        "description": "+10% Damage, +10 Max HP. Ancient relic.",
+        "category": "Passive",
+        "rarity": "Uncommon",
+        "minLevel": 3,
+        "statBonus": {
+            "damageMultiplier": 0.10,
+            "maxHp": 10
+        }
+    },
+
     // === RARE PASSIVES (minLevel 2-5) ===
     {
         "id": "holy_bread",
@@ -69,6 +82,19 @@ const passives = [
         "minLevel": 2,
         "statBonus": {
             "armor": 3.0
+        }
+    },
+
+    {
+        "id": "crypt_lantern",
+        "name": "Crypt Lantern",
+        "description": "+15% Ability Area, +0.5 HP/sec Regen. Guiding light.",
+        "category": "Passive",
+        "rarity": "Rare",
+        "minLevel": 4,
+        "statBonus": {
+            "areaMultiplier": 0.15,
+            "regen": 0.5
         }
     },
 

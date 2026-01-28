@@ -60,13 +60,9 @@ export function Leaderboard({
                             const sortedScores = [...scores]
                                 .filter(s => (s.worldId || 'dark_forest') === leaderboardWorldId)
                                 .sort((a, b) => {
-                                    if (leaderboardWorldId === 'dark_forest' && world?.winCondition === 'level') {
-                                        const aCompleted = a.level >= completionLevel
-                                        const bCompleted = b.level >= completionLevel
-                                        if (aCompleted && bCompleted) return a.time - b.time
-                                        if (aCompleted !== bCompleted) return aCompleted ? -1 : 1
-                                    }
-                                    return b.level - a.level || b.time - a.time
+                                    // Sort by level DESC, then time ASC (faster times first)
+                                    if (a.level !== b.level) return b.level - a.level
+                                    return a.time - b.time
                                 })
                             return (
                                 <div className="w-full min-w-[600px]">

@@ -58,12 +58,19 @@
     3.  Player picks a Chest or Upgrade (specific trigger).
 
 ### Spawning & Difficulty
+- **Default Levels**: Use both **Timeline Events** and **Background Spawning** for continuous enemy pressure and endless survival gameplay.
+- **Custom Levels**: Default to **Timeline-Only Spawning** (background spawning disabled), allowing precise control over enemy waves.
 - **Ring Spawning**: Enemies spawn in a radius *around* the player, never on top, ensuring constant pressure from all sides.
-- **The Director**:
-    - **Base Spawns**: Scale linearly with time.
-    - **Waves**: Distinct enemy compositions change every minute.
-    - **Elite Spikes**: Every **90 seconds**, an Elite enemy spawns (High HP, High XP, Chest Drop).
-- **Boss**: Spawns at the end of the run timer (e.g., 5, 12, or 15 mins).
+- **Timeline Events**:
+    - Spawns are fully defined in level `timeline` data.
+    - Each event specifies: time (seconds), enemy type, count, elite/boss flag, and optional message.
+    - Example: `{ time: 45, enemyType: 'screecher', count: 3, message: 'Piercing cries echo!' }`
+- **Background Spawning** (default levels only):
+    - Continuous automatic spawning every 5 seconds (decreasing to 0.8s over time).
+    - Enemy count grows exponentially (25% per minute).
+    - Elite enemies start appearing after 5 minutes.
+    - Tougher enemy types introduced after 8-15 minutes.
+- **Boss**: Spawns are explicitly scheduled in the timeline at specific times.
 
 ---
 

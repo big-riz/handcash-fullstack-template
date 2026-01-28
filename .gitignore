@@ -35,4 +35,6 @@ next-env.d.ts
 .DS_Store
 
 # archives
-*.zip
+*.zip.coder
+/google-cloud-sdk
+/test-results

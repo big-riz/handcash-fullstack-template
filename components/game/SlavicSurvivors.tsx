@@ -6,7 +6,7 @@ import { CharacterInfo, GameComment } from "./types"
 import characterDataImport from '@/components/game/data/characters'
 const characterData: CharacterInfo[] = characterDataImport as CharacterInfo[]
 
-import { useGameEngine } from "./hooks/useGameEngine"
+import { useGameEngine, updateCustomLevelsCache } from "./hooks/useGameEngine"
 import { MainMenu } from "./screens/MainMenu"
 import { CharacterSelect } from "./screens/CharacterSelect"
 import { Leaderboard } from "./screens/Leaderboard"
@@ -29,10 +29,15 @@ import { Player } from "./entities/Player"
 import { AbilitySystem } from "./systems/AbilitySystem"
 import { ReplayRecorder } from "../../lib/ReplaySystem"
 import { AudioManager } from "./core/AudioManager"
+import { LevelEditor, CustomLevelData } from "./debug/LevelEditor"
+import { loadCustomLevels, getCustomLevel } from "@/lib/custom-levels-storage"
+import { PerformanceOverlay } from "./ui/PerformanceOverlay"
+import { PerformanceMetrics, GameStatsHistory } from "./core/PerformanceProfiler"
 
 export function SlavicSurvivors() {
     const containerRef = useRef<HTMLDivElement>(null)
     const [gameState, setGameState] = useState<"menu" | "characterSelect" | "playing" | "paused" | "gameOver" | "levelUp" | "replaying" | "leaderboard" | "gameVictory" | "myHistory" | "achievements">("menu")
+    const [customLevels, setCustomLevels] = useState<CustomLevelData[]>([])
     
     // Stats
     const [playerHp, setPlayerHp] = useState<number>(100)
@@ -56,6 +61,8 @@ export function SlavicSurvivors() {
     const [showStats, setShowStats] = useState(false)
     const [playerName, setPlayerName] = useState("")
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
+    const [isCheckingAuth, setIsCheckingAuth] = useState(false)
+    const [hasCompletedAuthCheck, setHasCompletedAuthCheck] = useState(false)
     const [authReason, setAuthReason] = useState<string | null>(null)
     const [selectedCharacterId, setSelectedCharacterId] = useState<string>('gopnik')
     const [selectedWorldId, setSelectedWorldId] = useState<string>('dark_forest')
@@ -76,6 +83,17 @@ export function SlavicSurvivors() {
     const [musicVolume, setMusicVolume] = useState(1)
     const [sfxVolume, setSfxVolume] = useState(1)
     const [activeSynergies, setActiveSynergies] = useState<{name: string, description: string}[]>([])
+    const [levelEditorOpen, setLevelEditorOpen] = useState(false)
+    const [waveNotification, setWaveNotification] = useState<string | null>(null)
+
+    // Performance Profiler
+    const [profilerVisible, setProfilerVisible] = useState(false)
+    const [profilerMetrics, setProfilerMetrics] = useState<PerformanceMetrics | null>(null)
+    const [profilerWarnings, setProfilerWarnings] = useState<string[]>([])
+    const [fpsHistory, setFPSHistory] = useState<number[]>([])
+    const [gameStatsHistory, setGameStatsHistory] = useState<GameStatsHistory>({
+        damage: [], kills: [], xp: [], dps: [], enemies: [], timestamps: []
+    })
 
     // Achievement tracking
     const achievementTracker = getAchievementTracker()
@@ -161,7 +179,18 @@ export function SlavicSurvivors() {
     // Data Fetching & Persistence
     useEffect(() => {
         if (typeof window !== "undefined") {
-            setIsLocalhost(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+            const localhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+            setIsLocalhost(localhost);
+
+            // Load custom levels on localhost
+            if (localhost) {
+                loadCustomLevels().then(levels => {
+                    setCustomLevels(levels)
+                    updateCustomLevelsCache(levels) // Update game engine cache
+                }).catch(err => {
+                    console.error('[LevelEditor] Failed to load custom levels:', err)
+                })
+            }
         }
         const saved = localStorage.getItem('slavic_survivors_unlocked_heros')
         if (saved) {
@@ -234,19 +263,31 @@ export function SlavicSurvivors() {
         localStorage.setItem('slavic_total_runs', totalRuns.toString())
     }, [scores, totalRuns])
 
-    const fetchGlobalScores = () => {
-        fetch('/api/replays?limit=25')
-            .then(res => res.json())
-            .then(data => {
+    const fetchGlobalScores = async () => {
+        // Fetch scores for all worlds in parallel
+        const worlds = WORLDS.map(w => w.id)
+        try {
+            const allScores: any[] = []
+            const results = await Promise.all(
+                worlds.map(worldId =>
+                    fetch(`/api/replays?worldId=${worldId}&limit=25`)
+                        .then(res => res.json())
+                        .catch(() => [])
+                )
+            )
+            results.forEach(data => {
                 if (Array.isArray(data)) {
-                    setScores(data.map((r: any) => ({
+                    allScores.push(...data.map((r: any) => ({
                         id: r.id, name: r.playerName, handle: r.handle, avatarUrl: r.avatarUrl,
                         level: r.finalLevel, time: r.finalTime, seed: r.seed, events: r.events,
                         worldId: r.worldId, characterId: r.characterId, createdAt: r.createdAt
                     })))
                 }
             })
-            .catch(err => console.error("Failed to fetch global scores:", err))
+            setScores(allScores)
+        } catch (err) {
+            console.error("Failed to fetch global scores:", err)
+        }
     }
 
     const fetchUserHistory = async () => {
@@ -277,10 +318,20 @@ export function SlavicSurvivors() {
             fetchGlobalScores()
             fetchComments()
             fetchUserHistory()
+
+            // Reload custom levels when returning to menu to ensure latest levels are shown
+            if (isLocalhost) {
+                loadCustomLevels().then(levels => {
+                    setCustomLevels(levels)
+                    updateCustomLevelsCache(levels)
+                }).catch(err => {
+                    console.error('[LevelEditor] Failed to reload custom levels:', err)
+                })
+            }
         } else if (gameState === 'myHistory') {
             fetchUserHistory()
         }
-    }, [gameState, user])
+    }, [gameState, user, isLocalhost])
 
     const postComment = async (parentId?: number) => {
         if (!newComment.trim() || !user || isPostingComment) return
@@ -302,12 +353,17 @@ export function SlavicSurvivors() {
 
     const submitReplayToDB = (overrideName?: string) => {
         if (!replayRef.current) return
+        // Only submit if user is authenticated
+        if (!user) {
+            console.log("Skipping score submission - user not authenticated")
+            return
+        }
         const replayData = replayRef.current.getReplayData()
         fetch('/api/replays', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                playerName: overrideName || user?.publicProfile.displayName || playerName || 'ANON',
+                playerName: overrideName || user.publicProfile.handle,
                 handle: user?.publicProfile.handle || null,
                 avatarUrl: user?.publicProfile.avatarUrl || null,
                 seed: replayData.seed,
@@ -319,59 +375,27 @@ export function SlavicSurvivors() {
                 worldId: replayData.worldId || selectedWorldId,
                 userId: user?.publicProfile?.id || null
             })
-        }).then(() => fetchUserHistory()).catch(err => console.error("Failed to save replay to DB:", err))
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log("Score submission result:", data)
+            // Refresh both user history and global scores
+            fetchUserHistory()
+            fetchGlobalScores()
+        })
+        .catch(err => console.error("Failed to save replay to DB:", err))
     }
 
     const saveScore = () => {
-        const finalName = (user?.publicProfile.displayName || "ANON").toUpperCase()
-        
+        if (!user) return // Must be authenticated
         const replayData = replayRef.current?.getReplayData()
-        const newScore = {
-            name: finalName,
-            handle: user?.publicProfile.handle,
-            avatarUrl: user?.publicProfile.avatarUrl,
-            level: replayData?.finalLevel || playerLevel,
-            time: replayData?.finalTime || Math.floor(gameTime),
-            seed: replayData?.seed,
-            events: replayData?.events,
-            characterId: replayData?.characterId || selectedCharacterId,
-            worldId: replayData?.worldId || selectedWorldId
-        }
+        const worldId = replayData?.worldId || selectedWorldId
 
-        const sortScoresForWorld = (worldId: string, list: typeof scores) => {
-            const world = WORLDS.find(w => w.id === worldId)
-            if (world?.id === 'dark_forest' && world.winCondition === 'level') {
-                const completionLevel = world.winValue || world.maxLevel
-                return [...list].sort((a, b) => {
-                    const aCompleted = a.level >= completionLevel
-                    const bCompleted = b.level >= completionLevel
-                    if (aCompleted && bCompleted) return a.time - b.time
-                    if (aCompleted !== bCompleted) return aCompleted ? -1 : 1
-                    return b.level - a.level || b.time - a.time
-                })
-            }
-            return [...list].sort((a, b) => b.level - a.level || b.time - a.time)
-        }
-
-        const allNewScores = [...scores, newScore]
-        const scoresPerMap: Record<string, any[]> = {}
-        allNewScores.forEach(s => {
-            const wid = s.worldId || 'dark_forest'
-            if (!scoresPerMap[wid]) scoresPerMap[wid] = []
-            scoresPerMap[wid].push(s)
-        })
-
-        const finalScores: any[] = []
-        Object.keys(scoresPerMap).forEach(wid => {
-            const sortedMapScores = sortScoresForWorld(wid, scoresPerMap[wid]).slice(0, 25)
-            finalScores.push(...sortedMapScores)
-        })
-
-        setScores(finalScores)
-        setLeaderboardWorldId(newScore.worldId)
+        // Submit to server - server handles one-entry-per-world logic
         setShowScoreInput(false)
         setPlayerName("")
-        submitReplayToDB(finalName)
+        setLeaderboardWorldId(worldId)
+        submitReplayToDB(user.publicProfile.handle)
     }
 
     const {
@@ -381,7 +405,9 @@ export function SlavicSurvivors() {
         getLevelUpChoices,
         levelUpChoices,
         allowPostVictoryRef,
-        pendingLevelUpAfterVictoryRef
+        pendingLevelUpAfterVictoryRef,
+        spawnSystemRef,
+        entityManagerRef
     } = useGameEngine({
         containerRef,
         gameState,
@@ -423,8 +449,27 @@ export function SlavicSurvivors() {
         playerRef,
         abilitySystemRef,
         replayRef,
-        audioManagerRef
+        audioManagerRef,
+        setWaveNotification,
+        setProfilerMetrics,
+        setProfilerWarnings,
+        setFPSHistory,
+        setGameStatsHistory
     })
+
+    // Expose entityManager globally for console debugging and benchmarking
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            (window as any).gameEngine = {
+                entityManager: entityManagerRef.current
+            }
+        }
+        return () => {
+            if (typeof window !== 'undefined') {
+                delete (window as any).gameEngine
+            }
+        }
+    }, [entityManagerRef])
 
     // Regenerate level-up choices when templates load
     useEffect(() => {
@@ -463,17 +508,116 @@ export function SlavicSurvivors() {
         } catch (e) { console.error('Fullscreen toggle failed:', e) }
     }
 
+    // Performance Profiler Keyboard Controls
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Toggle profiler overlay (F3)
+            if (e.key === 'F3') {
+                e.preventDefault()
+                setProfilerVisible(v => !v)
+            }
+
+            // Export profiler report (F4)
+            if (e.key === 'F4') {
+                e.preventDefault()
+                if (profilerMetrics) {
+                    // Generate report text
+                    const m = profilerMetrics
+                    let report = '=== PERFORMANCE REPORT ===\n\n'
+                    report += `Timestamp: ${new Date().toLocaleString()}\n\n`
+                    report += `--- Frame Statistics ---\n`
+                    report += `FPS: ${m.fps.toFixed(1)} / 60\n`
+                    report += `Frame Time: ${m.frameTime.toFixed(2)}ms / 16.67ms\n`
+                    report += `Avg Frame Time: ${m.avgFrameTime.toFixed(2)}ms\n`
+                    report += `Min/Max: ${m.minFrameTime.toFixed(2)}ms / ${m.maxFrameTime.toFixed(2)}ms\n\n`
+                    report += `--- Entity Counts ---\n`
+                    report += `Total: ${m.totalEntities} / 2250\n`
+                    report += `Enemies: ${m.enemyCount}\n`
+                    report += `Projectiles: ${m.projectileCount}\n`
+                    report += `Particles: ${m.particleCount}\n`
+                    report += `XP Gems: ${m.xpGemCount}\n\n`
+                    report += `--- Render Statistics ---\n`
+                    report += `Draw Calls: ${m.drawCalls}\n`
+                    report += `Triangles: ${m.triangles.toLocaleString()}\n`
+                    report += `Geometries: ${m.geometries}\n`
+                    report += `Textures: ${m.textures}\n\n`
+                    report += `--- Timing Breakdown ---\n`
+                    report += `Update: ${m.updateTime.toFixed(2)}ms\n`
+                    report += `Render: ${m.renderTime.toFixed(2)}ms\n`
+                    report += `Entity Update: ${m.timings.entityUpdate.toFixed(2)}ms\n`
+                    report += `Collision: ${m.timings.collisionDetection.toFixed(2)}ms\n`
+                    report += `Particles: ${m.timings.particleSystem.toFixed(2)}ms\n`
+                    report += `Billboard: ${m.timings.billboardUpdate.toFixed(2)}ms\n`
+                    report += `Scene: ${m.timings.sceneRender.toFixed(2)}ms\n\n`
+                    if (m.memoryUsageMB > 0) {
+                        report += `--- Memory ---\n`
+                        report += `Heap: ${m.memoryUsageMB.toFixed(1)}MB\n\n`
+                    }
+                    if (profilerWarnings.length > 0) {
+                        report += `--- Warnings ---\n`
+                        profilerWarnings.forEach(w => report += `${w}\n`)
+                    }
+
+                    // Log to console
+                    console.log(report)
+                    console.log('📊 Raw profiler data:', {
+                        metrics: m,
+                        fpsHistory,
+                        warnings: profilerWarnings,
+                    })
+
+                    // Download as file
+                    const blob = new Blob([report], { type: 'text/plain' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `performance-report-${Date.now()}.txt`
+                    a.click()
+                    URL.revokeObjectURL(url)
+
+                    console.log('✅ Performance report exported')
+                }
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [profilerMetrics, profilerWarnings, fpsHistory])
+
     // Access Check
     useEffect(() => {
         const checkAccess = async () => {
-            if (!user) return
+            if (!user) {
+                setIsCheckingAuth(false)
+                setHasCompletedAuthCheck(false)
+                return
+            }
+
+            setIsCheckingAuth(true)
+            setHasCompletedAuthCheck(false)
+
             const hostname = typeof window !== "undefined" ? window.location.hostname : ""
-            if (hostname === "localhost" || hostname === "127.0.0.1") { setIsAuthorized(true); return }
+            if (hostname === "localhost" || hostname === "127.0.0.1") {
+                setIsAuthorized(true)
+                setHasCompletedAuthCheck(true)
+                setIsCheckingAuth(false)
+                return
+            }
+
             try {
                 const response = await fetch("/api/game/check-access")
                 const data = await response.json()
-                if (data.success) { setIsAuthorized(data.authorized); setAuthReason(data.reason) }
-            } catch (err) { console.error("Access check failed:", err) }
+                if (data.success) {
+                    setIsAuthorized(data.authorized)
+                    setAuthReason(data.reason)
+                }
+                setHasCompletedAuthCheck(true)
+                setIsCheckingAuth(false)
+            } catch (err) {
+                console.error("Access check failed:", err)
+                setHasCompletedAuthCheck(true)
+                setIsCheckingAuth(false)
+            }
         }
         checkAccess()
     }, [user])
@@ -496,7 +640,7 @@ export function SlavicSurvivors() {
             {/* Header Card Removed */}
 
             <div className={`relative w-full h-full`}>
-                <div ref={containerRef} className={`w-full h-full`} style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }} />
+                <div ref={containerRef} className={`w-full h-full relative z-0`} style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }} />
 
                 <HUD
                     isMobile={isMobile}
@@ -519,6 +663,9 @@ export function SlavicSurvivors() {
                     statusEffects={playerRef.current?.statusEffects ?? []}
                     activeSynergies={activeSynergies}
                     difficultyMultiplier={difficultyMultiplier}
+                    spawnSystem={spawnSystemRef.current}
+                    entityManager={entityManagerRef.current}
+                    waveNotification={waveNotification}
                 />
 
                 {/* Mobile Fullscreen Toggle */}
@@ -533,7 +680,7 @@ export function SlavicSurvivors() {
                                     <div className="flex flex-col gap-1 bg-black/50 backdrop-blur-md p-2 rounded-xl border border-white/10 mb-2">
                                         <span className="text-[10px] text-white/50 font-mono uppercase text-center tracking-wider">Sim Speed</span>
                                         <div className="flex gap-1">
-                                            {[1, 2, 4, 10, 25, 50].map(speed => (
+                                            {[1, 2, 4, 10].map(speed => (
                                                 <Button
                                                     key={speed}
                                                     onClick={() => setGameSpeed(speed)}
@@ -603,6 +750,9 @@ export function SlavicSurvivors() {
                         worldStars={worldStars}
                         setGameState={setGameState}
                         audioManager={audioManagerRef.current}
+                        isLocalhost={isLocalhost}
+                        customLevels={customLevels}
+                        onOpenLevelEditor={() => setLevelEditorOpen(true)}
                     />
                 )}
 
@@ -736,7 +886,7 @@ export function SlavicSurvivors() {
                     />
                 )}
 
-                {isAuthorized === false && (
+                {hasCompletedAuthCheck && isAuthorized === false && (
                     <div className="absolute inset-0 bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center z-[100] animate-in fade-in duration-700">
                         <div className="bg-red-500/10 border-4 border-red-500/20 p-12 rounded-[4rem] max-w-2xl w-full shadow-[0_0_100px_rgba(220,38,38,0.2)] relative overflow-hidden">
                             <div className="absolute -top-24 -left-24 w-64 h-64 bg-red-500/10 rounded-full blur-[80px]" />
@@ -761,13 +911,57 @@ export function SlavicSurvivors() {
                     </div>
                 )}
 
-                {isAuthorized === null && user && (
+                {(isCheckingAuth || (isAuthorized === null && user)) && (
                     <div className="absolute inset-0 bg-black flex items-center justify-center z-[100]">
                         <div className="flex flex-col items-center gap-6">
                             <Loader2 className="w-16 h-16 animate-spin text-primary" />
                             <span className="text-primary font-black uppercase tracking-[0.5em] animate-pulse">VERIFYING RELICS...</span>
                         </div>
                     </div>
+                )}
+
+                {/* Level Editor Debug Mode */}
+                {isLocalhost && (
+                    <LevelEditor
+                        isVisible={levelEditorOpen}
+                        onClose={async () => {
+                            setLevelEditorOpen(false)
+                            // Reload levels when editor closes to ensure main menu shows latest
+                            const levels = await loadCustomLevels()
+                            setCustomLevels(levels)
+                            updateCustomLevelsCache(levels)
+                        }}
+                        onLevelsChanged={async () => {
+                            // Reload custom levels when they are saved/deleted in the editor
+                            const levels = await loadCustomLevels()
+                            setCustomLevels(levels)
+                            updateCustomLevelsCache(levels) // Update game engine cache
+                        }}
+                        onTestLevel={async (levelData) => {
+                            console.log(`[LevelEditor] Testing level: "${levelData.name}" (${levelData.timeline?.length || 0} events, background: ${levelData.disableBackgroundSpawning ? 'OFF' : 'ON'})`)
+                            // Reload custom levels to include the newly saved/updated level
+                            const levels = await loadCustomLevels()
+                            setCustomLevels(levels)
+                            updateCustomLevelsCache(levels) // Update game engine cache
+                            // Select this level
+                            setSelectedWorldId(levelData.id)
+                            setLevelEditorOpen(false)
+                            setGameState('characterSelect')
+                        }}
+                    />
+                )}
+
+                {/* Performance Profiler Overlay */}
+                {profilerMetrics && (
+                    <PerformanceOverlay
+                        metrics={profilerMetrics}
+                        warnings={profilerWarnings}
+                        fpsHistory={fpsHistory}
+                        frameTimeHistory={[]}
+                        entityCountHistory={[]}
+                        gameStatsHistory={gameStatsHistory}
+                        visible={profilerVisible}
+                    />
                 )}
             </div>
         </div>

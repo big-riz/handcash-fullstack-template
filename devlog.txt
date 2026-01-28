@@ -3,6 +3,17 @@
 # Types: ADD (addition), FIX (bug fix), REM (removal), UPD (update)
 # ═══════════════════════════════════════════════════════════════════════════
 
+[2026-01-26] [FIX] Fixed authorization check timing to prevent unauthorized alert flash
+[2026-01-26] [ADD] Added isCheckingAuth state to track auth check progress
+[2026-01-26] [UPD] Unauthorized alert now only shows after check completes, not during
+[2026-01-26] [FIX] Fixed passive event listener warning in Visual Level Editor wheel zoom
+[2026-01-26] [UPD] Replaced React onWheel with native event listener using { passive: false }
+[2026-01-26] [ADD] Implemented Meshes tab with mesh placement, scale, rotation, collision settings
+[2026-01-26] [ADD] Implemented Paint tab with scatter mesh and color paint functionality
+[2026-01-26] [UPD] Enhanced Settings tab with theme colors, border config, win conditions, and loot settings
+[2026-01-26] [ADD] Mesh management UI with add, delete, and list functionality
+[2026-01-26] [ADD] Paint area management with density, mesh type, and area size controls
+
 [2026-01-23] [ADD] Initial devlog system created with CLI script support
 [2026-01-24] [ADD] Devlog section with UI component and CLI script for feature tracking
 [2026-01-24] [UPD] Reduced difficulty scaling progression, boss at 5min is main challenge
@@ -18,6 +29,22 @@
 [2026-01-24] [UPD] Integrated database item template images into level-up upgrade cards
 [2026-01-24] [FIX] Fixed item name mismatch (TT33 Handgun â†’ TT33 Pistol) for database image matching
 [2026-01-24] [UPD] Completed item name audit - all 31 database items match game perfectly
+[2026-01-26] [ADD] Level Editor debug mode (localhost only) with keyboard shortcut Ctrl+L or F2
+[2026-01-26] [ADD] Level creation, editing, duplication, and deletion functionality
+[2026-01-26] [ADD] Level export/import as JSON for sharing and version control
+[2026-01-26] [ADD] API endpoints for level storage (/api/levels/list, /api/levels/save, /api/levels/[id])
+[2026-01-26] [ADD] Basic level settings editor (name, description, difficulty, max level)
+[2026-01-26] [ADD] Timeline editor with add, edit, delete, and duplicate spawn events
+[2026-01-26] [ADD] Timeline event sorting, enemy type selection, elite/boss flags
+[2026-01-26] [ADD] Level editor button in main menu (plus icon after world cards, localhost only)
+[2026-01-26] [REM] Removed keyboard shortcuts for level editor in favor of menu button
+[2026-01-26] [ADD] Visual level editor with live 3D view of the level being edited
+[2026-01-26] [ADD] Top-down orthographic camera with zoom and pan controls
+[2026-01-26] [ADD] Grid overlay, ground plane visualization, and border preview
+[2026-01-26] [ADD] Real-time color picker for sky and ground colors
+[2026-01-26] [ADD] Four editor modes: Select, Meshes, Paint, Timeline with tool sidebar
+[2026-01-26] [ADD] Visual editor accessible via "Visual Editor" button in menu editor
+[2026-01-26] [FIX] Visual editor now uses correct SpriteSystem.initialize() API
 [2026-01-24] [UPD] Added debug logging to track image loading in level-up system
 [2026-01-24] [FIX] Fixed item icon log spam during template loading
 [2026-01-24] [FIX] Fixed stale closure issue preventing item icons from displaying
@@ -55,3 +82,10 @@
 [2026-01-24] [UPD] Scaled harder enemy spawns to start with 1 and increase every 5 levels
 [2026-01-24] [UPD] Optimized character progression with world star system and improved stats
 [2026-01-24] [UPD] Implemented star rating system, character progression with starting items, and improved victory thresholds
+[2026-01-26] [ADD] Enemy counter showing active enemies on screen (HUD clock area)
+[2026-01-26] [ADD] Wave queue showing next 3 upcoming spawn events with countdown timers
+[2026-01-26] [ADD] Visual alerts for imminent waves (< 10 seconds) with pulsing red text
+[2026-01-26] [ADD] Elite and Boss wave indicators (⭐ and 👑 icons)
+[2026-01-26] [ADD] Wave flavor text notifications displayed as dramatic popups during gameplay
+[2026-01-26] [ADD] Auto-dismiss notifications after 4 seconds with smooth animations
+[2026-01-26] [UPD] Moved wave queue to left side under health bar with progress bars instead of time

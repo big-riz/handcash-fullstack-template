@@ -7,7 +7,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 
 export default function PlayPage() {
-    const { user, loading } = useAuth()
+    const { user, isLoading } = useAuth()
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
     const [authReason, setAuthReason] = useState<string | null>(null)
     const [checkingAccess, setCheckingAccess] = useState(false)
@@ -61,7 +61,7 @@ export default function PlayPage() {
         window.location.reload()
     }
 
-    const showBlocker = !loading && isAuthorized === false
+    const showBlocker = !isLoading && isAuthorized === false
 
     return (
         <div className="full-viewport overflow-hidden bg-black prevent-pull-refresh">
@@ -111,7 +111,7 @@ export default function PlayPage() {
             )}
 
             {/* Loading state */}
-            {(loading || (user && isAuthorized === null)) && (
+            {(isLoading || (user && isAuthorized === null)) && (
                 <div className="absolute inset-0 bg-black/90 backdrop-blur-2xl flex items-center justify-center z-[100]">
                     <div className="text-white text-2xl uppercase tracking-widest font-black">
                         {checkingAccess ? "Verifying Access..." : "Loading..."}
