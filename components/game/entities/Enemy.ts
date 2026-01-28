@@ -302,7 +302,8 @@ export class Enemy {
         spawnProjectile?: (x: number, z: number, vx: number, vz: number, damage: number, appliesSlow?: boolean, appliesCurse?: boolean) => void,
         spawnEnemy?: (type: EnemyType, x: number, z: number) => void,
         createMeleeSwing?: (x: number, z: number, facingAngle: number, damage: number, radius: number) => void,
-        spawnObstacle?: (x: number, z: number, radius: number, duration: number) => void
+        spawnObstacle?: (x: number, z: number, radius: number, duration: number) => void,
+        rng?: { next: () => number }
     ) {
         if (!this.isActive) return
 
@@ -321,17 +322,17 @@ export class Enemy {
         }
 
         // Chernobog abilities
-        if (this.type === 'chernobog' && spawnEnemy && spawnProjectile && createMeleeSwing) {
+        if (this.type === 'chernobog' && spawnEnemy && spawnProjectile && createMeleeSwing && rng) {
             this.bossAbility1Cooldown -= deltaTime
             if (this.bossAbility1Cooldown <= 0) {
                 this.bossAbility1Cooldown = 15.0
                 const minionTypes: EnemyType[] = ['drifter', 'screecher', 'domovoi', 'zmora', 'bruiser']
                 for (let i = 0; i < 5; i++) {
-                    const angle = Math.random() * Math.PI * 2
+                    const angle = rng.next() * Math.PI * 2
                     const spawnDist = 3.0
                     const spawnX = this.position.x + Math.cos(angle) * spawnDist
                     const spawnZ = this.position.z + Math.sin(angle) * spawnDist
-                    const randomType = minionTypes[Math.floor(Math.random() * minionTypes.length)]
+                    const randomType = minionTypes[Math.floor(rng.next() * minionTypes.length)]
                     spawnEnemy(randomType, spawnX, spawnZ)
                 }
             }
@@ -408,11 +409,11 @@ export class Enemy {
         }
 
         // Ancient Treant summon + stomp
-        if (this.type === 'ancient_treant' && spawnEnemy && createMeleeSwing) {
+        if (this.type === 'ancient_treant' && spawnEnemy && createMeleeSwing && rng) {
             this.summonCooldown -= deltaTime
             if (this.summonCooldown <= 0) {
                 this.summonCooldown = 8.0
-                const angleOffset = Math.random() * Math.PI * 2
+                const angleOffset = rng.next() * Math.PI * 2
                 for (let i = 0; i < 3; i++) {
                     const angle = angleOffset + (i * Math.PI * 2 / 3)
                     const spawnX = this.position.x + Math.cos(angle) * 2.5

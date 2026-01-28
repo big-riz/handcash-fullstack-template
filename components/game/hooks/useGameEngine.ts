@@ -501,6 +501,7 @@ export function useGameEngine({
             const gameRNG = new SeededRandom(newSeed + "_game")
             const uiRNG = new SeededRandom(newSeed + "_ui")
             rngRef.current = uiRNG
+            em.setRNG(gameRNG)
 
             const startingWeapon = character.startingWeapon as any
             const startingActives = [startingWeapon, ...(character.startingActives || [])] as any[]
@@ -1025,6 +1026,7 @@ export function useGameEngine({
 
             const rng = new SeededRandom(Date.now().toString())
             rngRef.current = rng
+            entityManager.setRNG(rng)
             const replay = new ReplayRecorder(rng.next().toString(), user?.publicProfile.handle || '', selectedCharacterId, selectedWorldId)
             replayRef.current = replay
 

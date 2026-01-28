@@ -11,6 +11,7 @@ import { AudioManager } from '../core/AudioManager'
 import { SpriteSystem } from '../core/SpriteSystem'
 import { InstancedRenderer } from '../systems/InstancedRenderer'
 import { InstancedHealthBars, InstancedGems, InstancedProjectiles } from '../systems/InstancedBatch'
+import { SeededRandom } from '@/lib/SeededRandom'
 
 export interface Obstacle {
     x: number
@@ -106,6 +107,7 @@ export class EntityManager {
     private vfx: VFXManager | null = null
     private audioManager: AudioManager | null = null
     private spriteSystem: SpriteSystem | null = null
+    private rng: SeededRandom | null = null
 
     // Instanced rendering
     private instancedRenderer: InstancedRenderer
@@ -159,6 +161,10 @@ export class EntityManager {
         this.gemColor = color
         this.gemEmissive = emissive
         this.instancedGems.setColor(color, emissive)
+    }
+
+    setRNG(rng: SeededRandom) {
+        this.rng = rng
     }
 
     setHealthBarsEnabled(enabled: boolean) {
@@ -305,7 +311,8 @@ export class EntityManager {
                     (x, z, vx, vz, dmg, appliesSlow = false, appliesCurse = false) => this.spawnProjectile(x, z, vx, vz, dmg, true, appliesSlow, appliesCurse),
                     (type, x, z) => this.spawnEnemy(type, x, z),
                     (x, z, angle, dmg, radius) => this.spawnMeleeSwing(x, z, angle, dmg, radius),
-                    (x, z, radius, duration) => this.spawnObstacle(x, z, radius, duration)
+                    (x, z, radius, duration) => this.spawnObstacle(x, z, radius, duration),
+                    this.rng || undefined
                 )
                 this.enemyQuadtree.insert({ x: enemy.position.x, y: enemy.position.z, data: enemy });
 
