@@ -160,6 +160,31 @@ const characters = [
             "weapons": ["dagger", "holywater", "skull_screen", "cross", "grail", "salt", "stake"],
             "passives": ["bone_charm", "crypt_lantern", "garlic_ring", "holy_cheese", "holy_bread", "spy_hat", "pickled_gpu", "infinity_purse"]
         }
+    },
+    {
+        "id": "strigoi",
+        "name": "Strigoi Vampire",
+        "description": "Undead bloodsucker. Deals damage when hit, heals when dealing damage. Glass cannon that never dies.",
+        "startingWeapon": "vampire_rat",
+        "startingActives": ["shank"],
+        "startingPassives": ["spy_hat"],
+        "sprite": "strigoi",
+        "stats": {
+            "maxHp": 60,
+            "moveSpeed": 1.3,
+            "might": 1.8,
+            "area": 0.8,
+            "armor": -3,
+            "regen": -0.5,
+            "thorns": 0.5,
+            "lifesteal": 0.15,
+            "critRate": 0.25,
+            "critDamage": 2.5
+        },
+        "arsenal": {
+            "weapons": ["vampire_rat", "shank", "kabar", "knuckles", "skull_screen", "grail", "stilleto"],
+            "passives": ["spy_hat", "bone_charm", "boss_shoe", "garlic_ring", "battle_scarf", "holy_cheese", "crypt_lantern", "pickled_gpu"]
+        }
     }
 ];
 

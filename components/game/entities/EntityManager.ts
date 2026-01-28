@@ -465,6 +465,7 @@ export class EntityManager {
                                 if (distSq < radii * radii) {
                                     enemy.takeDamage(projectile.damage, this.vfx || undefined);
                                     this.totalDamageDealt += projectile.damage;
+                                    this.player.onDealDamage(projectile.damage); // Lifesteal
                                     this.audioManager?.playEnemyHurt();
                                     if (this.vfx) this.vfx.createEmoji(enemy.position.x, enemy.position.z, '⚔️', 0.8);
                                     projectile.despawn();
@@ -491,6 +492,7 @@ export class EntityManager {
                         if (enemy.isActive && swing.isEnemyInArc(enemy.position.x, enemy.position.z, enemy.radius, enemy.id)) {
                              enemy.takeDamage(swing.damage, this.vfx || undefined);
                              this.totalDamageDealt += swing.damage;
+                             this.player.onDealDamage(swing.damage); // Lifesteal
                              this.audioManager?.playEnemyHurt();
                              if (this.vfx) this.vfx.createEmoji(enemy.position.x, enemy.position.z, '💥', 0.8);
                         }
@@ -628,20 +630,34 @@ export class EntityManager {
     private handlePlayerEnemyCollision(enemy: Enemy) {
         const buffMultiplier = enemy.isBuffed ? 1.3 : 1.0
         const damage = enemy.stats.damage * 0.7 * buffMultiplier
-        const tookDamage = this.player.takeDamage(damage)
-        if (tookDamage) {
+        const thornDamage = this.player.takeDamage(damage)
+
+        if (thornDamage > 0) {
+            // Player took damage
             this.totalDamageTaken += damage;
             this.audioManager?.playPlayerHurt();
-        }
 
-        if (tookDamage && this.vfx) {
-            this.vfx.createDamageNumber(
-                this.player.position.x,
-                this.player.position.z,
-                Math.max(1, damage - this.player.stats.armor),
-                '#ff4444',
-                1.5
-            )
+            // Apply thorn damage back to enemy
+            if (thornDamage > 0) {
+                enemy.takeDamage(thornDamage, this.vfx || undefined)
+                this.totalDamageDealt += thornDamage
+                // Lifesteal from thorn damage
+                this.player.onDealDamage(thornDamage)
+                if (this.vfx) {
+                    this.vfx.createDamageNumber(enemy.position.x, enemy.position.z, thornDamage, '#ff00ff', 1.0)
+                    this.vfx.createEmoji(enemy.position.x, enemy.position.z, '🔥', 0.5)
+                }
+            }
+
+            if (this.vfx) {
+                this.vfx.createDamageNumber(
+                    this.player.position.x,
+                    this.player.position.z,
+                    Math.max(1, damage - this.player.stats.armor),
+                    '#ff4444',
+                    1.5
+                )
+            }
         }
     }
 

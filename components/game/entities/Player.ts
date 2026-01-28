@@ -27,6 +27,8 @@ export interface PlayerStats {
     revivals: number
     rerolls: number
     visionMultiplier: number
+    thorns: number // Damage dealt back to attackers (0-1 = percentage of damage taken)
+    lifesteal: number // Heal percentage of damage dealt (0-1)
 }
 
 export class Player {
@@ -98,7 +100,9 @@ export class Player {
             curse: 1.0,
             revivals: 1,
             rerolls: 3,
-            visionMultiplier: 1.0
+            visionMultiplier: 1.0,
+            thorns: 0,
+            lifesteal: 0
         }
     }
 
@@ -285,16 +289,32 @@ export class Player {
 
     /**
      * Handle taking damage
+     * Returns the thorn damage to deal back to the attacker (0 if no damage taken)
      */
-    takeDamage(amount: number): boolean {
-        if (this.iframeTimer > 0) return false
+    takeDamage(amount: number): number {
+        if (this.iframeTimer > 0) return 0
 
         // Apply curse multiplier if cursed
         const cursedAmount = this.isCursed ? amount * this.curseMultiplier : amount
         const actualDamage = Math.max(1, cursedAmount - this.stats.armor)
         this.stats.currentHp -= actualDamage
         this.iframeTimer = this.iframeDuration
-        return true // Indicate damage was taken
+
+        // Calculate thorn damage to return to attacker
+        const thornDamage = actualDamage * this.stats.thorns
+        return thornDamage
+    }
+
+    /**
+     * Heal based on damage dealt (lifesteal)
+     */
+    onDealDamage(damageDealt: number): void {
+        if (this.stats.lifesteal <= 0) return
+
+        const healAmount = damageDealt * this.stats.lifesteal
+        if (healAmount > 0) {
+            this.stats.currentHp = Math.min(this.stats.maxHp, this.stats.currentHp + healAmount)
+        }
     }
 
     addXp(amount: number) {

@@ -481,6 +481,10 @@ export function useGameEngine({
                 p.stats.armor = character.stats.armor || 0
                 p.stats.amount = character.stats.amount || 0
                 p.stats.growth = character.stats.growth || 1.0
+                p.stats.thorns = character.stats.thorns || 0
+                p.stats.lifesteal = character.stats.lifesteal || 0
+                p.stats.critRate = character.stats.critRate || 0.05
+                p.stats.critDamage = character.stats.critDamage || 2.0
             }
 
             // No meta-progression bonuses - removed

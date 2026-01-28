@@ -43,9 +43,13 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Get user profile from HandCash
+        // Get user profile from HandCash - use same ID extraction as auth callback
         const profile = await handcashService.getUserProfile(privateKey)
-        const userId = profile?.publicProfile?.id || profile?.publicProfile?.handle || 'unknown'
+        const userId = profile?.userId || profile?.publicProfile?.userId || profile?.publicProfile?.handle
+
+        if (!userId) {
+            return NextResponse.json({ error: "Could not determine user ID" }, { status: 400 })
+        }
 
         const body = await req.json()
         const { playerName, seed, events, finalLevel, finalTime, gameVersion, handle, avatarUrl, characterId, worldId } = body
