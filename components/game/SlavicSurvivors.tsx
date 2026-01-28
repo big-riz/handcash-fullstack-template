@@ -106,7 +106,13 @@ export function SlavicSurvivors() {
     const [choicesRefreshKey, setChoicesRefreshKey] = useState(0)
 
     const { user } = useAuth()
+    const userRef = useRef(user)
     const audioManagerRef = useRef<AudioManager | null>(null)
+
+    // Keep userRef in sync with user
+    useEffect(() => {
+        userRef.current = user
+    }, [user])
 
     // Lifted Refs for Engine
     const inputManagerRef = useRef<InputManager | null>(null)
@@ -351,12 +357,13 @@ export function SlavicSurvivors() {
     }
 
     const submitReplayToDB = () => {
-        console.log("[Replay] submitReplayToDB called", { hasReplayRef: !!replayRef.current, hasUser: !!user })
+        const currentUser = userRef.current
+        console.log("[Replay] submitReplayToDB called", { hasReplayRef: !!replayRef.current, hasUser: !!currentUser })
         if (!replayRef.current) {
             console.log("[Replay] Skipping - no replay recorder")
             return
         }
-        if (!user) {
+        if (!currentUser) {
             console.log("[Replay] Skipping score submission - user not authenticated")
             return
         }
@@ -366,9 +373,9 @@ export function SlavicSurvivors() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                playerName: user.publicProfile.handle,
-                handle: user.publicProfile.handle,
-                avatarUrl: user.publicProfile.avatarUrl || null,
+                playerName: currentUser.publicProfile.handle,
+                handle: currentUser.publicProfile.handle,
+                avatarUrl: currentUser.publicProfile.avatarUrl || null,
                 seed: replayData.seed,
                 events: replayData.events,
                 finalLevel: replayData.finalLevel,
@@ -376,7 +383,7 @@ export function SlavicSurvivors() {
                 gameVersion: replayData.gameVersion,
                 characterId: replayData.characterId || selectedCharacterId,
                 worldId: replayData.worldId || selectedWorldId,
-                userId: user.publicProfile.id || null
+                userId: currentUser.publicProfile.id || null
             })
         })
         .then(res => res.json())
