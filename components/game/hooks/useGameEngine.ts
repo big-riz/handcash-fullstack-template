@@ -1159,9 +1159,7 @@ export function useGameEngine({
                     // No seed rewards - meta progression removed
 
                     setGameState("gameOver")
-                    if (gameStateRef.current === "playing") {
-                        submitScore(p.stats.level)
-                    }
+                    submitScore(p.stats.level)
                     break
                 }
                 else if (p.stats.level > prevLevel && gameStateRef.current !== "replaying") {
