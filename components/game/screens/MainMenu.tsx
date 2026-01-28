@@ -52,17 +52,19 @@ export function MainMenu({
 
             {/* World Selection - Centered Verbose List */}
             <div className="relative w-full max-w-4xl mb-12">
-                {/* Create Level Button - Top Left */}
-                <div className="absolute -top-16 left-0 z-40">
-                    <div
-                        onClick={() => { playSelect(); onOpenLevelEditor(); }}
-                        onMouseEnter={playHover}
-                        className="flex items-center gap-3 px-4 py-2 border-2 border-dashed rounded-xl transition-all group hover:scale-105 bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/40 hover:border-purple-400 cursor-pointer"
-                    >
-                        <Plus className="w-5 h-5 text-purple-400" />
-                        <span className="text-purple-300 font-bold uppercase text-xs tracking-wider">Create Custom World</span>
+                {/* Create Level Button - Top Left (localhost only) */}
+                {isLocalhost && (
+                    <div className="absolute -top-16 left-0 z-40">
+                        <div
+                            onClick={() => { playSelect(); onOpenLevelEditor?.(); }}
+                            onMouseEnter={playHover}
+                            className="flex items-center gap-3 px-4 py-2 border-2 border-dashed rounded-xl transition-all group hover:scale-105 bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/40 hover:border-purple-400 cursor-pointer"
+                        >
+                            <Plus className="w-5 h-5 text-purple-400" />
+                            <span className="text-purple-300 font-bold uppercase text-xs tracking-wider">Create Custom World</span>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Verbose Centered World Cards */}
                 <div className="relative">

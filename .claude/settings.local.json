@@ -16,7 +16,8 @@
       "Bash(find:*)",
       "Skill(ralph-loop:ralph-loop)",
       "Bash(npm run lint:*)",
-      "Bash(tsx scripts/regenerate-timelines.ts:*)"
+      "Bash(tsx scripts/regenerate-timelines.ts:*)",
+      "Bash(grep:*)"
     ]
   }
 }

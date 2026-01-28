@@ -136,7 +136,7 @@ export class EntityManager {
         this.enemyQuadtree = new Quadtree(worldBounds, 4);
 
         // Create instanced renderer for regular enemies
-        this.instancedRenderer = new InstancedRenderer(scene, 600)
+        this.instancedRenderer = new InstancedRenderer(scene, 1500)
 
         // Pre-register all non-boss enemy types
         for (const [type, radius] of Object.entries(ENEMY_RADII)) {
@@ -146,9 +146,9 @@ export class EntityManager {
         }
 
         // Instanced batches for health bars, gems, projectiles
-        this.instancedHealthBars = new InstancedHealthBars(scene, 600)
-        this.instancedGems = new InstancedGems(scene, this.gemColor, this.gemEmissive, 200)
-        this.instancedProjectiles = new InstancedProjectiles(scene, 300)
+        this.instancedHealthBars = new InstancedHealthBars(scene, 1500)
+        this.instancedGems = new InstancedGems(scene, this.gemColor, this.gemEmissive, 500)
+        this.instancedProjectiles = new InstancedProjectiles(scene, 500)
     }
 
     setObstacles(obstacles: Obstacle[]) {
@@ -701,15 +701,15 @@ export class EntityManager {
         this.instancedGems.dispose()
         this.instancedProjectiles.dispose()
 
-        this.instancedRenderer = new InstancedRenderer(this.scene, 600)
+        this.instancedRenderer = new InstancedRenderer(this.scene, 1500)
         for (const [type, radius] of Object.entries(ENEMY_RADII)) {
             if (!BOSS_TYPES.has(type as EnemyType)) {
                 this.instancedRenderer.registerEnemyType(type, radius, ENEMY_COLORS[type] || 0xff4444)
             }
         }
-        this.instancedHealthBars = new InstancedHealthBars(this.scene, 600)
-        this.instancedGems = new InstancedGems(this.scene, this.gemColor, this.gemEmissive, 200)
-        this.instancedProjectiles = new InstancedProjectiles(this.scene, 300)
+        this.instancedHealthBars = new InstancedHealthBars(this.scene, 1500)
+        this.instancedGems = new InstancedGems(this.scene, this.gemColor, this.gemEmissive, 500)
+        this.instancedProjectiles = new InstancedProjectiles(this.scene, 500)
 
         this.enemies = []
         this.gems = []

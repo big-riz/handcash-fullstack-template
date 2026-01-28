@@ -18,7 +18,7 @@ export class InstancedRenderer {
     private instancedMeshes: Map<string, THREE.InstancedMesh> = new Map()
     private maxInstances: number
 
-    constructor(scene: THREE.Scene, maxInstances = 600) {
+    constructor(scene: THREE.Scene, maxInstances = 1500) {
         this.scene = scene
         this.maxInstances = maxInstances
     }

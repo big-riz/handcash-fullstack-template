@@ -4,9 +4,9 @@
  * Batches health bars, XP gems, and projectiles using InstancedMesh.
  * Reduces hundreds of individual draw calls down to a handful.
  *
- * Health bars: 400 → 2 draw calls
- * XP gems:     30 → 1 draw call
- * Projectiles: 50 → 1 draw call
+ * Health bars: 1500 max → 2 draw calls
+ * XP gems:     500 max  → 1 draw call
+ * Projectiles: 500 max  → 1 draw call
  */
 
 import * as THREE from 'three'
@@ -26,7 +26,7 @@ export class InstancedHealthBars {
     private fillMesh: THREE.InstancedMesh
     private maxInstances: number
 
-    constructor(scene: THREE.Scene, maxInstances = 600) {
+    constructor(scene: THREE.Scene, maxInstances = 1500) {
         this.maxInstances = maxInstances
 
         const bgGeo = new THREE.PlaneGeometry(1, 0.08)
@@ -126,7 +126,7 @@ export class InstancedGems {
     private mesh: THREE.InstancedMesh
     private maxInstances: number
 
-    constructor(scene: THREE.Scene, color: number, emissive: number, maxInstances = 200) {
+    constructor(scene: THREE.Scene, color: number, emissive: number, maxInstances = 500) {
         this.maxInstances = maxInstances
 
         const geometry = new THREE.IcosahedronGeometry(0.2, 1)
@@ -180,7 +180,7 @@ export class InstancedProjectiles {
     private mesh: THREE.InstancedMesh
     private maxInstances: number
 
-    constructor(scene: THREE.Scene, maxInstances = 300) {
+    constructor(scene: THREE.Scene, maxInstances = 500) {
         this.maxInstances = maxInstances
 
         const geometry = new THREE.ConeGeometry(0.2, 0.6, 8)
