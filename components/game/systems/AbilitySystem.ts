@@ -584,50 +584,179 @@ export class AbilitySystem {
 
     getUpgradeDescription(type: string, nextLevel: number): string {
         // ============================================
-        // ACTIVE WEAPONS
+        // ACTIVE WEAPONS - Use static methods where available
         // ============================================
-
-        // Legacy weapons (kept for backwards compatibility)
-        if (type === 'garlic') return GarlicAura.getUpgradeDesc(nextLevel)
         if (type === 'dagger') return DaggerWeapon.getUpgradeDesc(nextLevel)
         if (type === 'holywater') return HolyWaterWeapon.getUpgradeDesc(nextLevel)
         if (type === 'stake') return AspenStakeWeapon.getUpgradeDesc(nextLevel)
         if (type === 'cross') return CrossWeapon.getUpgradeDesc(nextLevel)
         if (type === 'salt') return SaltLineWeapon.getUpgradeDesc(nextLevel)
         if (type === 'ak_radioactive') return RadioactiveAKWeapon.getUpgradeDesc(nextLevel)
-        if (type === 'ak_ghzel') return "Artisanal precision. High critical hit chance."
-        if (type === 'ak_corrupted') return "Demonic weapon that siphons life from foes."
-        if (type === 'ak_mushroom') return "Fires rounds that burst into toxic spore clouds."
-        if (type === 'lada') return "Periodic armored push. Crush anything in your path."
-
-        // New weapons - descriptions without "Level X:" prefix (added by UI)
-        if (type === 'tt33') return nextLevel === 1 ? "Reliable shots at nearest enemy." : `+20% damage.`
         if (type === 'shank') return MeleeWeapon.getUpgradeDesc(nextLevel)
         if (type === 'knuckles') return MeleeWeapon.getUpgradeDesc(nextLevel)
-        if (type === 'stilleto') return nextLevel === 1 ? "Fast knives at multiple targets." : `+1 extra knife.`
-        if (type === 'peppermill') return nextLevel === 1 ? "Rapid bullet spray." : `+10% fire rate.`
         if (type === 'soviet_stick') return MeleeWeapon.getUpgradeDesc(nextLevel)
-        if (type === 'kabar') return nextLevel === 1 ? "Armor-piercing blade." : `+20% damage.`
-        if (type === 'grail') return nextLevel === 1 ? "Holy damage aura." : `+15% area.`
-        if (type === 'skull_screen') return nextLevel === 1 ? "Orbiting skulls." : `+15% damage, +10% area.`
-        if (type === 'visors') return nextLevel === 1 ? "Devastating holy lasers." : `+25% damage.`
-        if (type === 'gzhel_smg') return nextLevel === 1 ? "Rapid bursts with high crit." : `+15% fire rate.`
+        if (type === 'grail') return GarlicAura.getUpgradeDesc(nextLevel)
+        if (type === 'skull_screen') return GarlicAura.getUpgradeDesc(nextLevel)
+
+        // TT33 - matches TT33Weapon.upgrade()
+        if (type === 'tt33') {
+            switch (nextLevel) {
+                case 1: return "Rapid shots at nearest enemy."
+                case 2: return "Polished barrel (+20% damage)."
+                case 3: return "Hair trigger (+20% attack speed)."
+                case 4: return "High-velocity rounds (+50% damage)."
+                case 5: return "Semi-auto mastery (+30% attack speed)."
+                default: return ""
+            }
+        }
+
+        // Stilleto - DaggerWeapon variant
+        if (type === 'stilleto') {
+            switch (nextLevel) {
+                case 1: return "Fast throwing knives at multiple targets."
+                case 2: return "Extra blade (+1 knife)."
+                case 3: return "Sharper blades (+50% damage)."
+                case 4: return "Faster throwing (+30% attack speed)."
+                case 5: return "Blade Master (+1 knife)."
+                default: return ""
+            }
+        }
+
+        // Peppermill - TT33 variant with faster fire
+        if (type === 'peppermill') {
+            switch (nextLevel) {
+                case 1: return "Rapid spray of bullets."
+                case 2: return "Larger magazine (+20% damage)."
+                case 3: return "Oiled mechanism (+20% fire rate)."
+                case 4: return "Hollow points (+50% damage)."
+                case 5: return "Overclocked (+30% fire rate)."
+                default: return ""
+            }
+        }
+
+        // Kabar - DaggerWeapon variant
+        if (type === 'kabar') {
+            switch (nextLevel) {
+                case 1: return "Armor-piercing throwing blade."
+                case 2: return "Serrated edge (+1 blade)."
+                case 3: return "Hardened steel (+50% damage)."
+                case 4: return "Quick draw (+30% attack speed)."
+                case 5: return "Combat mastery (+1 blade)."
+                default: return ""
+            }
+        }
+
+        // Visors - TT33 variant with high damage
+        if (type === 'visors') {
+            switch (nextLevel) {
+                case 1: return "Devastating holy lasers."
+                case 2: return "Focused beam (+20% damage)."
+                case 3: return "Rapid pulse (+20% fire rate)."
+                case 4: return "Overcharge (+50% damage)."
+                case 5: return "Divine fury (+30% fire rate)."
+                default: return ""
+            }
+        }
+
+        // Gzhel SMG - GhzelAKWeapon
+        if (type === 'gzhel_smg') {
+            switch (nextLevel) {
+                case 1: return "Rapid bursts with high crit."
+                case 2: return "Extended mag (+20% damage)."
+                case 3: return "Burst fire (+20% fire rate)."
+                case 4: return "AP rounds (+50% damage)."
+                case 5: return "Full auto (+30% fire rate)."
+                default: return ""
+            }
+        }
 
         // Deployables
-        if (type === 'propaganda_tower') return nextLevel === 1 ? "Deploy tower that damages enemies." : `+1 tower, +10% damage.`
-        if (type === 'kvass_reactor') return nextLevel === 1 ? "Deploy healing zone." : `+20% heal rate.`
+        if (type === 'propaganda_tower') return PropagandaTower.getUpgradeDesc(nextLevel)
+        if (type === 'kvass_reactor') {
+            switch (nextLevel) {
+                case 1: return "Deploy healing zone that boosts speed."
+                case 2: return "Wider zone (+30% radius)."
+                case 3: return "Stronger brew (+50% heal)."
+                case 4: return "Faster ferment (+30% tick rate)."
+                case 5: return "Unlimited refills (+50% area, +25% heal)."
+                default: return ""
+            }
+        }
 
         // Companions
-        if (type === 'nuclear_pigeon') return nextLevel === 1 ? "Radioactive companion that orbits." : `+20% damage.`
-        if (type === 'vampire_rat') return nextLevel === 1 ? "Fast companion that bites." : `+15% attack speed.`
-        if (type === 'pig_luggage') return nextLevel === 1 ? "Companion that drops pickups." : `+20% drop rate.`
+        if (type === 'nuclear_pigeon') return NuclearPigeon.getUpgradeDesc(nextLevel)
+        if (type === 'vampire_rat') {
+            switch (nextLevel) {
+                case 1: return "Companion that bites nearby enemies."
+                case 2: return "Sharper teeth (+30% damage)."
+                case 3: return "Faster scurry (+20% orbit speed)."
+                case 4: return "Bloodthirst (+50% damage)."
+                case 5: return "Swarm (+1 rat companion)."
+                default: return ""
+            }
+        }
+        if (type === 'pig_luggage') {
+            switch (nextLevel) {
+                case 1: return "Companion that drops health pickups."
+                case 2: return "Better snout (+20% drop rate)."
+                case 3: return "Faster trot (+20% orbit speed)."
+                case 4: return "Lucky pig (+50% drop rate)."
+                case 5: return "Golden pig (drops coins too)."
+                default: return ""
+            }
+        }
 
         // Vehicles
-        if (type === 'haunted_lada') return nextLevel === 1 ? "Ghost car phases through." : `+15% speed.`
-        if (type === 'big_biz_lada') return nextLevel === 1 ? "Gold tank generates coins." : `+20% gold.`
-        if (type === 'dadushka_chair') return nextLevel === 1 ? "Armored slow vehicle." : `+15% armor.`
-        if (type === 'gopnik_gondola') return nextLevel === 1 ? "Floating vehicle." : `+15% damage.`
-        if (type === 'tank_stroller') return nextLevel === 1 ? "Armored transport." : `+25% crush damage.`
+        if (type === 'haunted_lada') {
+            switch (nextLevel) {
+                case 1: return "Ghost car phases through enemies."
+                case 2: return "Cold aura (+30% damage)."
+                case 3: return "Faster drift (+20% speed)."
+                case 4: return "Freezing touch (+50% damage)."
+                case 5: return "Phantom overdrive (+30% speed, phases walls)."
+                default: return ""
+            }
+        }
+        if (type === 'big_biz_lada') {
+            switch (nextLevel) {
+                case 1: return "Gold tank generates coins while ramming."
+                case 2: return "Reinforced bumper (+30% damage)."
+                case 3: return "Gold plating (+20% coin gen)."
+                case 4: return "Tank treads (+50% damage)."
+                case 5: return "Oligarch mode (+50% coins, +30% damage)."
+                default: return ""
+            }
+        }
+        if (type === 'dadushka_chair') {
+            switch (nextLevel) {
+                case 1: return "Armored wheelchair with high defense."
+                case 2: return "Steel frame (+30% damage)."
+                case 3: return "Rubber wheels (+20% speed)."
+                case 4: return "Spikes (+50% damage)."
+                case 5: return "Tank mode (+30% armor, +25% damage)."
+                default: return ""
+            }
+        }
+        if (type === 'gopnik_gondola') {
+            switch (nextLevel) {
+                case 1: return "Floating vehicle ignores terrain."
+                case 2: return "Sharper hull (+30% damage)."
+                case 3: return "Jet propulsion (+20% speed)."
+                case 4: return "Ramming prow (+50% damage)."
+                case 5: return "Flying fortress (+30% speed, +25% damage)."
+                default: return ""
+            }
+        }
+        if (type === 'tank_stroller') {
+            switch (nextLevel) {
+                case 1: return "Armored stroller crushes enemies."
+                case 2: return "Heavy treads (+30% damage)."
+                case 3: return "Motor upgrade (+20% speed)."
+                case 4: return "Battering ram (+50% damage)."
+                case 5: return "War machine (+30% area, +25% damage)."
+                default: return ""
+            }
+        }
 
         // ============================================
         // EVOLUTIONS
@@ -652,7 +781,7 @@ export class AbilitySystem {
         if (type === 'nuclear_spray') return "Multi-projectile radioactive barrage."
 
         // ============================================
-        // PASSIVES - descriptions without "Level X:" prefix (added by UI)
+        // PASSIVES - Stack per level
         // ============================================
         if (type === 'beer_coin') return nextLevel === 1 ? "+0.3 Speed, +1 Armor." : `+0.3 speed, +1 armor.`
         if (type === 'boss_shoe') return nextLevel === 1 ? "+0.5 Movement Speed." : `+0.5 speed.`
@@ -702,6 +831,24 @@ export class AbilitySystem {
 
     getPassiveLevel(type: PassiveType): number {
         return this.passives.get(type) || 0
+    }
+
+    getMinActiveLevel(): number {
+        if (this.abilities.size === 0) return 0
+        let min = this.MAX_LEVEL
+        for (const ability of this.abilities.values()) {
+            if (ability.level < min) min = ability.level
+        }
+        return min
+    }
+
+    getMinPassiveLevel(): number {
+        if (this.passives.size === 0) return 0
+        let min = this.MAX_LEVEL
+        for (const level of this.passives.values()) {
+            if (level < min) min = level
+        }
+        return min
     }
 
     update(deltaTime: number) {

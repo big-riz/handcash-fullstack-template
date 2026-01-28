@@ -57,9 +57,8 @@ export function SlavicSurvivors() {
     const [damageDealt, setDamageDealt] = useState<number>(0)
     const [damageTaken, setDamageTaken] = useState<number>(0)
     const [difficultyMultiplier, setDifficultyMultiplier] = useState<number>(1.0)
-    const [showScoreInput, setShowScoreInput] = useState(false)
+    const [isNewHighScore, setIsNewHighScore] = useState(false)
     const [showStats, setShowStats] = useState(false)
-    const [playerName, setPlayerName] = useState("")
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
     const [isCheckingAuth, setIsCheckingAuth] = useState(false)
     const [hasCompletedAuthCheck, setHasCompletedAuthCheck] = useState(false)
@@ -351,21 +350,25 @@ export function SlavicSurvivors() {
         } catch (err) { console.error("Failed to post comment:", err) } finally { setIsPostingComment(false) }
     }
 
-    const submitReplayToDB = (overrideName?: string) => {
-        if (!replayRef.current) return
-        // Only submit if user is authenticated
+    const submitReplayToDB = () => {
+        console.log("[Replay] submitReplayToDB called", { hasReplayRef: !!replayRef.current, hasUser: !!user })
+        if (!replayRef.current) {
+            console.log("[Replay] Skipping - no replay recorder")
+            return
+        }
         if (!user) {
-            console.log("Skipping score submission - user not authenticated")
+            console.log("[Replay] Skipping score submission - user not authenticated")
             return
         }
         const replayData = replayRef.current.getReplayData()
+        console.log("[Replay] Submitting replay:", { level: replayData.finalLevel, time: replayData.finalTime, worldId: replayData.worldId })
         fetch('/api/replays', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                playerName: overrideName || user.publicProfile.handle,
-                handle: user?.publicProfile.handle || null,
-                avatarUrl: user?.publicProfile.avatarUrl || null,
+                playerName: user.publicProfile.handle,
+                handle: user.publicProfile.handle,
+                avatarUrl: user.publicProfile.avatarUrl || null,
                 seed: replayData.seed,
                 events: replayData.events,
                 finalLevel: replayData.finalLevel,
@@ -373,29 +376,21 @@ export function SlavicSurvivors() {
                 gameVersion: replayData.gameVersion,
                 characterId: replayData.characterId || selectedCharacterId,
                 worldId: replayData.worldId || selectedWorldId,
-                userId: user?.publicProfile?.id || null
+                userId: user.publicProfile.id || null
             })
         })
         .then(res => res.json())
         .then(data => {
-            console.log("Score submission result:", data)
-            // Refresh both user history and global scores
+            console.log("[Replay] Score submission result:", data)
+            // Check if this was a new high score (new entry or updated existing)
+            if (data.success && (data.updated === true || !data.updated)) {
+                // updated === true means beat previous score, no updated field means new entry
+                setIsNewHighScore(data.updated !== false)
+            }
             fetchUserHistory()
             fetchGlobalScores()
         })
-        .catch(err => console.error("Failed to save replay to DB:", err))
-    }
-
-    const saveScore = () => {
-        if (!user) return // Must be authenticated
-        const replayData = replayRef.current?.getReplayData()
-        const worldId = replayData?.worldId || selectedWorldId
-
-        // Submit to server - server handles one-entry-per-world logic
-        setShowScoreInput(false)
-        setPlayerName("")
-        setLeaderboardWorldId(worldId)
-        submitReplayToDB(user.publicProfile.handle)
+        .catch(err => console.error("[Replay] Failed to save replay to DB:", err))
     }
 
     const {
@@ -426,12 +421,7 @@ export function SlavicSurvivors() {
         setActiveSynergies,
         setDifficultyMultiplier,
         setTotalRuns,
-        scores,
-        setScores,
         user,
-        playerName,
-        setPlayerName,
-        setShowScoreInput,
         setSelectedCharacterId,
         setSelectedWorldId,
         setWorldStars,
@@ -439,7 +429,6 @@ export function SlavicSurvivors() {
         setNewHeroUnlocked,
         itemTemplates,
         submitReplayToDB,
-        saveScore,
         banishedItems,
         setBanishedItems,
         replayPaused,
@@ -838,12 +827,9 @@ export function SlavicSurvivors() {
                         isMobile={isMobile}
                         playerLevel={playerLevel}
                         gameTime={gameTime}
-                        showScoreInput={showScoreInput}
-                        playerName={playerName}
-                        setPlayerName={setPlayerName}
-                        onSaveScore={saveScore}
-                        onRestart={() => { setTotalRuns(r => r + 1); resetGame(false); setGameState("playing"); }}
-                        onMainMenu={() => { setTotalRuns(r => r + 1); resetGame(false); setGameState("menu"); }}
+                        isNewHighScore={isNewHighScore}
+                        onRestart={() => { setTotalRuns(r => r + 1); setIsNewHighScore(false); resetGame(false); setGameState("playing"); }}
+                        onMainMenu={() => { setTotalRuns(r => r + 1); setIsNewHighScore(false); resetGame(false); setGameState("menu"); }}
                         kills={kills}
                         damageDealt={damageDealt}
                         damageTaken={damageTaken}

@@ -11,6 +11,7 @@ export interface LevelUpChoice {
     imageUrl?: string
     rarity: string
     type: 'active' | 'passive' | 'evolution'
+    level: number
 }
 
 export class LevelUpSystem {
@@ -72,89 +73,53 @@ export class LevelUpSystem {
         })
 
         // Check Capacity & Levels
-                const validActives = actives.filter(a => {
-                    const level = abilitySystem.getAbilityLevel(a.id as AbilityType)
-                    const passesLevelCheck = level < 5
-                    const passesAddCheck = level === 0 ? abilitySystem.canAddActive() : true // Can always upgrade if owned
-                    const passesGatingCheck = level === 0 ? (gatingLevel >= (a.minLevel ?? 0)) : true // Gating only for new items
-        
-                    return passesLevelCheck && passesAddCheck && passesGatingCheck
-                })
-        
-                const validPassives = passives.filter(p => {
-                    const level = abilitySystem.getPassiveLevel(p.id as PassiveType)
+        const minActiveLevel = abilitySystem.getMinActiveLevel()
+        const minPassiveLevel = abilitySystem.getMinPassiveLevel()
+
+        const validActives = actives.filter(a => {
+            const level = abilitySystem.getAbilityLevel(a.id as AbilityType)
+            const passesLevelCheck = level < 5
+            const passesAddCheck = level === 0 ? abilitySystem.canAddActive() : true
+            const passesGatingCheck = level === 0 ? (gatingLevel >= (a.minLevel ?? 0)) : true
+            // Can only upgrade if all owned weapons are at this level or higher
+            const passesBalanceCheck = level === 0 || level <= minActiveLevel
+
+            return passesLevelCheck && passesAddCheck && passesGatingCheck && passesBalanceCheck
+        })
+
+        const validPassives = passives.filter(p => {
+            const level = abilitySystem.getPassiveLevel(p.id as PassiveType)
             if (level === 0) {
                 if (gatingLevel < (p.minLevel ?? 0)) return false
                 return abilitySystem.canAddPassive()
             }
-            return level < 5
+            // Can only upgrade if all owned passives are at this level or higher
+            const passesBalanceCheck = level <= minPassiveLevel
+            return level < 5 && passesBalanceCheck
         })
 
-        const rarities: Record<string, number> = {
-            'Common': 100,
-            'Uncommon': 60,
-            'Rare': 30,
-            'Epic': 15,
-            'Legendary': 5,
-            'Evolution': 2
-        }
-
-        const luck = player.stats.luck || 1.0
-        
-        // Build weighted pool
-        const poolWithWeights = [
-            ...validActives.map(item => ({
-                item,
-                weight: (rarities[item.rarity] || 100) * (item.rarity === 'Common' ? 1 : luck)
-            })),
-            ...validPassives.map(item => ({
-                item,
-                weight: (rarities[item.rarity] || 100) * (item.rarity === 'Common' ? 1 : luck)
-            })),
-            ...evos.map(item => ({
-                item,
-                weight: (rarities['Evolution'] || 2) * luck
-            }))
-        ]
-
+        // Build result with all valid choices
         const result: LevelUpChoice[] = []
 
-        // Select up to 4 unique items
-        // We clone the pool so we can remove selected items
-        const currentPool = [...poolWithWeights]
+        // Add all valid actives with dynamic descriptions
+        for (const item of validActives) {
+            const level = abilitySystem.getAbilityLevel(item.id as AbilityType)
+            const nextDesc = abilitySystem.getUpgradeDescription(item.id, level + 1)
+            const desc = level > 0 ? `Lv${level + 1}: ${nextDesc}` : nextDesc
+            result.push({ ...item, desc, level })
+        }
 
-        while (result.length < 4 && currentPool.length > 0) {
-            const totalWeight = currentPool.reduce((sum, entry) => sum + entry.weight, 0)
-            let random = rng.next() * totalWeight
-            
-            let foundIndex = -1
-            for (let i = 0; i < currentPool.length; i++) {
-                random -= currentPool[i].weight
-                if (random <= 0) {
-                    foundIndex = i
-                    break
-                }
-            }
+        // Add all valid passives with dynamic descriptions
+        for (const item of validPassives) {
+            const level = abilitySystem.getPassiveLevel(item.id as PassiveType)
+            const nextDesc = abilitySystem.getUpgradeDescription(item.id, level + 1)
+            const desc = level > 0 ? `Lv${level + 1}: ${nextDesc}` : nextDesc
+            result.push({ ...item, desc, level })
+        }
 
-            if (foundIndex !== -1) {
-                const selectedEntry = currentPool.splice(foundIndex, 1)[0]
-                const selected = selectedEntry.item
-                
-                // Generate dynamic description
-                let desc = selected.desc
-                if (selected.type !== 'evolution') {
-                    const level = selected.type === 'active' 
-                        ? abilitySystem.getAbilityLevel(selected.id as AbilityType)
-                        : abilitySystem.getPassiveLevel(selected.id as PassiveType)
-                    
-                    const nextDesc = abilitySystem.getUpgradeDescription(selected.id, level + 1)
-                    desc = level > 0 ? `Level ${level + 1}: ${nextDesc}` : `New: ${nextDesc}`
-                }
-
-                result.push({ ...selected, desc })
-            } else {
-                break
-            }
+        // Add all evolutions
+        for (const item of evos) {
+            result.push({ ...item, level: 0 })
         }
 
         return result

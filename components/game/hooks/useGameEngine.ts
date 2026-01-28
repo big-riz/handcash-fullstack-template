@@ -93,20 +93,14 @@ interface UseGameEngineProps {
     setActiveSynergies: (synergies: {name: string, description: string}[]) => void
     setDifficultyMultiplier: (multiplier: number) => void
     setTotalRuns: (updater: (prev: number) => number) => void
-    scores: any[]
-    setScores: (scores: any[]) => void
     user: any
-    playerName: string
-    setPlayerName: (name: string) => void
-    setShowScoreInput: (show: boolean) => void
     setSelectedCharacterId: (id: string) => void
     setSelectedWorldId: (id: string) => void
     setWorldStars: (updater: (prev: Record<string, number>) => Record<string, number>) => void
     setUnlockedCharacters: (updater: (prev: Set<string>) => Set<string>) => void
     setNewHeroUnlocked: (hero: string | null) => void
     itemTemplates: ItemTemplate[]
-    submitReplayToDB: (overrideName?: string) => void
-    saveScore: () => void
+    submitReplayToDB: () => void
     banishedItems: Set<string>
     setBanishedItems: (set: Set<string>) => void
     replayPaused: boolean
@@ -144,12 +138,7 @@ export function useGameEngine({
     setActiveSynergies,
     setDifficultyMultiplier,
     setTotalRuns,
-    scores,
-    setScores,
     user,
-    playerName,
-    setPlayerName,
-    setShowScoreInput,
     setSelectedCharacterId,
     setSelectedWorldId,
     setWorldStars,
@@ -157,7 +146,6 @@ export function useGameEngine({
     setNewHeroUnlocked,
     itemTemplates,
     submitReplayToDB,
-    saveScore,
     banishedItems,
     setBanishedItems,
     replayPaused,
@@ -312,73 +300,106 @@ export function useGameEngine({
             }
         })
 
-        const validActives = actives.filter(a => {
-            const level = as.getAbilityLevel(a.id as any)
-            if (level === 0) {
-                if (gatingLevel < (a.minLevel ?? 0)) return false
-                return as.canAddActive()
-            }
-            return level < 5
-        })
+        // Get min levels for balance check - can only upgrade if all owned are at same level
+        const minActiveLevel = as.getMinActiveLevel()
+        const minPassiveLevel = as.getMinPassiveLevel()
 
-        const validPassives = passives.filter(p => {
-            const level = as.getPassiveLevel(p.id as any)
-            if (level === 0) {
-                if (gatingLevel < (p.minLevel ?? 0)) return false
-                return as.canAddPassive()
-            }
-            return level < 5
-        })
-
-        const rarities: Record<string, number> = { 'Common': 100, 'Uncommon': 60, 'Rare': 30, 'Epic': 15, 'Legendary': 5, 'Evolution': 2 }
-        const luck = p.stats.luck || 1.0
-        const poolWithWeights = [
-            ...validActives.map(item => ({ item, weight: (rarities[item.rarity] || 100) * (item.rarity === 'Common' ? 1 : luck) })),
-            ...validPassives.map(item => ({ item, weight: (rarities[item.rarity] || 100) * (item.rarity === 'Common' ? 1 : luck) })),
-            ...evos.map(item => ({ item, weight: (rarities['Evolution'] || 2) * luck }))
-        ]
-
-        const rng = rngRef.current || { next: () => Math.random() }
+        // Return ALL choices, marking locked ones
         const result: any[] = []
 
-        while (result.length < 4 && poolWithWeights.length > 0) {
-            const totalWeight = poolWithWeights.reduce((sum, entry) => sum + entry.weight, 0)
-            let random = rng.next() * totalWeight
-            let foundIndex = -1
-            for (let i = 0; i < poolWithWeights.length; i++) {
-                random -= poolWithWeights[i].weight
-                if (random <= 0) {
-                    foundIndex = i
-                    break
+        // Add all actives (owned ones that can upgrade, and new ones that meet requirements)
+        for (const item of actives) {
+            const level = as.getAbilityLevel(item.id as any)
+            const nextLevelDescription = as.getUpgradeDescription(item.id, level + 1)
+            const desc = level > 0 ? `Lv${level + 1}: ${nextLevelDescription}` : nextLevelDescription
+
+            // Determine if locked and why
+            let locked = false
+            let lockReason = ''
+
+            if (level >= 5) {
+                locked = true
+                lockReason = 'Max level'
+            } else if (level === 0) {
+                if (gatingLevel < (item.minLevel ?? 0)) {
+                    locked = true
+                    lockReason = `Requires Lv${item.minLevel}`
+                } else if (!as.canAddActive()) {
+                    locked = true
+                    lockReason = 'Slots full'
                 }
-            }
-            if (foundIndex !== -1) {
-                const selectedEntry = poolWithWeights.splice(foundIndex, 1)[0]
-                const selected = selectedEntry.item
-                const isPassiveProp = passiveData.some(p => p.id === selected.id)
-                const isEvo = selected.id.startsWith('evolve_')
-                let desc = selected.desc
-                if (!isEvo) {
-                    const level = isPassiveProp ? as.getPassiveLevel(selected.id as any) : as.getAbilityLevel(selected.id as any)
-                    const nextLevelDescription = as.getUpgradeDescription(selected.id, level + 1)
-                    desc = level > 0 ? `Level ${level + 1}: ${nextLevelDescription}` : `New: ${nextLevelDescription}`
-                }
-                result.push({ ...selected, desc })
             } else {
-                break
+                // Owned item - check balance
+                if (level > minActiveLevel) {
+                    locked = true
+                    lockReason = 'Level up other weapons first'
+                }
             }
+
+            result.push({ ...item, desc, level, type: 'active', locked, lockReason })
         }
+
+        // Add all passives (owned ones that can upgrade, and new ones that meet requirements)
+        for (const item of passives) {
+            const level = as.getPassiveLevel(item.id as any)
+            const nextLevelDescription = as.getUpgradeDescription(item.id, level + 1)
+            const desc = level > 0 ? `Lv${level + 1}: ${nextLevelDescription}` : nextLevelDescription
+
+            // Determine if locked and why
+            let locked = false
+            let lockReason = ''
+
+            if (level >= 5) {
+                locked = true
+                lockReason = 'Max level'
+            } else if (level === 0) {
+                if (gatingLevel < (item.minLevel ?? 0)) {
+                    locked = true
+                    lockReason = `Requires Lv${item.minLevel}`
+                } else if (!as.canAddPassive()) {
+                    locked = true
+                    lockReason = 'Slots full'
+                }
+            } else {
+                // Owned item - check balance
+                if (level > minPassiveLevel) {
+                    locked = true
+                    lockReason = 'Level up other passives first'
+                }
+            }
+
+            result.push({ ...item, desc, level, type: 'passive', locked, lockReason })
+        }
+
+        // Add all evolutions
+        for (const item of evos) {
+            result.push({ ...item, level: 0, type: 'evolution', locked: false, lockReason: '' })
+        }
+
+        // Sort: evolutions first, then unlocked owned, then unlocked new, then locked
+        const rarityOrder: Record<string, number> = { 'Evolution': 0, 'Legendary': 1, 'Epic': 2, 'Rare': 3, 'Uncommon': 4, 'Common': 5 }
+        result.sort((a, b) => {
+            // Evolutions first
+            if (a.type === 'evolution' && b.type !== 'evolution') return -1
+            if (b.type === 'evolution' && a.type !== 'evolution') return 1
+            // Unlocked before locked
+            if (!a.locked && b.locked) return -1
+            if (a.locked && !b.locked) return 1
+            // Owned before new (among unlocked)
+            if (!a.locked && !b.locked) {
+                if (a.level > 0 && b.level === 0) return -1
+                if (a.level === 0 && b.level > 0) return 1
+            }
+            // By rarity
+            return (rarityOrder[a.rarity] ?? 5) - (rarityOrder[b.rarity] ?? 5)
+        })
+
         return result
     }
 
-    const checkHighScore = (level: number) => {
-        const scoresForThisMap = scores.filter(s => (s.worldId || 'dark_forest') === selectedWorldId)
-        const isHighScore = scoresForThisMap.length < 10 || level > (scoresForThisMap[scoresForThisMap.length - 1]?.level || 0)
-        if (isHighScore) {
-            saveScore()
-        } else {
-            submitReplayToDB()
-        }
+    const submitScore = (level: number) => {
+        console.log("[Replay] submitScore called", { level, worldId: selectedWorldId })
+        submitReplayToDB()
     }
 
     const handleUpgrade = (type: string, fromReplay = false) => {
@@ -1135,7 +1156,7 @@ export function useGameEngine({
 
                     setGameState("gameOver")
                     if (gameStateRef.current === "playing") {
-                        checkHighScore(p.stats.level)
+                        submitScore(p.stats.level)
                     }
                     break
                 }
@@ -1251,7 +1272,7 @@ export function useGameEngine({
                             replayRef.current.updateFinalStats(p.stats.level, Math.floor(gameTimeRef.current))
                         }
 
-                        checkHighScore(p.stats.level)
+                        submitScore(p.stats.level)
                         break
                     }
                 }

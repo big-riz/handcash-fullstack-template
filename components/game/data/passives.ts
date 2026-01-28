@@ -1,5 +1,5 @@
 const passives = [
-    // === COMMON PASSIVES (minLevel 1) ===
+    // === COMMON PASSIVES (minLevel 1-3) ===
     {
         "id": "beer_coin",
         "name": "Beer Coin",
@@ -24,14 +24,14 @@ const passives = [
         }
     },
 
-    // === UNCOMMON PASSIVES (minLevel 2-3) ===
+    // === UNCOMMON PASSIVES (minLevel 4-7) ===
     {
         "id": "dove_coin",
         "name": "Dove Coin",
         "description": "+20% Luck. Better drops and crits.",
         "category": "Passive",
         "rarity": "Uncommon",
-        "minLevel": 2,
+        "minLevel": 4,
         "statBonus": {
             "luck": 0.2
         }
@@ -42,33 +42,32 @@ const passives = [
         "description": "+15% Ability Area. Smells powerful.",
         "category": "Passive",
         "rarity": "Uncommon",
-        "minLevel": 2,
+        "minLevel": 4,
         "statBonus": {
             "areaMultiplier": 0.15
         }
     },
-
     {
         "id": "bone_charm",
         "name": "Bone Charm",
         "description": "+10% Damage, +10 Max HP. Ancient relic.",
         "category": "Passive",
         "rarity": "Uncommon",
-        "minLevel": 3,
+        "minLevel": 5,
         "statBonus": {
             "damageMultiplier": 0.10,
             "maxHp": 10
         }
     },
 
-    // === RARE PASSIVES (minLevel 2-5) ===
+    // === RARE PASSIVES (minLevel 8-13) ===
     {
         "id": "holy_bread",
         "name": "Holy Bread",
         "description": "+40 Max Health. Blessed sustenance.",
         "category": "Passive",
         "rarity": "Rare",
-        "minLevel": 2,
+        "minLevel": 8,
         "statBonus": {
             "maxHp": 40
         }
@@ -79,33 +78,32 @@ const passives = [
         "description": "+3 Armor. Warm and protective.",
         "category": "Passive",
         "rarity": "Rare",
-        "minLevel": 2,
+        "minLevel": 9,
         "statBonus": {
             "armor": 3.0
         }
     },
-
     {
         "id": "crypt_lantern",
         "name": "Crypt Lantern",
         "description": "+15% Ability Area, +0.5 HP/sec Regen. Guiding light.",
         "category": "Passive",
         "rarity": "Rare",
-        "minLevel": 4,
+        "minLevel": 10,
         "statBonus": {
             "areaMultiplier": 0.15,
             "regen": 0.5
         }
     },
 
-    // === EPIC PASSIVES (minLevel 6-8) ===
+    // === EPIC PASSIVES (minLevel 14-19) ===
     {
         "id": "holy_cheese",
         "name": "Holy Cheese",
         "description": "+2.0 HP/sec Regeneration. Blessed dairy.",
         "category": "Passive",
         "rarity": "Epic",
-        "minLevel": 5,
+        "minLevel": 14,
         "statBonus": {
             "regen": 2.0
         }
@@ -116,7 +114,7 @@ const passives = [
         "description": "+20% Critical Hit Chance. See everything.",
         "category": "Passive",
         "rarity": "Epic",
-        "minLevel": 6,
+        "minLevel": 15,
         "statBonus": {
             "crit": 0.2
         }
@@ -127,7 +125,7 @@ const passives = [
         "description": "+20% Experience Gain. Bottomless knowledge.",
         "category": "Passive",
         "rarity": "Epic",
-        "minLevel": 7,
+        "minLevel": 16,
         "statBonus": {
             "growth": 0.2
         }
@@ -138,21 +136,21 @@ const passives = [
         "description": "+2 Armor, +15% Damage. Royal headwear.",
         "category": "Passive",
         "rarity": "Epic",
-        "minLevel": 8,
+        "minLevel": 18,
         "statBonus": {
             "armor": 2.0,
             "damageMultiplier": 0.15
         }
     },
 
-    // === LEGENDARY PASSIVES (minLevel 9+) ===
+    // === LEGENDARY PASSIVES (minLevel 20+) ===
     {
         "id": "sunflower_pouch",
         "name": "Infinite Sunflower Pouch",
         "description": "+1 Projectile to all weapons. Seeds forever.",
         "category": "Passive",
         "rarity": "Legendary",
-        "minLevel": 9,
+        "minLevel": 20,
         "statBonus": {
             "amount": 1
         }
@@ -163,7 +161,7 @@ const passives = [
         "description": "-20% Cooldowns. Overclocked fermentation.",
         "category": "Passive",
         "rarity": "Legendary",
-        "minLevel": 10,
+        "minLevel": 22,
         "statBonus": {
             "cooldownMultiplier": -0.20
         }

@@ -17,7 +17,8 @@
       "Skill(ralph-loop:ralph-loop)",
       "Bash(npm run lint:*)",
       "Bash(tsx scripts/regenerate-timelines.ts:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(node -e \"require\\(''./components/game/screens/GameOver.tsx''\\)\")"
     ]
   }
 }

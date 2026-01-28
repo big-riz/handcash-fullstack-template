@@ -1,12 +1,12 @@
 const actives = [
-    // === STARTER WEAPONS (Common, minLevel 2) ===
+    // === COMMON WEAPONS (minLevel 1-3, ~30 DPS) ===
     {
         "id": "tt33",
         "name": "TT33 Pistol",
         "description": "Balanced shots at nearest enemy. Reliable.",
         "category": "ActiveWeapon",
         "rarity": "Common",
-        "minLevel": 2,
+        "minLevel": 1,
         "tags": ["projectile", "gun"]
     },
     {
@@ -15,7 +15,7 @@ const actives = [
         "description": "Very fast close-range stabs. High damage.",
         "category": "ActiveWeapon",
         "rarity": "Common",
-        "minLevel": 2,
+        "minLevel": 1,
         "tags": ["melee"]
     },
     {
@@ -24,7 +24,7 @@ const actives = [
         "description": "Slow but devastating punches. Massive hits.",
         "category": "ActiveWeapon",
         "rarity": "Common",
-        "minLevel": 2,
+        "minLevel": 1,
         "tags": ["melee"]
     },
     {
@@ -42,7 +42,7 @@ const actives = [
         "description": "Basic projectile weapon. Reliable damage.",
         "category": "ActiveWeapon",
         "rarity": "Common",
-        "minLevel": 2,
+        "minLevel": 1,
         "tags": ["projectile"]
     },
     {
@@ -69,7 +69,7 @@ const actives = [
         "description": "Creates protective barriers of salt.",
         "category": "ActiveWeapon",
         "rarity": "Common",
-        "minLevel": 2,
+        "minLevel": 3,
         "tags": ["area"]
     },
     {
@@ -81,24 +81,24 @@ const actives = [
         "minLevel": 2,
         "tags": ["projectile"]
     },
+
+    // === UNCOMMON WEAPONS (minLevel 4-7, ~35-40 DPS) ===
     {
         "id": "ak_radioactive",
         "name": "Radioactive AK",
         "description": "Toxic bullets that pierce enemies.",
         "category": "ActiveWeapon",
-        "rarity": "Common",
-        "minLevel": 2,
+        "rarity": "Uncommon",
+        "minLevel": 4,
         "tags": ["projectile", "gun"]
     },
-
-    // === UNCOMMON WEAPONS (minLevel 4-6) ===
     {
         "id": "peppermill",
         "name": "Peppermill Gun",
         "description": "Rapid spray of bullets. Quantity over quality.",
         "category": "ActiveWeapon",
         "rarity": "Uncommon",
-        "minLevel": 4,
+        "minLevel": 5,
         "tags": ["projectile", "gun"]
     },
     {
@@ -116,7 +116,7 @@ const actives = [
         "description": "Companion that scurries and bites enemies.",
         "category": "Companion",
         "rarity": "Uncommon",
-        "minLevel": 2,
+        "minLevel": 5,
         "tags": ["companion"]
     },
     {
@@ -125,11 +125,11 @@ const actives = [
         "description": "Companion that drops health pickups.",
         "category": "Companion",
         "rarity": "Uncommon",
-        "minLevel": 2,
+        "minLevel": 6,
         "tags": ["companion"]
     },
 
-    // === RARE WEAPONS (minLevel 8-12) ===
+    // === RARE WEAPONS (minLevel 8-13, ~45-55 DPS) ===
     {
         "id": "kabar",
         "name": "Kabar Knife",
@@ -145,7 +145,7 @@ const actives = [
         "description": "Holy aura that damages nearby enemies.",
         "category": "ActiveWeapon",
         "rarity": "Rare",
-        "minLevel": 8,
+        "minLevel": 9,
         "tags": ["area"]
     },
     {
@@ -154,7 +154,7 @@ const actives = [
         "description": "Deploy towers that damage and slow enemies.",
         "category": "Deployable",
         "rarity": "Rare",
-        "minLevel": 2,
+        "minLevel": 10,
         "tags": ["deployable"]
     },
     {
@@ -163,7 +163,7 @@ const actives = [
         "description": "Slow armored vehicle. High defense.",
         "category": "Vehicle",
         "rarity": "Rare",
-        "minLevel": 2,
+        "minLevel": 11,
         "tags": ["vehicle"]
     },
     {
@@ -172,11 +172,11 @@ const actives = [
         "description": "Armored transport. Crushes enemies.",
         "category": "Vehicle",
         "rarity": "Rare",
-        "minLevel": 2,
+        "minLevel": 12,
         "tags": ["vehicle"]
     },
 
-    // === EPIC WEAPONS (minLevel 14-20) ===
+    // === EPIC WEAPONS (minLevel 14-19, ~60-70 DPS) ===
     {
         "id": "gzhel_smg",
         "name": "Gzhel SMG",
@@ -192,7 +192,7 @@ const actives = [
         "description": "Deploy healing zones that boost speed.",
         "category": "Deployable",
         "rarity": "Epic",
-        "minLevel": 2,
+        "minLevel": 15,
         "tags": ["deployable"]
     },
     {
@@ -214,7 +214,7 @@ const actives = [
         "tags": ["vehicle"]
     },
 
-    // === LEGENDARY WEAPONS (minLevel 20+) ===
+    // === LEGENDARY WEAPONS (minLevel 20+, ~75-95 DPS) ===
     {
         "id": "visors",
         "name": "Orthodox Visors",
@@ -248,7 +248,7 @@ const actives = [
         "description": "Gold tank. Generates coins while ramming.",
         "category": "Vehicle",
         "rarity": "Legendary",
-        "minLevel": 2,
+        "minLevel": 26,
         "tags": ["vehicle"]
     }
 ];
