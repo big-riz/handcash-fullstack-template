@@ -16,7 +16,11 @@ const _quat = new THREE.Quaternion()
 export class InstancedRenderer {
     private scene: THREE.Scene
     private instancedMeshes: Map<string, THREE.InstancedMesh> = new Map()
+    private baseColors: Map<string, number> = new Map() // Store base colors per type
     private maxInstances: number
+    // Reusable map for grouping - avoid allocations in hot path
+    private groupsCache: Map<string, Array<{ x: number; z: number; radius: number; scale: number; hitFlash: number }>> = new Map()
+    private lastCounts: Map<string, number> = new Map()
 
     constructor(scene: THREE.Scene, maxInstances = 1500) {
         this.scene = scene
@@ -48,6 +52,7 @@ export class InstancedRenderer {
 
         this.scene.add(mesh)
         this.instancedMeshes.set(type, mesh)
+        this.baseColors.set(type, color)
     }
 
     /**
@@ -61,38 +66,70 @@ export class InstancedRenderer {
         radius: number
         scale: number
         isActive: boolean
+        hitFlash?: number
     }>) {
-        // Group by type
-        const groups = new Map<string, typeof enemies>()
-        for (const e of enemies) {
+        // Clear cached arrays (reuse allocations)
+        this.groupsCache.forEach(arr => {
+            arr.length = 0
+        })
+
+        // Group by type using cached arrays
+        for (let i = 0; i < enemies.length; i++) {
+            const e = enemies[i]
             if (!e.isActive) continue
-            let arr = groups.get(e.type)
+            let arr = this.groupsCache.get(e.type)
             if (!arr) {
                 arr = []
-                groups.set(e.type, arr)
+                this.groupsCache.set(e.type, arr)
             }
-            arr.push(e)
+            arr.push({ x: e.x, z: e.z, radius: e.radius, scale: e.scale, hitFlash: e.hitFlash || 0 })
         }
 
         // Update each InstancedMesh
         for (const [type, mesh] of this.instancedMeshes) {
-            const list = groups.get(type)
+            const list = this.groupsCache.get(type)
+            const lastCount = this.lastCounts.get(type) || 0
+            const baseColor = this.baseColors.get(type) || 0xff4444
+
             if (!list || list.length === 0) {
                 mesh.count = 0
+                if (lastCount > 0) {
+                    mesh.instanceMatrix.needsUpdate = true
+                    this.lastCounts.set(type, 0)
+                }
                 continue
             }
 
             const count = Math.min(list.length, this.maxInstances)
+            let hasFlash = false
+
             for (let i = 0; i < count; i++) {
                 const e = list[i]
                 _pos.set(e.x, e.radius * e.scale, e.z)
                 _scale.set(e.scale, e.scale, e.scale)
                 _matrix.compose(_pos, _quat, _scale)
                 mesh.setMatrixAt(i, _matrix)
+
+                // Set color - white flash or base color
+                if (e.hitFlash > 0) {
+                    _color.setHex(0xffffff)
+                    hasFlash = true
+                } else {
+                    _color.setHex(baseColor)
+                }
+                mesh.setColorAt(i, _color)
             }
 
             mesh.count = count
             mesh.instanceMatrix.needsUpdate = true
+            if (mesh.instanceColor) {
+                mesh.instanceColor.needsUpdate = true
+            } else if (hasFlash) {
+                // Force color attribute creation on first flash
+                mesh.setColorAt(0, _color)
+                if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+            }
+            this.lastCounts.set(type, count)
         }
     }
 

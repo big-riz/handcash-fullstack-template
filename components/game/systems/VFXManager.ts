@@ -1,50 +1,156 @@
 /**
  * VFXManager.ts
- * 
+ *
  * Handles ephemeral visual effects like damage numbers and hit flashes.
+ * Optimized with texture caching to avoid creating new canvases each frame.
  */
 
 import * as THREE from 'three'
 
-export class VFXManager {
-    private effects: {
-        sprite: THREE.Sprite;
-        velocity: THREE.Vector3;
-        life: number;
-        maxLife: number;
-        rotation: number;
-        baseScale: THREE.Vector3;
-        fadeType: 'scale' | 'opacity';
-    }[] = []
+// Cached textures for damage numbers - initialized lazily to avoid SSR issues
+const colorTextureCache: Map<string, THREE.Texture> = new Map()
+let textureInitialized = false
 
-    private particlePool: THREE.Sprite[] = []
+function initializeTextureCacheIfNeeded(): void {
+    if (textureInitialized || typeof document === 'undefined') return
+    textureInitialized = true
+}
+
+interface VFXEffect {
+    sprite: THREE.Sprite
+    velocity: THREE.Vector3
+    life: number
+    maxLife: number
+    rotation: number
+    baseScale: THREE.Vector3
+    fadeType: 'scale' | 'opacity'
+}
+
+export class VFXManager {
+    private effects: VFXEffect[] = []
+    private effectCount = 0 // Track active effects without array mutation
+    private maxEffects = 60 // Hard cap on effects
+
+    private spritePool: THREE.Sprite[] = []
+    private materialPool: THREE.SpriteMaterial[] = []
     private screenShakeIntensity: number = 0
     private screenShakeDecay: number = 0
 
-    constructor(private scene: THREE.Scene) { }
+    // Damage number throttling - less aggressive
+    private damageNumberBuckets: Map<string, number> = new Map()
+    private damageNumberThrottleMs = 50 // Allow more damage numbers
+    private lastCleanup = 0
 
-    // Pool management for better performance
-    private getPooledSprite(texture: THREE.Texture): THREE.Sprite {
-        if (this.particlePool.length > 0) {
-            const sprite = this.particlePool.pop()!
-            sprite.material.map = texture
-            return sprite
+    // Reusable vectors to avoid allocations
+    private static _tempVec = new THREE.Vector3()
+    private static _tempScale = new THREE.Vector3()
+
+    constructor(private scene: THREE.Scene) {
+        // Pre-allocate effect slots
+        for (let i = 0; i < this.maxEffects; i++) {
+            this.effects.push({
+                sprite: null!,
+                velocity: new THREE.Vector3(),
+                life: 0,
+                maxLife: 0,
+                rotation: 0,
+                baseScale: new THREE.Vector3(),
+                fadeType: 'opacity'
+            })
         }
-        const material = new THREE.SpriteMaterial({ map: texture, transparent: true })
-        return new THREE.Sprite(material)
+    }
+
+    private getPooledSprite(texture: THREE.Texture): THREE.Sprite | null {
+        if (this.effectCount >= this.maxEffects) return null
+
+        let sprite: THREE.Sprite
+        let material: THREE.SpriteMaterial
+
+        if (this.spritePool.length > 0) {
+            sprite = this.spritePool.pop()!
+            material = sprite.material as THREE.SpriteMaterial
+            material.map = texture
+            material.opacity = 1
+            material.visible = true
+        } else if (this.materialPool.length > 0) {
+            material = this.materialPool.pop()!
+            material.map = texture
+            material.opacity = 1
+            material.visible = true
+            sprite = new THREE.Sprite(material)
+        } else {
+            material = new THREE.SpriteMaterial({ map: texture, transparent: true })
+            sprite = new THREE.Sprite(material)
+        }
+
+        return sprite
     }
 
     private returnToPool(sprite: THREE.Sprite) {
         this.scene.remove(sprite)
-        if (this.particlePool.length < 100) {
-            this.particlePool.push(sprite)
+        sprite.visible = false
+        if (this.spritePool.length < 50) {
+            this.spritePool.push(sprite)
         } else {
-            sprite.material.dispose()
-            if (sprite.material.map) sprite.material.map.dispose()
+            // Don't dispose material - reuse it
+            const mat = sprite.material as THREE.SpriteMaterial
+            if (this.materialPool.length < 50) {
+                mat.map = null
+                this.materialPool.push(mat)
+            } else {
+                mat.dispose()
+            }
         }
     }
 
+    private addEffect(sprite: THREE.Sprite, vx: number, vy: number, vz: number, life: number, rotation: number, baseScale: THREE.Vector3, fadeType: 'scale' | 'opacity') {
+        // Find an inactive slot
+        for (let i = 0; i < this.maxEffects; i++) {
+            const effect = this.effects[i]
+            if (effect.life <= 0) {
+                effect.sprite = sprite
+                effect.velocity.set(vx, vy, vz)
+                effect.life = life
+                effect.maxLife = life
+                effect.rotation = rotation
+                effect.baseScale.copy(baseScale)
+                effect.fadeType = fadeType
+                this.effectCount++
+                this.scene.add(sprite)
+                return
+            }
+        }
+        // No slot available, return sprite to pool
+        this.returnToPool(sprite)
+    }
+
+    // Check if damage number should be throttled
+    private shouldThrottleDamage(x: number, z: number): boolean {
+        const now = performance.now()
+        // Cleanup old buckets every second
+        if (now - this.lastCleanup > 1000) {
+            this.lastCleanup = now
+            this.damageNumberBuckets.forEach((time, key) => {
+                if (now - time > 500) this.damageNumberBuckets.delete(key)
+            })
+        }
+
+        // Bucket by 2-unit grid cells
+        const bucketKey = `${Math.floor(x / 2)},${Math.floor(z / 2)}`
+        const lastTime = this.damageNumberBuckets.get(bucketKey)
+
+        if (lastTime && now - lastTime < this.damageNumberThrottleMs) {
+            return true
+        }
+
+        this.damageNumberBuckets.set(bucketKey, now)
+        return false
+    }
+
     createDamageNumber(x: number, z: number, amount: number, color: string = 'white', scale: number = 1.0, isCritical: boolean = false, isKill: boolean = false) {
+        // Throttle damage numbers to avoid spam
+        if (this.shouldThrottleDamage(x, z)) return
+
         let finalColor = color
         let finalScale = scale
 
@@ -60,7 +166,55 @@ export class VFXManager {
             finalScale *= 1.8
         }
 
-        this.createFloatingText(x, z, Math.round(amount).toString(), finalColor, finalScale)
+        this.createFloatingTextFast(x, z, Math.round(amount).toString(), finalColor, finalScale)
+    }
+
+    // Optimized floating text using cached textures
+    private createFloatingTextFast(x: number, z: number, text: string, color: string | number = 'white', scale: number = 1.0) {
+        if (typeof document === 'undefined') return
+
+        initializeTextureCacheIfNeeded()
+
+        // Use cached texture for this color+text combo
+        const cacheKey = `${text}_${color}`
+        let texture = colorTextureCache.get(cacheKey)
+
+        if (!texture) {
+            const canvas = document.createElement('canvas')
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
+
+            const font = 'Bold 40px Arial'
+            ctx.font = font
+            const textMetrics = ctx.measureText(text)
+            const padding = 10
+            canvas.width = Math.ceil(textMetrics.width) + padding * 2
+            canvas.height = 64
+
+            ctx.font = font
+            ctx.fillStyle = typeof color === 'number' ? '#' + color.toString(16).padStart(6, '0') : color
+            ctx.textAlign = 'center'
+            ctx.shadowColor = 'rgba(0,0,0,0.5)'
+            ctx.shadowBlur = 4
+            ctx.fillText(text, canvas.width / 2, 45)
+
+            texture = new THREE.CanvasTexture(canvas)
+            texture.colorSpace = THREE.SRGBColorSpace
+
+            if (colorTextureCache.size < 500) {
+                colorTextureCache.set(cacheKey, texture)
+            }
+        }
+
+        const sprite = this.getPooledSprite(texture)
+        if (!sprite) return
+
+        sprite.position.set(x, 2, z)
+        const aspectRatio = texture.image ? (texture.image as HTMLCanvasElement).width / (texture.image as HTMLCanvasElement).height : 2
+        VFXManager._tempScale.set(aspectRatio * scale, scale, 1)
+        sprite.scale.copy(VFXManager._tempScale)
+
+        this.addEffect(sprite, 0, 3.5, 0, 0.8, 0, VFXManager._tempScale, 'opacity')
     }
 
     createHealingNumber(x: number, z: number, amount: number) {
@@ -88,58 +242,64 @@ export class VFXManager {
         }
     }
 
-    // Particle burst effect (e.g., on enemy death, critical hit)
+    // Cached particle textures by color
+    private static particleTextureCache: Map<string, THREE.Texture> = new Map()
+
+    // Particle burst effect - heavily throttled
     createParticleBurst(x: number, z: number, count: number = 8, color: string | number = 0xFFFFFF, speed: number = 5) {
+        if (typeof document === 'undefined') return
+        if (this.effectCount >= this.maxEffects - 4) return // Reserve slots
+
         const colorStr = typeof color === 'number' ? '#' + color.toString(16).padStart(6, '0') : color
 
-        for (let i = 0; i < count; i++) {
+        let texture = VFXManager.particleTextureCache.get(colorStr)
+        if (!texture) {
             const canvas = document.createElement('canvas')
             canvas.width = 16
             canvas.height = 16
             const context = canvas.getContext('2d')
-            if (!context) continue
+            if (!context) return
 
-            // Draw a small circle
             context.fillStyle = colorStr
             context.beginPath()
             context.arc(8, 8, 4, 0, Math.PI * 2)
             context.fill()
 
-            const texture = new THREE.CanvasTexture(canvas)
-            const material = new THREE.SpriteMaterial({ map: texture, transparent: true })
-            const sprite = new THREE.Sprite(material)
+            texture = new THREE.CanvasTexture(canvas)
+            texture.colorSpace = THREE.SRGBColorSpace
+            VFXManager.particleTextureCache.set(colorStr, texture)
+        }
 
-            const angle = (Math.PI * 2 * i) / count
-            const velocityX = Math.cos(angle) * speed
-            const velocityZ = Math.sin(angle) * speed
+        // Only spawn 3 particles max
+        const actualCount = Math.min(count, 3)
+        VFXManager._tempScale.set(0.5, 0.5, 1)
 
+        for (let i = 0; i < actualCount; i++) {
+            const sprite = this.getPooledSprite(texture)
+            if (!sprite) return
+
+            const angle = (Math.PI * 2 * i) / actualCount
             sprite.position.set(x, 0.5, z)
-            const baseScale = new THREE.Vector3(0.5, 0.5, 1)
-            sprite.scale.copy(baseScale)
+            sprite.scale.copy(VFXManager._tempScale)
 
-            this.scene.add(sprite)
-
-            this.effects.push({
-                sprite,
-                velocity: new THREE.Vector3(velocityX, speed * 0.5, velocityZ),
-                life: 0.5,
-                maxLife: 0.5,
-                rotation: Math.random() * 10 - 5,
-                baseScale,
-                fadeType: 'opacity'
-            })
+            this.addEffect(sprite, Math.cos(angle) * speed, speed * 0.5, Math.sin(angle) * speed, 0.4, 0, VFXManager._tempScale, 'opacity')
         }
     }
 
-    // Level up burst effect
+    // Cached level up texture
+    private static levelUpTexture: THREE.Texture | null = null
+
+    // Level up burst effect - minimal particles
     createLevelUpBurst(x: number, z: number) {
-        // Golden ring expanding outward
-        for (let i = 0; i < 16; i++) {
+        if (typeof document === 'undefined') return
+        if (this.effectCount >= this.maxEffects - 4) return
+
+        if (!VFXManager.levelUpTexture) {
             const canvas = document.createElement('canvas')
             canvas.width = 32
             canvas.height = 32
             const context = canvas.getContext('2d')
-            if (!context) continue
+            if (!context) return
 
             const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16)
             gradient.addColorStop(0, 'rgba(255, 215, 0, 1)')
@@ -147,118 +307,80 @@ export class VFXManager {
             context.fillStyle = gradient
             context.fillRect(0, 0, 32, 32)
 
-            const texture = new THREE.CanvasTexture(canvas)
-            const material = new THREE.SpriteMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending })
-            const sprite = new THREE.Sprite(material)
+            VFXManager.levelUpTexture = new THREE.CanvasTexture(canvas)
+            VFXManager.levelUpTexture.colorSpace = THREE.SRGBColorSpace
+        }
 
-            const angle = (Math.PI * 2 * i) / 16
-            const radius = 2
-            const velocityX = Math.cos(angle) * 8
-            const velocityZ = Math.sin(angle) * 8
+        VFXManager._tempScale.set(1.5, 1.5, 1)
 
-            sprite.position.set(x + Math.cos(angle) * radius, 1, z + Math.sin(angle) * radius)
-            const baseScale = new THREE.Vector3(1.5, 1.5, 1)
-            sprite.scale.copy(baseScale)
+        // Only 4 particles for level up
+        for (let i = 0; i < 4; i++) {
+            const sprite = this.getPooledSprite(VFXManager.levelUpTexture)
+            if (!sprite) return
 
-            this.scene.add(sprite)
+            const angle = (Math.PI * 2 * i) / 4
+            sprite.position.set(x + Math.cos(angle) * 2, 1, z + Math.sin(angle) * 2)
+            sprite.scale.copy(VFXManager._tempScale)
+            ;(sprite.material as THREE.SpriteMaterial).blending = THREE.AdditiveBlending
 
-            this.effects.push({
-                sprite,
-                velocity: new THREE.Vector3(velocityX, 2, velocityZ),
-                life: 1.0,
-                maxLife: 1.0,
-                rotation: 0,
-                baseScale,
-                fadeType: 'opacity'
-            })
+            this.addEffect(sprite, Math.cos(angle) * 8, 2, Math.sin(angle) * 8, 0.6, 0, VFXManager._tempScale, 'opacity')
         }
     }
 
     createFloatingText(x: number, z: number, text: string, color: string | number = 'white', scale: number = 1.0) {
-        const canvas = document.createElement('canvas')
-        const context = canvas.getContext('2d')
-        if (!context) return
-
-        const font = 'Bold 40px Arial'
-        context.font = font
-
-        // Measure text and set canvas size dynamically
-        const textMetrics = context.measureText(text)
-        const padding = 10
-        canvas.width = textMetrics.width + padding * 2
-        canvas.height = 64 // Height can remain fixed
-
-        // Redraw with new dimensions
-        context.font = font // Font is reset when canvas is resized
-        context.fillStyle = typeof color === 'number' ? '#' + color.toString(16).padStart(6, '0') : color
-        context.textAlign = 'center'
-        context.shadowColor = 'rgba(0,0,0,0.5)'
-        context.shadowBlur = 4
-        context.fillText(text, canvas.width / 2, 45) // Centered
-
-        const texture = new THREE.CanvasTexture(canvas)
-        const material = new THREE.SpriteMaterial({ map: texture, transparent: true })
-        const sprite = new THREE.Sprite(material)
-
-        sprite.position.set(x, 2, z)
-
-        // Adjust scale based on new canvas aspect ratio
-        const aspectRatio = canvas.width / canvas.height
-        const baseScale = new THREE.Vector3(aspectRatio * 1.0 * scale, 1.0 * scale, 1) // Keep height consistent, adjust width by aspect
-        sprite.scale.copy(baseScale)
-
-        this.scene.add(sprite)
-
-        this.effects.push({
-            sprite,
-            velocity: new THREE.Vector3(0, 3.5, 0),
-            life: 2.0,
-            maxLife: 2.0,
-            rotation: 0,
-            baseScale,
-            fadeType: 'opacity'
-        })
+        // Use the fast path
+        this.createFloatingTextFast(x, z, text, color, scale)
     }
 
+    // Cache for emoji textures
+    private static emojiTextureCache: Map<string, THREE.Texture> = new Map()
+    private lastEmojiTime = 0
+
     createEmoji(x: number, z: number, emoji: string, scale: number = 1.0) {
-        const canvas = document.createElement('canvas')
-        canvas.width = 64
-        canvas.height = 64
-        const context = canvas.getContext('2d')
-        if (!context) return
+        if (typeof document === 'undefined') return
 
-        context.font = '48px Arial'
-        context.textAlign = 'center'
-        context.textBaseline = 'middle'
-        context.fillText(emoji, 32, 32)
+        // Throttle emojis to max 5 per second
+        const now = performance.now()
+        if (now - this.lastEmojiTime < 200) return
+        this.lastEmojiTime = now
 
-        const texture = new THREE.CanvasTexture(canvas)
-        const material = new THREE.SpriteMaterial({ map: texture, transparent: true })
-        const sprite = new THREE.Sprite(material)
+        if (this.effectCount >= this.maxEffects) return
+
+        let texture = VFXManager.emojiTextureCache.get(emoji)
+        if (!texture) {
+            const canvas = document.createElement('canvas')
+            canvas.width = 64
+            canvas.height = 64
+            const context = canvas.getContext('2d')
+            if (!context) return
+
+            context.font = '48px Arial'
+            context.textAlign = 'center'
+            context.textBaseline = 'middle'
+            context.fillText(emoji, 32, 32)
+
+            texture = new THREE.CanvasTexture(canvas)
+            texture.colorSpace = THREE.SRGBColorSpace
+            VFXManager.emojiTextureCache.set(emoji, texture)
+        }
+
+        const sprite = this.getPooledSprite(texture)
+        if (!sprite) return
 
         sprite.position.set(x, 0.5, z)
-        const baseScale = new THREE.Vector3(1.2 * scale, 1.2 * scale, 1)
-        sprite.scale.copy(baseScale)
+        VFXManager._tempScale.set(1.2 * scale, 1.2 * scale, 1)
+        sprite.scale.copy(VFXManager._tempScale)
 
-        this.scene.add(sprite)
-
-        this.effects.push({
-            sprite,
-            velocity: new THREE.Vector3((Math.random() - 0.5) * 4, 3 + Math.random() * 5, (Math.random() - 0.5) * 4),
-            life: 0.8,
-            maxLife: 0.8,
-            rotation: (Math.random() - 0.5) * 10,
-            baseScale,
-            fadeType: 'scale'
-        })
+        this.addEffect(sprite, (Math.random() - 0.5) * 4, 3 + Math.random() * 5, (Math.random() - 0.5) * 4, 0.6, (Math.random() - 0.5) * 10, VFXManager._tempScale, 'scale')
     }
 
     update(deltaTime: number) {
-        // Update screen shake
         this.updateScreenShake(deltaTime)
 
-        for (let i = this.effects.length - 1; i >= 0; i--) {
+        for (let i = 0; i < this.maxEffects; i++) {
             const effect = this.effects[i]
+            if (effect.life <= 0) continue
+
             effect.life -= deltaTime
 
             // Move
@@ -267,49 +389,47 @@ export class VFXManager {
             effect.sprite.position.z += effect.velocity.z * deltaTime
 
             // Rotate
-            effect.sprite.material.rotation += effect.rotation * deltaTime
+            ;(effect.sprite.material as THREE.SpriteMaterial).rotation += effect.rotation * deltaTime
 
             // Gravity
             effect.velocity.y -= 12 * deltaTime
 
-            // Life ratio (1.0 at birth, 0.0 at death)
             const ratio = Math.max(0, effect.life / effect.maxLife)
 
             if (effect.fadeType === 'scale') {
-                // Scale-based fade (for emojis)
-                // Stay large for the first 50% of life, then shrink quickly
                 const scaleMod = ratio > 0.5 ? 1.0 : ratio * 2.0
                 effect.sprite.scale.copy(effect.baseScale).multiplyScalar(scaleMod)
-
-                if (effect.sprite.material instanceof THREE.SpriteMaterial) {
-                    effect.sprite.material.opacity = 1.0
-                }
             } else {
-                // Opacity-based fade (for text)
                 effect.sprite.scale.copy(effect.baseScale)
-                if (effect.sprite.material instanceof THREE.SpriteMaterial) {
-                    effect.sprite.material.opacity = ratio
-                }
+                ;(effect.sprite.material as THREE.SpriteMaterial).opacity = ratio
             }
 
             if (effect.life <= 0) {
                 this.returnToPool(effect.sprite)
-                this.effects.splice(i, 1)
+                this.effectCount--
             }
         }
     }
 
     cleanup() {
-        for (const effect of this.effects) {
-            this.returnToPool(effect.sprite)
+        for (let i = 0; i < this.maxEffects; i++) {
+            const effect = this.effects[i]
+            if (effect.life > 0 && effect.sprite) {
+                this.returnToPool(effect.sprite)
+                effect.life = 0
+            }
         }
-        this.effects = []
+        this.effectCount = 0
 
-        // Clean up particle pool
-        for (const sprite of this.particlePool) {
-            sprite.material.dispose()
-            if (sprite.material.map) sprite.material.map.dispose()
+        // Clean up pools
+        for (const sprite of this.spritePool) {
+            (sprite.material as THREE.SpriteMaterial).dispose()
         }
-        this.particlePool = []
+        this.spritePool = []
+
+        for (const mat of this.materialPool) {
+            mat.dispose()
+        }
+        this.materialPool = []
     }
 }

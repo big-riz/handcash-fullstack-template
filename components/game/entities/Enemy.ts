@@ -75,6 +75,7 @@ export class Enemy {
     private flickerTimer = 0
     private isInvulnerable = false
     public isElite = false
+    public hitFlashTimer = 0 // White flash when hit
     private healCooldown = 0
     private isEnraged = false
     public canPhaseThrough = false
@@ -289,11 +290,11 @@ export class Enemy {
             this.stats.xpValue *= 2.0
         }
 
-        // Super enemy: use combined HP and 5x XP
+        // Super enemy: use combined HP and 10x XP (10 enemies merged)
         if (isSuperEnemy && combinedHp > 0) {
             this.stats.maxHp = combinedHp
             this.stats.currentHp = combinedHp
-            this.stats.xpValue *= 5
+            this.stats.xpValue *= 10
             this.radius *= 2 // Double collision radius
         }
 
@@ -348,6 +349,11 @@ export class Enemy {
         rng?: { next: () => number }
     ) {
         if (!this.isActive) return
+
+        // Update hit flash timer
+        if (this.hitFlashTimer > 0) {
+            this.hitFlashTimer -= deltaTime
+        }
 
         // Ghost flicker
         if (this.type === 'zmora' || this.type === 'forest_wraith') {
@@ -563,9 +569,18 @@ export class Enemy {
         this.position.z += this.velocity.z * deltaTime
 
         // 3D model updates handled by EntityManager.update3DModels() for performance
-        // Update boss mesh position (bosses use individual meshes, not 3D models)
+        // Update boss mesh position and hit flash (bosses use individual meshes)
         if (this.mesh && this.isBoss) {
             this.mesh.position.set(this.position.x, this.radius, this.position.z)
+            // Apply hit flash effect
+            const mat = this.mesh.material as THREE.MeshStandardMaterial
+            if (this.hitFlashTimer > 0) {
+                mat.emissive.setHex(0xffffff)
+                mat.emissiveIntensity = 0.8
+            } else if (!this.isEnraged) {
+                mat.emissive.setHex(0x000000)
+                mat.emissiveIntensity = 0
+            }
         }
 
         // Update googly eyes
@@ -599,6 +614,7 @@ export class Enemy {
     takeDamage(amount: number, vfx?: VFXManager): boolean {
         if (this.isInvulnerable) return false
         this.stats.currentHp -= amount
+        this.hitFlashTimer = 0.1 // Flash white for 100ms
         if (vfx) {
             vfx.createDamageNumber(this.position.x, this.position.z, amount)
         }

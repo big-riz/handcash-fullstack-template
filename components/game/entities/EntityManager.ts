@@ -93,6 +93,10 @@ const BOSS_SCALES: Record<string, number> = {
     ice_golem: 2,
 }
 
+// Base model radius: the collision radius the 3D model represents at scale 1.0
+// This is used to scale instanced skinned mesh enemies to match their actual collision radius
+const BASE_MODEL_RADIUS = 0.3
+
 export class EntityManager {
     player: Player
     enemies: Enemy[] = []
@@ -121,15 +125,23 @@ export class EntityManager {
     private instancedSkinnedMesh: InstancedSkinnedMesh | null = null
     private useInstancedSkinning = false
 
-    // Optimized Object Pools
+    // Optimized Object Pools - use Sets for O(1) lookups
     private inactiveEnemies: Map<string, Enemy[]> = new Map()
-    private inactiveGems: XPGem[] = []
-    private inactiveProjectiles: Projectile[] = []
-    private inactiveMeleeSwings: MeleeSwing[] = []
-    private inactiveHazardZones: HazardZone[] = []
+    private inactiveGemSet: Set<XPGem> = new Set()
+    private inactiveProjectileSet: Set<Projectile> = new Set()
+    private inactiveMeleeSwingSet: Set<MeleeSwing> = new Set()
+    private inactiveHazardZoneSet: Set<HazardZone> = new Set()
 
     // Spatial Partitioning
     private enemyQuadtree: Quadtree;
+
+    // Pre-allocated arrays for batch updates (avoid per-frame allocations)
+    private healthDataCache: Array<{ x: number; z: number; radius: number; currentHp: number; maxHp: number; isActive: boolean }> = []
+    private gemDataCache: Array<{ x: number; y: number; z: number; isActive: boolean }> = []
+    private projDataCache: Array<{ x: number; z: number; vx: number; vz: number; isActive: boolean; isEnemy: boolean; appliesSlow: boolean; appliesCurse: boolean }> = []
+    private instanceDataCache: Array<{ type: string; x: number; z: number; radius: number; scale: number; isActive: boolean; isSuperEnemy?: boolean; hitFlash?: number }> = []
+    private shamansCache: Enemy[] = []
+    private separationCache: Enemy[] = []
 
     private gemColor = 0x00cccc
     private gemEmissive = 0x00ffff
@@ -187,7 +199,15 @@ export class EntityManager {
 
     spawnGem(x: number, z: number, value: number) {
         this.totalKills++
-        let gem = this.inactiveGems.pop()
+        let gem: XPGem | undefined
+
+        // Get from inactive set
+        for (const g of this.inactiveGemSet) {
+            gem = g
+            this.inactiveGemSet.delete(g)
+            break
+        }
+
         if (!gem) {
             gem = new XPGem()
             this.gems.push(gem)
@@ -196,7 +216,14 @@ export class EntityManager {
     }
 
     spawnProjectile(x: number, z: number, vx: number, vz: number, damage: number, isEnemyProjectile: boolean = false, appliesSlow: boolean = false, appliesCurse: boolean = false) {
-        let projectile = this.inactiveProjectiles.pop()
+        let projectile: Projectile | undefined
+
+        for (const p of this.inactiveProjectileSet) {
+            projectile = p
+            this.inactiveProjectileSet.delete(p)
+            break
+        }
+
         if (!projectile) {
             projectile = new Projectile()
             this.projectiles.push(projectile)
@@ -205,7 +232,14 @@ export class EntityManager {
     }
 
     spawnMeleeSwing(x: number, z: number, facingAngle: number, damage: number, radius: number = 3.0, swingDuration: number = 0.3, arcAngle: number = Math.PI * 0.6, color: number = 0xcccccc) {
-        let swing = this.inactiveMeleeSwings.pop()
+        let swing: MeleeSwing | undefined
+
+        for (const s of this.inactiveMeleeSwingSet) {
+            swing = s
+            this.inactiveMeleeSwingSet.delete(s)
+            break
+        }
+
         if (!swing) {
             swing = new MeleeSwing()
             swing.createMesh(this.scene, color)
@@ -215,7 +249,14 @@ export class EntityManager {
     }
 
     spawnHazardZone(x: number, z: number, type: HazardType, radius: number = 2.0, duration: number = 5.0, damage: number = 5) {
-        let hazard = this.inactiveHazardZones.pop()
+        let hazard: HazardZone | undefined
+
+        for (const h of this.inactiveHazardZoneSet) {
+            hazard = h
+            this.inactiveHazardZoneSet.delete(h)
+            break
+        }
+
         if (!hazard) {
             hazard = new HazardZone()
             hazard.createMesh(this.scene)
@@ -298,12 +339,14 @@ export class EntityManager {
 
         // Update instanced skin instance
         if (enemy.useInstancedSkinning && this.instancedSkinnedMesh && enemy.instancedSkinIndex >= 0) {
-            const scale = isSuperEnemy ? 2.0 : (isElite ? 1.5 : 1.0)
+            // Scale model to match collision radius, with multiplier for elite/super
+            const eliteMultiplier = isSuperEnemy ? 2.0 : (isElite ? 1.5 : 1.0)
+            const modelScale = (enemy.radius / BASE_MODEL_RADIUS) * eliteMultiplier
             this.instancedSkinnedMesh.setInstance(
                 enemy.instancedSkinIndex,
                 enemy.position,
                 0,
-                0.5 * scale, // Base scale
+                modelScale,
                 color
             )
         }
@@ -352,13 +395,15 @@ export class EntityManager {
             for (const enemy of this.enemies) {
                 if (enemy.isActive && enemy.useInstancedSkinning && enemy.instancedSkinIndex >= 0) {
                     const color = ENEMY_COLORS[enemy.type] || 0xff4444
-                    const scale = enemy.isSuperEnemy ? 1.0 : (enemy.isElite ? 0.75 : 0.5)
+                    // Scale model to match collision radius, with multiplier for elite/super
+                    const eliteMultiplier = enemy.isSuperEnemy ? 2.0 : (enemy.isElite ? 1.5 : 1.0)
+                    const modelScale = (enemy.radius / BASE_MODEL_RADIUS) * eliteMultiplier
                     const rotation = Math.atan2(enemy.velocity.x, enemy.velocity.z)
                     this.instancedSkinnedMesh.setInstance(
                         enemy.instancedSkinIndex,
                         enemy.position,
                         rotation,
-                        scale,
+                        modelScale,
                         color
                     )
                 }
@@ -395,10 +440,23 @@ export class EntityManager {
     update(deltaTime: number) {
         this.handlePlayerObstacleCollision()
 
-        // 1. Update enemies and build the quadtree for this frame
-        this.enemyQuadtree.clear();
-        for (const enemy of this.enemies) {
+        // OPTIMIZED: Single pass over enemies for update + quadtree + collision + instance data collection
+        this.enemyQuadtree.clear()
+
+        // Reuse cached arrays - just reset length
+        this.instanceDataCache.length = 0
+        this.shamansCache.length = 0
+        this.separationCache.length = 0
+
+        const playerX = this.player.position.x
+        const playerZ = this.player.position.z
+        const playerRadius = this.player.radius
+
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i]
+
             if (enemy.isActive) {
+                // Update enemy
                 enemy.update(
                     deltaTime,
                     this.player,
@@ -408,122 +466,141 @@ export class EntityManager {
                     (x, z, radius, duration) => this.spawnObstacle(x, z, radius, duration),
                     this.rng || undefined
                 )
-                this.enemyQuadtree.insert({ x: enemy.position.x, y: enemy.position.z, data: enemy });
 
-                const dist = enemy.position.distanceTo(this.player.position)
-                if (dist < (enemy.radius + this.player.radius)) {
+                // Insert into quadtree
+                this.enemyQuadtree.insert({ x: enemy.position.x, y: enemy.position.z, data: enemy })
+
+                // Player collision (inline distance check to avoid function call overhead)
+                const dx = enemy.position.x - playerX
+                const dz = enemy.position.z - playerZ
+                const combinedRadius = enemy.radius + playerRadius
+                if (dx * dx + dz * dz < combinedRadius * combinedRadius) {
                     this.handlePlayerEnemyCollision(enemy)
                 }
 
+                // Obstacle collision
                 if (!enemy.canPhaseThrough) {
-                    for (const obs of this.obstacles) {
-                        const dx = enemy.position.x - obs.x
-                        const dz = enemy.position.z - obs.z
-                        const distSq = dx * dx + dz * dz
+                    for (let j = 0; j < this.obstacles.length; j++) {
+                        const obs = this.obstacles[j]
+                        const odx = enemy.position.x - obs.x
+                        const odz = enemy.position.z - obs.z
+                        const distSq = odx * odx + odz * odz
                         const radii = enemy.radius + obs.radius
                         if (distSq < radii * radii) {
                             const d = Math.sqrt(distSq)
                             if (d > 0) {
                                 const overlap = radii - d
-                                enemy.position.x += (dx / d) * overlap
-                                enemy.position.z += (dz / d) * overlap
+                                enemy.position.x += (odx / d) * overlap
+                                enemy.position.z += (odz / d) * overlap
                             }
                         }
                     }
+                }
+
+                // Reset buff state and collect shamans
+                enemy.isBuffed = false
+                if (enemy.providesBuffAura) {
+                    this.shamansCache.push(enemy)
+                }
+
+                // Collect for separation (only moving enemies)
+                if (enemy.stats.moveSpeed > 0) {
+                    this.separationCache.push(enemy)
+                }
+
+                // Collect instance data for non-boss, non-model enemies
+                if (!enemy.isBoss && !enemy.use3DModel && !enemy.useInstancedSkinning) {
+                    this.instanceDataCache.push({
+                        type: enemy.type,
+                        x: enemy.position.x,
+                        z: enemy.position.z,
+                        radius: enemy.radius,
+                        scale: enemy.isSuperEnemy ? 2.0 : (enemy.isElite ? 1.5 : 1),
+                        isActive: true,
+                        isSuperEnemy: enemy.isSuperEnemy,
+                        hitFlash: enemy.hitFlashTimer,
+                    })
                 }
             } else {
                 // Hide instanced skin instance when enemy becomes inactive
                 if (enemy.useInstancedSkinning && this.instancedSkinnedMesh && enemy.instancedSkinIndex >= 0) {
                     this.instancedSkinnedMesh.setVisible(enemy.instancedSkinIndex, false)
                 }
-                const pool = this.inactiveEnemies.get(enemy.type) || []
-                if (!pool.includes(enemy)) pool.push(enemy)
-                this.inactiveEnemies.set(enemy.type, pool)
-            }
-        }
-
-        // Apply enemy separation
-        for (const enemy of this.enemies) {
-            if (enemy.isActive && enemy.stats.moveSpeed > 0) {
-                const separationRadius = enemy.radius * 3
-                const nearbyPoints = this.enemyQuadtree.query({
-                    x: enemy.position.x,
-                    y: enemy.position.z,
-                    width: separationRadius,
-                    height: separationRadius
-                })
-
-                let separationX = 0
-                let separationZ = 0
-                let neighborCount = 0
-
-                for (const point of nearbyPoints) {
-                    const other = point.data as Enemy
-                    if (other !== enemy && other.isActive) {
-                        const dx = enemy.position.x - other.position.x
-                        const dz = enemy.position.z - other.position.z
-                        const distSq = dx * dx + dz * dz
-                        const minDist = enemy.radius + other.radius
-
-                        if (distSq < minDist * minDist * 4) {
-                            const dist = Math.sqrt(distSq)
-                            if (dist > 0.01) {
-                                const force = (1 - dist / (minDist * 2))
-                                separationX += (dx / dist) * force
-                                separationZ += (dz / dist) * force
-                                neighborCount++
-                            }
-                        }
-                    }
+                let pool = this.inactiveEnemies.get(enemy.type)
+                if (!pool) {
+                    pool = []
+                    this.inactiveEnemies.set(enemy.type, pool)
                 }
-
-                if (neighborCount > 0) {
-                    const separationStrength = 2.0
-                    enemy.position.x += separationX * separationStrength * deltaTime
-                    enemy.position.z += separationZ * separationStrength * deltaTime
-                    // Sync boss mesh immediately after separation push
-                    if (enemy.mesh && enemy.isBoss) {
-                        enemy.mesh.position.set(enemy.position.x, enemy.radius, enemy.position.z)
-                    }
+                // Only add if not already in pool (check last item for quick check)
+                if (pool.length === 0 || pool[pool.length - 1] !== enemy) {
+                    pool.push(enemy)
                 }
             }
         }
 
-        // Buff auras
-        for (const enemy of this.enemies) {
-            if (enemy.isActive) enemy.isBuffed = false
-        }
-        for (const shaman of this.enemies) {
-            if (shaman.isActive && shaman.providesBuffAura) {
-                for (const enemy of this.enemies) {
-                    if (enemy.isActive && enemy !== shaman) {
-                        const dist = shaman.position.distanceTo(enemy.position)
-                        if (dist < shaman.buffAuraRadius) {
-                            enemy.isBuffed = true
+        // Apply enemy separation (now using pre-filtered list)
+        const separationStrength = 2.0
+        for (let i = 0; i < this.separationCache.length; i++) {
+            const enemy = this.separationCache[i]
+            const separationRadius = enemy.radius * 3
+            const nearbyPoints = this.enemyQuadtree.query({
+                x: enemy.position.x,
+                y: enemy.position.z,
+                width: separationRadius,
+                height: separationRadius
+            })
+
+            let separationX = 0
+            let separationZ = 0
+            let neighborCount = 0
+
+            for (let j = 0; j < nearbyPoints.length; j++) {
+                const other = nearbyPoints[j].data as Enemy
+                if (other !== enemy && other.isActive) {
+                    const dx = enemy.position.x - other.position.x
+                    const dz = enemy.position.z - other.position.z
+                    const distSq = dx * dx + dz * dz
+                    const minDist = enemy.radius + other.radius
+
+                    if (distSq < minDist * minDist * 4) {
+                        const dist = Math.sqrt(distSq)
+                        if (dist > 0.01) {
+                            const force = (1 - dist / (minDist * 2))
+                            separationX += (dx / dist) * force
+                            separationZ += (dz / dist) * force
+                            neighborCount++
                         }
                     }
                 }
             }
-        }
 
-        // --- Sync InstancedRenderer for non-boss enemies (skip those using 3D models or instanced skinning) ---
-        const instanceData: Array<{
-            type: string; x: number; z: number; radius: number; scale: number; isActive: boolean; isSuperEnemy?: boolean
-        }> = []
-        for (const enemy of this.enemies) {
-            if (!enemy.isBoss && enemy.isActive && !enemy.use3DModel && !enemy.useInstancedSkinning) {
-                instanceData.push({
-                    type: enemy.type,
-                    x: enemy.position.x,
-                    z: enemy.position.z,
-                    radius: enemy.radius,
-                    scale: enemy.isSuperEnemy ? 2.0 : (enemy.isElite ? 1.5 : 1),
-                    isActive: true,
-                    isSuperEnemy: enemy.isSuperEnemy,
-                })
+            if (neighborCount > 0) {
+                enemy.position.x += separationX * separationStrength * deltaTime
+                enemy.position.z += separationZ * separationStrength * deltaTime
+                if (enemy.mesh && enemy.isBoss) {
+                    enemy.mesh.position.set(enemy.position.x, enemy.radius, enemy.position.z)
+                }
             }
         }
-        this.instancedRenderer.updateInstances(instanceData)
+
+        // Apply buff auras (only iterate shamans, not all enemies twice)
+        for (let i = 0; i < this.shamansCache.length; i++) {
+            const shaman = this.shamansCache[i]
+            const auraRadiusSq = shaman.buffAuraRadius * shaman.buffAuraRadius
+            for (let j = 0; j < this.enemies.length; j++) {
+                const enemy = this.enemies[j]
+                if (enemy.isActive && enemy !== shaman) {
+                    const dx = shaman.position.x - enemy.position.x
+                    const dz = shaman.position.z - enemy.position.z
+                    if (dx * dx + dz * dz < auraRadiusSq) {
+                        enemy.isBuffed = true
+                    }
+                }
+            }
+        }
+
+        // Update instanced renderer
+        this.instancedRenderer.updateInstances(this.instanceDataCache)
 
         // 2. Update projectiles
         for (const projectile of this.projectiles) {
@@ -582,7 +659,7 @@ export class EntityManager {
                     }
                 }
             } else {
-                if (!this.inactiveProjectiles.includes(projectile)) this.inactiveProjectiles.push(projectile)
+                this.inactiveProjectileSet.add(projectile)
             }
         }
 
@@ -598,14 +675,13 @@ export class EntityManager {
                         if (enemy.isActive && swing.isEnemyInArc(enemy.position.x, enemy.position.z, enemy.radius, enemy.id)) {
                              enemy.takeDamage(swing.damage, this.vfx || undefined);
                              this.totalDamageDealt += swing.damage;
-                             this.player.onDealDamage(swing.damage); // Lifesteal
+                             this.player.onDealDamage(swing.damage);
                              this.audioManager?.playEnemyHurt();
-                             if (this.vfx) this.vfx.createEmoji(enemy.position.x, enemy.position.z, '💥', 0.8);
                         }
                     }
                 }
             } else {
-                if (!this.inactiveMeleeSwings.includes(swing)) this.inactiveMeleeSwings.push(swing)
+                this.inactiveMeleeSwingSet.add(swing)
             }
         }
 
@@ -615,10 +691,9 @@ export class EntityManager {
                 if (gem.update(deltaTime, this.player.position, this.player.stats.magnet)) {
                     this.player.addXp(gem.value)
                     this.audioManager?.playGemPickup();
-                    if (this.vfx) this.vfx.createEmoji(gem.position.x, gem.position.z, '✨', 0.8)
                 }
             } else {
-                 if (!this.inactiveGems.includes(gem)) this.inactiveGems.push(gem)
+                this.inactiveGemSet.add(gem)
             }
         }
 
@@ -630,14 +705,13 @@ export class EntityManager {
                     if (hazard.type === 'poison' && hazard.shouldApplyDamage()) {
                         this.player.takeDamage(hazard.damage)
                         this.totalDamageTaken += hazard.damage
-                        if (this.vfx) this.vfx.createEmoji(this.player.position.x, this.player.position.z, '☠️', 0.5)
                     } else if (hazard.type === 'slow') {
                         this.player.isSlowed = true
                         this.player.slowFactor = hazard.slowFactor
                     }
                 }
             } else {
-                if (!this.inactiveHazardZones.includes(hazard)) this.inactiveHazardZones.push(hazard)
+                this.inactiveHazardZoneSet.add(hazard)
             }
         }
 
@@ -671,17 +745,15 @@ export class EntityManager {
             }
         }
 
-        // --- Sync instanced batches ---
+        // --- Sync instanced batches (reuse cached arrays) ---
 
-        // Health bars (all enemies)
+        // Health bars
         if (Enemy.healthBarsEnabled) {
-            const healthData: Array<{
-                x: number; z: number; radius: number
-                currentHp: number; maxHp: number; isActive: boolean
-            }> = []
-            for (const enemy of this.enemies) {
+            this.healthDataCache.length = 0
+            for (let i = 0; i < this.enemies.length; i++) {
+                const enemy = this.enemies[i]
                 if (enemy.isActive) {
-                    healthData.push({
+                    this.healthDataCache.push({
                         x: enemy.position.x,
                         z: enemy.position.z,
                         radius: enemy.radius,
@@ -691,16 +763,17 @@ export class EntityManager {
                     })
                 }
             }
-            this.instancedHealthBars.updateBars(healthData)
+            this.instancedHealthBars.updateBars(this.healthDataCache)
         } else {
             this.instancedHealthBars.updateBars([])
         }
 
         // Gems
-        const gemData: Array<{ x: number; y: number; z: number; isActive: boolean }> = []
-        for (const gem of this.gems) {
+        this.gemDataCache.length = 0
+        for (let i = 0; i < this.gems.length; i++) {
+            const gem = this.gems[i]
             if (gem.isActive) {
-                gemData.push({
+                this.gemDataCache.push({
                     x: gem.position.x,
                     y: gem.position.y,
                     z: gem.position.z,
@@ -708,16 +781,14 @@ export class EntityManager {
                 })
             }
         }
-        this.instancedGems.updateGems(gemData)
+        this.instancedGems.updateGems(this.gemDataCache)
 
         // Projectiles
-        const projData: Array<{
-            x: number; z: number; vx: number; vz: number
-            isActive: boolean; isEnemy: boolean; appliesSlow: boolean; appliesCurse: boolean
-        }> = []
-        for (const projectile of this.projectiles) {
+        this.projDataCache.length = 0
+        for (let i = 0; i < this.projectiles.length; i++) {
+            const projectile = this.projectiles[i]
             if (projectile.isActive) {
-                projData.push({
+                this.projDataCache.push({
                     x: projectile.position.x,
                     z: projectile.position.z,
                     vx: projectile.velocity.x,
@@ -729,7 +800,7 @@ export class EntityManager {
                 })
             }
         }
-        this.instancedProjectiles.updateProjectiles(projData)
+        this.instancedProjectiles.updateProjectiles(this.projDataCache)
     }
 
 

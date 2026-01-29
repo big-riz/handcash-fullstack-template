@@ -2,7 +2,7 @@
  * EnemyCombinationSystem.ts
  *
  * Monitors enemy positions and merges 10 nearby same-type enemies
- * into a single "super enemy" with combined HP and 5x XP.
+ * into a single "super enemy" with combined HP and 10x XP.
  *
  * Uses centroid-based clustering:
  * 1. Group enemies by type

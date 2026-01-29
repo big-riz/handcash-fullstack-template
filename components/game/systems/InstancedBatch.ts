@@ -25,6 +25,7 @@ export class InstancedHealthBars {
     private bgMesh: THREE.InstancedMesh
     private fillMesh: THREE.InstancedMesh
     private maxInstances: number
+    private lastCount = 0
 
     constructor(scene: THREE.Scene, maxInstances = 1500) {
         this.maxInstances = maxInstances
@@ -102,11 +103,13 @@ export class InstancedHealthBars {
         this.bgMesh.count = count
         this.fillMesh.count = count
 
-        if (count > 0) {
+        // Only trigger GPU upload if count changed or we have visible bars
+        if (count > 0 || this.lastCount > 0) {
             this.bgMesh.instanceMatrix.needsUpdate = true
             this.fillMesh.instanceMatrix.needsUpdate = true
             if (this.fillMesh.instanceColor) this.fillMesh.instanceColor.needsUpdate = true
         }
+        this.lastCount = count
     }
 
     dispose() {
@@ -125,6 +128,7 @@ export class InstancedHealthBars {
 export class InstancedGems {
     private mesh: THREE.InstancedMesh
     private maxInstances: number
+    private lastCount = 0
 
     constructor(scene: THREE.Scene, color: number, emissive: number, maxInstances = 500) {
         this.maxInstances = maxInstances
@@ -157,9 +161,10 @@ export class InstancedGems {
         }
 
         this.mesh.count = count
-        if (count > 0) {
+        if (count > 0 || this.lastCount > 0) {
             this.mesh.instanceMatrix.needsUpdate = true
         }
+        this.lastCount = count
     }
 
     setColor(color: number, emissive: number) {
@@ -179,6 +184,7 @@ export class InstancedGems {
 export class InstancedProjectiles {
     private mesh: THREE.InstancedMesh
     private maxInstances: number
+    private lastCount = 0
 
     constructor(scene: THREE.Scene, maxInstances = 500) {
         this.maxInstances = maxInstances
@@ -232,10 +238,11 @@ export class InstancedProjectiles {
         }
 
         this.mesh.count = count
-        if (count > 0) {
+        if (count > 0 || this.lastCount > 0) {
             this.mesh.instanceMatrix.needsUpdate = true
             if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true
         }
+        this.lastCount = count
     }
 
     dispose() {

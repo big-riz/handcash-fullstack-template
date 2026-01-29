@@ -408,6 +408,7 @@ export function SlavicSurvivors() {
         handleUpgrade,
         getLevelUpChoices,
         getActiveAirdrops,
+        toggleUncapped,
         levelUpChoices,
         allowPostVictoryRef,
         pendingLevelUpAfterVictoryRef,
@@ -524,6 +525,13 @@ export function SlavicSurvivors() {
                 setProfilerVisible(v => !v)
             }
 
+            // Toggle uncapped FPS mode (F5)
+            if (e.key === 'F5') {
+                e.preventDefault()
+                const uncapped = toggleUncapped()
+                console.log(`[FPS] Uncapped mode: ${uncapped ? 'ON (max FPS)' : 'OFF (vsync)'}`)
+            }
+
             // Export profiler report (F4)
             if (e.key === 'F4') {
                 e.preventDefault()
@@ -589,7 +597,7 @@ export function SlavicSurvivors() {
 
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [profilerMetrics, profilerWarnings, fpsHistory])
+    }, [profilerMetrics, profilerWarnings, fpsHistory, toggleUncapped])
 
     // Access Check
     useEffect(() => {

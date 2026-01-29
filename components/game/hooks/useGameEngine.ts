@@ -202,6 +202,7 @@ export function useGameEngine({
     const gltfLoaderRef = useRef<GLTFLoader | null>(null)
     const loadedModelsRef = useRef<Map<string, { model: THREE.Group, collisionRadius: number }>>(new Map())
     const sceneGltfObjectsRef = useRef<THREE.Object3D[]>([])
+    const lastProfilerUpdateRef = useRef<number>(0) // Throttle profiler UI updates
 
     const gameStateRef = useRef(gameState)
     useEffect(() => { gameStateRef.current = gameState }, [gameState])
@@ -1484,12 +1485,16 @@ export function useGameEngine({
                     textures: renderer.info.memory.textures,
                 })
 
-                // Update profiler metrics for UI
-                const profiler = loop.getProfiler()
-                setProfilerMetrics(profiler.getMetrics())
-                setProfilerWarnings(profiler.getWarnings())
-                setFPSHistory(profiler.getFPSHistory())
-                setGameStatsHistory(profiler.getGameStatsHistory())
+                // Throttle profiler UI updates to every 100ms (avoid React re-renders every frame)
+                const now = performance.now()
+                if (now - lastProfilerUpdateRef.current > 100) {
+                    lastProfilerUpdateRef.current = now
+                    const profiler = loop.getProfiler()
+                    setProfilerMetrics(profiler.getMetrics())
+                    setProfilerWarnings(profiler.getWarnings())
+                    setFPSHistory(profiler.getFPSHistory())
+                    setGameStatsHistory(profiler.getGameStatsHistory())
+                }
             }
         }
 
@@ -1593,6 +1598,17 @@ benchmark.presets        - List available presets
         return airdropSystemRef.current?.getActiveAirdrops() || []
     }
 
+    // Toggle uncapped FPS mode (for benchmarking)
+    const toggleUncapped = (): boolean => {
+        const loop = gameLoopRef.current
+        if (loop) {
+            const newState = !loop.isUncapped()
+            loop.setUncapped(newState)
+            return newState
+        }
+        return false
+    }
+
     return {
         gameLoopRef,
         inputManagerRef,
@@ -1611,6 +1627,7 @@ benchmark.presets        - List available presets
         levelUpChoices,
         getLevelUpChoices,
         getActiveAirdrops,
+        toggleUncapped,
         resetGame,
         startReplay,
         handleUpgrade

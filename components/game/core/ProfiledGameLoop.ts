@@ -12,11 +12,15 @@ export class ProfiledGameLoop {
   private accumulator = 0;
   private readonly fixedDeltaTime = 1000 / 60; // 60 FPS in milliseconds
   private animationFrameId: number | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isRunning = false;
 
   // FPS tracking
   private fpsFrames: number[] = [];
   private currentFps = 0;
+
+  // Uncapped mode - runs as fast as possible (for benchmarking)
+  private uncappedMode = false;
 
   // Performance profiler
   private profiler: PerformanceProfiler;
@@ -33,6 +37,20 @@ export class ProfiledGameLoop {
     }
   }
 
+  /**
+   * Enable/disable uncapped frame rate mode.
+   * When enabled, runs as fast as CPU allows (no vsync).
+   * Useful for benchmarking but uses more CPU/power.
+   */
+  setUncapped(uncapped: boolean): void {
+    this.uncappedMode = uncapped;
+    console.log(`[ProfiledGameLoop] Uncapped mode: ${uncapped ? 'ON' : 'OFF'}`);
+  }
+
+  isUncapped(): boolean {
+    return this.uncappedMode;
+  }
+
   start() {
     if (this.isRunning) return;
     this.isRunning = true;
@@ -47,6 +65,10 @@ export class ProfiledGameLoop {
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
+    }
+    if (this.timeoutId !== null) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
     }
   }
 
@@ -109,7 +131,13 @@ export class ProfiledGameLoop {
     }
 
     // Schedule next frame
-    this.animationFrameId = requestAnimationFrame(this.loop);
+    if (this.uncappedMode) {
+      // Uncapped: use setTimeout(0) to run as fast as possible
+      this.timeoutId = setTimeout(() => this.loop(performance.now()), 0);
+    } else {
+      // Normal: use requestAnimationFrame (vsync, ~60Hz)
+      this.animationFrameId = requestAnimationFrame(this.loop);
+    }
   };
 
   private updateFps(frameTime: number) {

@@ -70,9 +70,10 @@ export class PerformanceProfiler {
   private enabled = true;
   private metrics: PerformanceMetrics;
 
-  // Frame timing
+  // Frame timing - track ACTUAL frame intervals, not just work time
   private frameTimes: number[] = [];
   private lastFrameTime = 0;
+  private lastFrameStartTime = 0; // When the previous frame started (for real FPS)
   private frameTimeWindow = 60; // Track last 60 frames
 
   // Timing markers
@@ -175,6 +176,19 @@ export class PerformanceProfiler {
   // Frame tracking
   beginFrame(): void {
     if (!this.enabled) return;
+
+    const now = performance.now();
+
+    // Calculate ACTUAL frame interval (time since last frame started)
+    if (this.lastFrameStartTime > 0) {
+      const actualFrameInterval = now - this.lastFrameStartTime;
+      this.frameTimes.push(actualFrameInterval);
+      if (this.frameTimes.length > this.frameTimeWindow) {
+        this.frameTimes.shift();
+      }
+    }
+    this.lastFrameStartTime = now;
+
     this.mark('frame');
     this.mark('update');
   }
@@ -200,28 +214,24 @@ export class PerformanceProfiler {
     if (!this.enabled) return;
 
     this.measureEnd('frame');
-    const frameTime = this.timingResults.get('frame') || 0;
+    const workTime = this.timingResults.get('frame') || 0; // Time spent doing work
 
-    // Update frame timing
-    this.frameTimes.push(frameTime);
-    if (this.frameTimes.length > this.frameTimeWindow) {
-      this.frameTimes.shift();
-    }
-
-    // Calculate FPS
-    const avgFrameTime = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
-    const fps = 1000 / avgFrameTime;
+    // Calculate FPS from ACTUAL frame intervals (not work time)
+    const avgFrameInterval = this.frameTimes.length > 0
+      ? this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length
+      : 16.67;
+    const fps = 1000 / avgFrameInterval;
 
     // Update metrics
-    this.metrics.frameTime = frameTime;
+    this.metrics.frameTime = avgFrameInterval; // Actual frame time for display
     this.metrics.fps = fps;
-    this.metrics.avgFrameTime = avgFrameTime;
-    this.metrics.minFrameTime = Math.min(this.metrics.minFrameTime, frameTime);
-    this.metrics.maxFrameTime = Math.max(this.metrics.maxFrameTime, frameTime);
+    this.metrics.avgFrameTime = avgFrameInterval;
+    this.metrics.minFrameTime = Math.min(this.metrics.minFrameTime, avgFrameInterval);
+    this.metrics.maxFrameTime = Math.max(this.metrics.maxFrameTime, avgFrameInterval);
 
     // Update history
     this.fpsHistory.push(fps);
-    this.frameTimeHistory.push(frameTime);
+    this.frameTimeHistory.push(avgFrameInterval);
     this.entityCountHistory.push(this.metrics.totalEntities);
 
     if (this.fpsHistory.length > this.historySize) {
@@ -230,7 +240,7 @@ export class PerformanceProfiler {
       this.entityCountHistory.shift();
     }
 
-    // Extract timing breakdowns
+    // Extract timing breakdowns (these are work times, useful for profiling)
     this.metrics.timings.entityUpdate = this.timingResults.get('entityUpdate') || 0;
     this.metrics.timings.spriteUpdate = this.timingResults.get('spriteUpdate') || 0;
     this.metrics.timings.collisionDetection = this.timingResults.get('collisionDetection') || 0;
@@ -241,7 +251,7 @@ export class PerformanceProfiler {
     // Check for performance issues
     this.checkPerformance();
 
-    this.lastFrameTime = frameTime;
+    this.lastFrameTime = workTime;
   }
 
   // Entity tracking
@@ -498,6 +508,7 @@ export class PerformanceProfiler {
   reset(): void {
     this.metrics = this.createEmptyMetrics();
     this.frameTimes = [];
+    this.lastFrameStartTime = 0;
     this.fpsHistory = [];
     this.frameTimeHistory = [];
     this.entityCountHistory = [];
