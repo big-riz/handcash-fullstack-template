@@ -50,13 +50,13 @@ const characters = [
         "stats": {
             "maxHp": 100,
             "moveSpeed": 1.1,
-            "might": 1.1,
-            "area": 0.9,
-            "cooldownMultiplier": 0.8
+            "might": 0.95,
+            "area": 0.85,
+            "cooldownMultiplier": 0.9
         },
         "arsenal": {
-            "weapons": ["stilleto", "kabar", "peppermill", "visors", "dagger", "stake"],
-            "passives": ["battle_scarf", "boss_shoe", "spy_hat", "pickled_gpu", "sunflower_pouch", "beer_coin", "bone_charm", "crypt_lantern"]
+            "weapons": ["stilleto", "kabar", "peppermill", "visors", "dagger"],
+            "passives": ["battle_scarf", "boss_shoe", "beer_coin", "bone_charm", "sunflower_pouch"]
         }
     },
     {

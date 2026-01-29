@@ -103,6 +103,7 @@ export class EntityManager {
     projectiles: Projectile[] = []
     meleeSwings: MeleeSwing[] = []
     gems: XPGem[] = []
+    healthPickups: XPGem[] = []
     hazardZones: HazardZone[] = []
     obstacles: Obstacle[] = []
     public totalKills = 0
@@ -128,6 +129,7 @@ export class EntityManager {
     // Optimized Object Pools - use Sets for O(1) lookups
     private inactiveEnemies: Map<string, Enemy[]> = new Map()
     private inactiveGemSet: Set<XPGem> = new Set()
+    private inactiveHealthPickupSet: Set<XPGem> = new Set()
     private inactiveProjectileSet: Set<Projectile> = new Set()
     private inactiveMeleeSwingSet: Set<MeleeSwing> = new Set()
     private inactiveHazardZoneSet: Set<HazardZone> = new Set()
@@ -213,6 +215,23 @@ export class EntityManager {
             this.gems.push(gem)
         }
         gem.spawn(x, z, value)
+    }
+
+    spawnHealthPickup(x: number, z: number, healAmount: number) {
+        let pickup: XPGem | undefined
+
+        for (const p of this.inactiveHealthPickupSet) {
+            pickup = p
+            this.inactiveHealthPickupSet.delete(p)
+            break
+        }
+
+        if (!pickup) {
+            pickup = new XPGem()
+            this.healthPickups.push(pickup)
+        }
+        pickup.spawn(x, z, healAmount)
+        pickup.setColor(0x00ff44, 0x00ff00)
     }
 
     spawnProjectile(x: number, z: number, vx: number, vz: number, damage: number, isEnemyProjectile: boolean = false, appliesSlow: boolean = false, appliesCurse: boolean = false, hitEmoji: string = '⚔️') {
@@ -712,6 +731,21 @@ export class EntityManager {
             }
         }
 
+        // 4b. Health Pickups
+        for (const pickup of this.healthPickups) {
+            if (pickup.isActive) {
+                if (pickup.update(deltaTime, this.player.position, this.player.stats.magnet)) {
+                    this.player.stats.currentHp = Math.min(
+                        this.player.stats.maxHp,
+                        this.player.stats.currentHp + pickup.value
+                    )
+                    this.audioManager?.playPlayerHeal()
+                }
+            } else {
+                this.inactiveHealthPickupSet.add(pickup)
+            }
+        }
+
         // 5. Hazard Zones
         for (const hazard of this.hazardZones) {
             if (hazard.isActive) {
@@ -904,6 +938,9 @@ export class EntityManager {
         for (const gem of this.gems) {
             gem.despawn()
         }
+        for (const pickup of this.healthPickups) {
+            pickup.despawn()
+        }
         for (const projectile of this.projectiles) {
             projectile.despawn()
         }
@@ -934,11 +971,13 @@ export class EntityManager {
 
         this.enemies = []
         this.gems = []
+        this.healthPickups = []
         this.projectiles = []
         this.meleeSwings = []
         this.hazardZones = []
         this.obstacles = []
         this.inactiveEnemies.clear()
+        this.inactiveHealthPickupSet.clear()
         this.inactiveGems = []
         this.inactiveProjectiles = []
         this.inactiveMeleeSwings = []

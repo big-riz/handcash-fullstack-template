@@ -26,6 +26,11 @@ export class NuclearPigeon {
     public damage = 18
     private range = 10
 
+    // Health drop (pig_luggage only)
+    private healthDropTimer = 0
+    private healthDropInterval = 5.0
+    private healthDropAmount = 3
+
     constructor(
         private scene: THREE.Scene,
         private player: Player,
@@ -63,6 +68,18 @@ export class NuclearPigeon {
         if (this.fireTimer >= (this.fireCooldown * this.player.stats.cooldownMultiplier)) {
             this.fire()
             this.fireTimer = 0
+        }
+
+        // Health drop (pig_luggage only)
+        if (this.companionType === 'pig_luggage') {
+            this.healthDropTimer += deltaTime
+            if (this.healthDropTimer >= this.healthDropInterval) {
+                this.healthDropTimer = 0
+                this.entityManager.spawnHealthPickup(x, z, this.healthDropAmount)
+                if (this.vfx) {
+                    this.vfx.createEmoji(x, z, '💚', 0.5)
+                }
+            }
         }
     }
 
@@ -115,14 +132,16 @@ export class NuclearPigeon {
                 this.orbitSpeed *= 1.3                       // faster orbit
             }
         } else if (this.companionType === 'pig_luggage') {
-            // Uncommon utility companion: same scaling pattern, lower base
-            // Base 25 DPS → Lvl5 ~61 DPS (~2.4x)
-            if (this.level === 2) this.damage *= 1.2        // +20% damage
-            if (this.level === 3) this.fireCooldown *= 0.8   // +25% attack speed
-            if (this.level === 4) this.damage *= 1.25        // +25% damage
+            // Uncommon utility companion: damage + health drops
+            // Health drops: 3→3→4→5→6 HP, interval: 5→4.5→4→3.5→3s
+            if (this.level === 2) { this.damage *= 1.2; this.healthDropInterval = 4.5 }
+            if (this.level === 3) { this.fireCooldown *= 0.8; this.healthDropInterval = 4.0; this.healthDropAmount = 4 }
+            if (this.level === 4) { this.damage *= 1.25; this.healthDropInterval = 3.5; this.healthDropAmount = 5 }
             if (this.level === 5) {
-                this.damage *= 1.3                            // +30% damage
-                this.orbitRadius += 1                         // wider pickup range
+                this.damage *= 1.3
+                this.orbitRadius += 1
+                this.healthDropInterval = 3.0
+                this.healthDropAmount = 6
             }
         } else {
             // Nuclear Pigeon (Legendary): consistent scaling matching legendary weapons

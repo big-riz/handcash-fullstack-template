@@ -703,11 +703,11 @@ export class AbilitySystem {
         }
         if (type === 'pig_luggage') {
             switch (nextLevel) {
-                case 1: return "Companion that drops health pickups."
-                case 2: return "Sharper tusks (+20% damage)."
-                case 3: return "Snout charge (+25% attack speed)."
-                case 4: return "War pig (+25% damage)."
-                case 5: return "Boar fury (+30% damage, wider orbit)."
+                case 1: return "Companion that drops 3 HP pickups every 5s."
+                case 2: return "Sharper tusks (+20% damage, faster drops)."
+                case 3: return "Snout charge (+25% attack speed, 4 HP drops)."
+                case 4: return "War pig (+25% damage, 5 HP drops)."
+                case 5: return "Boar fury (+30% damage, wider orbit, 6 HP drops)."
                 default: return ""
             }
         }
