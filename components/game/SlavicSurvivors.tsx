@@ -835,6 +835,7 @@ export function SlavicSurvivors() {
                         playerLevel={playerLevel}
                         choices={levelUpChoices.current}
                         onChoose={handleUpgrade}
+                        onSkip={() => setGameState("playing")}
                         rerolls={playerRef.current?.stats.rerolls ?? 0}
                         onReroll={() => {
                             if (playerRef.current && playerRef.current.stats.rerolls > 0) {
@@ -856,6 +857,7 @@ export function SlavicSurvivors() {
                         playerLevel={playerLevel}
                         choices={levelUpChoices.current}
                         onChoose={handleUpgrade}
+                        onSkip={() => setGameState("playing")}
                         rerolls={0}
                         onReroll={() => {}}
                         audioManager={audioManagerRef.current}

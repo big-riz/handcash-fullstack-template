@@ -7,6 +7,7 @@ interface LevelUpProps {
     playerLevel: number
     choices: any[]
     onChoose: (id: string) => void
+    onSkip?: () => void
     rerolls?: number
     onReroll?: () => void
     audioManager: AudioManager | null
@@ -18,6 +19,7 @@ export function LevelUp({
     playerLevel,
     choices,
     onChoose,
+    onSkip,
     audioManager,
     isAirdrop = false
 }: LevelUpProps) {
@@ -25,6 +27,8 @@ export function LevelUp({
         audioManager?.playUISelect();
         onChoose(id);
     };
+
+    const hasUnlocked = choices?.some(c => !c.locked)
 
     return (
         <div className={`absolute inset-0 ${isAirdrop ? 'bg-gradient-to-b from-yellow-900/90 to-black/95' : 'bg-black/90'} backdrop-blur-3xl flex flex-col items-center justify-start p-4 md:p-8 z-50 overflow-y-auto pt-8 md:pt-12 pb-8 scrollbar-hide safe-area-inset-top safe-area-inset-bottom animate-in fade-in duration-300`}>
@@ -43,27 +47,41 @@ export function LevelUp({
             </div>
 
             {/* Card Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4 w-full max-w-7xl mx-auto px-2 md:px-4 pb-4">
-                {choices.map((choice, index) => (
-                    <div
-                        key={choice.id}
-                        className="animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both"
-                        style={{ animationDelay: `${150 + Math.min(index * 30, 300)}ms` }}
-                    >
-                        <UpgradeCard
-                            title={choice.title}
-                            desc={choice.desc}
-                            imageUrl={choice.imageUrl}
-                            itemId={choice.itemId || choice.id}
-                            rarity={choice.rarity}
-                            level={choice.level || 0}
-                            locked={choice.locked || false}
-                            lockReason={choice.lockReason || ''}
-                            onClick={() => handleChoose(choice.id)}
-                        />
-                    </div>
-                ))}
-            </div>
+            {choices?.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4 w-full max-w-7xl mx-auto px-2 md:px-4 pb-4">
+                    {choices.map((choice, index) => (
+                        <div
+                            key={choice.id}
+                            className="animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both"
+                            style={{ animationDelay: `${150 + Math.min(index * 30, 300)}ms` }}
+                        >
+                            <UpgradeCard
+                                title={choice.title}
+                                desc={choice.desc}
+                                imageUrl={choice.imageUrl}
+                                itemId={choice.itemId || choice.id}
+                                rarity={choice.rarity}
+                                level={choice.level || 0}
+                                locked={choice.locked || false}
+                                lockReason={choice.lockReason || ''}
+                                onClick={() => handleChoose(choice.id)}
+                            />
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-white/40 text-sm mt-8">No upgrades available</p>
+            )}
+
+            {/* Skip button - shown when no unlocked choices or as fallback */}
+            {(!hasUnlocked || !choices?.length) && onSkip && (
+                <button
+                    onClick={onSkip}
+                    className="mt-6 px-6 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white/60 hover:text-white text-sm font-bold uppercase tracking-wider transition-all"
+                >
+                    Continue
+                </button>
+            )}
         </div>
     )
 }

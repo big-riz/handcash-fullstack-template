@@ -1208,12 +1208,22 @@ export function useGameEngine({
                         // Do not break or change state, keep playing
                     } else if (isVictoryMilestone) {
                         // If this is a victory milestone, save level-up choices and show victory first
-                        levelUpChoices.current = getLevelUpChoices()
-                        pendingLevelUpAfterVictoryRef.current = true
+                        const choices = getLevelUpChoices()
+                        const hasUnlocked = choices.some((c: any) => !c.locked)
+                        if (choices.length > 0 && hasUnlocked) {
+                            levelUpChoices.current = choices
+                            pendingLevelUpAfterVictoryRef.current = true
+                        }
                         // Victory screen will be shown on next frame
                     } else {
                         // Normal level-up
-                        levelUpChoices.current = getLevelUpChoices()
+                        const choices = getLevelUpChoices()
+                        const hasUnlocked = choices.some((c: any) => !c.locked)
+                        if (choices.length === 0 || !hasUnlocked) {
+                            // No actionable choices - skip level-up screen
+                            break
+                        }
+                        levelUpChoices.current = choices
                         setGameState("levelUp")
                         break
                     }

@@ -226,7 +226,10 @@ export class AbilitySystem {
         else if (type === 'ak_ghzel') ability = new GhzelAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
         else if (type === 'ak_corrupted') ability = new CorruptedAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
         else if (type === 'ak_mushroom') ability = new MushroomAKWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
-        else if (type === 'nuclear_pigeon') ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+        else if (type === 'nuclear_pigeon') {
+            ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.damage = 60 // Legendary: 60 dmg / 0.8s = 75 DPS
+        }
         else if (type === 'lada') ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
         else if (type === 'propaganda_tower') ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
 
@@ -292,20 +295,22 @@ export class AbilitySystem {
             ability.color = 0x8B4513 // Brown wood color
         }
 
-        // VAMPIRE RAT - Companion (minLevel 3, ~40 DPS equivalent)
+        // VAMPIRE RAT - Uncommon companion (28 dmg / 0.8s = 35 DPS)
         else if (type === 'vampire_rat') {
             ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.companionType = 'vampire_rat'
             ability.orbitSpeed = 3.0
             ability.orbitRadius = 2.5
-            ability.damage = 16 // 16 dmg / 0.4 tick = 40 DPS
+            ability.damage = 28
         }
 
-        // PIG LUGGAGE - Utility companion (minLevel 3, lower DPS but drops pickups)
+        // PIG LUGGAGE - Uncommon utility companion (20 dmg / 0.8s = 25 DPS, drops pickups)
         else if (type === 'pig_luggage') {
             ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.companionType = 'pig_luggage'
             ability.orbitSpeed = 2.0
             ability.orbitRadius = 3.0
-            ability.damage = 12 // 12 dmg / 0.4 tick = 30 DPS (utility focused)
+            ability.damage = 20
         }
 
         // === RARE WEAPONS (minLevel 4-6, DPS ~45-55) ===
@@ -430,7 +435,8 @@ export class AbilitySystem {
         } else if (type === 'death_pigeon') {
             ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.level = 8
-            ability.damage *= 5
+            ability.damage = 150 // Legendary evolution: 150 / 0.8s = 187.5 DPS
+            ability.fireCooldown = 0.6
         } else if (type === 'immortal_lada') {
             ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.level = 8
@@ -688,20 +694,20 @@ export class AbilitySystem {
         if (type === 'vampire_rat') {
             switch (nextLevel) {
                 case 1: return "Companion that bites nearby enemies."
-                case 2: return "Sharper teeth (+30% damage)."
-                case 3: return "Faster scurry (+20% orbit speed)."
-                case 4: return "Bloodthirst (+50% damage)."
-                case 5: return "Swarm (+1 rat companion)."
+                case 2: return "Sharper teeth (+20% damage)."
+                case 3: return "Frenzy (+25% attack speed)."
+                case 4: return "Bloodthirst (+25% damage)."
+                case 5: return "Blood rage (+30% damage, faster orbit)."
                 default: return ""
             }
         }
         if (type === 'pig_luggage') {
             switch (nextLevel) {
                 case 1: return "Companion that drops health pickups."
-                case 2: return "Better snout (+20% drop rate)."
-                case 3: return "Faster trot (+20% orbit speed)."
-                case 4: return "Lucky pig (+50% drop rate)."
-                case 5: return "Golden pig (drops coins too)."
+                case 2: return "Sharper tusks (+20% damage)."
+                case 3: return "Snout charge (+25% attack speed)."
+                case 4: return "War pig (+25% damage)."
+                case 5: return "Boar fury (+30% damage, wider orbit)."
                 default: return ""
             }
         }

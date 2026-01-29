@@ -10,14 +10,17 @@ import { EntityManager } from '../../entities/EntityManager'
 import { VFXManager } from '../../systems/VFXManager'
 import { AudioManager } from '../../core/AudioManager'
 
+export type CompanionType = 'nuclear_pigeon' | 'vampire_rat' | 'pig_luggage'
+
 export class NuclearPigeon {
     public level = 1
+    public companionType: CompanionType = 'nuclear_pigeon'
     private mesh: THREE.Mesh | null = null
     private angle = 0
     public orbitRadius = 2.5
     public orbitSpeed = 3
     private fireTimer = 0
-    private fireCooldown = 0.8
+    public fireCooldown = 0.8
 
     // Stats
     public damage = 18
@@ -101,12 +104,47 @@ export class NuclearPigeon {
 
     upgrade() {
         this.level++
-        if (this.level === 2) this.damage *= 1.3
-        if (this.level === 3) this.fireCooldown *= 0.8
-        if (this.level === 4) this.orbitRadius += 1
-        if (this.level === 5) {
-            this.damage *= 2
-            this.fireCooldown *= 0.5
+        if (this.companionType === 'vampire_rat') {
+            // Uncommon companion: consistent scaling matching weapon curves
+            // Base 35 DPS → Lvl5 ~85 DPS (~2.4x)
+            if (this.level === 2) this.damage *= 1.2       // +20% damage
+            if (this.level === 3) this.fireCooldown *= 0.8  // +25% attack speed
+            if (this.level === 4) this.damage *= 1.25       // +25% damage
+            if (this.level === 5) {
+                this.damage *= 1.3                           // +30% damage
+                this.orbitSpeed *= 1.3                       // faster orbit
+            }
+        } else if (this.companionType === 'pig_luggage') {
+            // Uncommon utility companion: same scaling pattern, lower base
+            // Base 25 DPS → Lvl5 ~61 DPS (~2.4x)
+            if (this.level === 2) this.damage *= 1.2        // +20% damage
+            if (this.level === 3) this.fireCooldown *= 0.8   // +25% attack speed
+            if (this.level === 4) this.damage *= 1.25        // +25% damage
+            if (this.level === 5) {
+                this.damage *= 1.3                            // +30% damage
+                this.orbitRadius += 1                         // wider pickup range
+            }
+        } else {
+            // Nuclear Pigeon (Legendary): consistent scaling matching legendary weapons
+            // Base 75 DPS → Lvl5 ~183 DPS (~2.4x)
+            if (this.level === 2) this.damage *= 1.2        // +20% damage
+            if (this.level === 3) this.fireCooldown *= 0.8   // +25% attack speed
+            if (this.level === 4) this.damage *= 1.25        // +25% damage
+            if (this.level === 5) {
+                this.damage *= 1.3                            // +30% damage
+                this.range += 3                               // wider targeting
+            }
+        }
+    }
+
+    static getUpgradeDesc(nextLevel: number): string {
+        switch (nextLevel) {
+            case 1: return "Radioactive companion. Orbits and nukes."
+            case 2: return "Enriched uranium (+20% damage)."
+            case 3: return "Faster reactor (+25% attack speed)."
+            case 4: return "Critical mass (+25% damage)."
+            case 5: return "Meltdown (+30% damage, +3 range)."
+            default: return ""
         }
     }
 
