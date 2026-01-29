@@ -20,10 +20,11 @@ export class Projectile {
     slowDuration = 3.0 // How long the slow lasts
     appliesCurse = false // Track if this projectile curses on hit
     curseDuration = 5.0 // How long the curse lasts
+    hitEmoji = '⚔️' // Emoji shown when projectile hits
 
     constructor() { }
 
-    spawn(x: number, z: number, vx: number, vz: number, damage: number, isEnemyProjectile: boolean = false, appliesSlow: boolean = false, appliesCurse: boolean = false) {
+    spawn(x: number, z: number, vx: number, vz: number, damage: number, isEnemyProjectile: boolean = false, appliesSlow: boolean = false, appliesCurse: boolean = false, hitEmoji: string = '⚔️') {
         this.position.set(x, 0.5, z)
         this.velocity.set(vx, 0, vz)
         this.damage = damage
@@ -32,6 +33,7 @@ export class Projectile {
         this.isEnemyProjectile = isEnemyProjectile
         this.appliesSlow = appliesSlow
         this.appliesCurse = appliesCurse
+        this.hitEmoji = hitEmoji
         if (this.mesh) {
             this.mesh.position.copy(this.position)
             this.mesh.visible = true

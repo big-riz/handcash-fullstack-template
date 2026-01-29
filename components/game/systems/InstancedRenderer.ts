@@ -50,6 +50,15 @@ export class InstancedRenderer {
         mesh.frustumCulled = false
         mesh.count = 0 // Start with 0 visible
 
+        // Initialize instance colors (required for per-instance coloring)
+        _color.setHex(color)
+        for (let i = 0; i < this.maxInstances; i++) {
+            mesh.setColorAt(i, _color)
+        }
+        if (mesh.instanceColor) {
+            mesh.instanceColor.needsUpdate = true
+        }
+
         this.scene.add(mesh)
         this.instancedMeshes.set(type, mesh)
         this.baseColors.set(type, color)

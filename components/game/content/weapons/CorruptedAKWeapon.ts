@@ -57,7 +57,9 @@ export class CorruptedAKWeapon {
             this.player.position.z,
             dir.x * this.speed,
             dir.z * this.speed,
-            this.damage * this.player.stats.damageMultiplier
+            this.damage * this.player.stats.damageMultiplier,
+            false, false, false,
+            '👿'
         )
 
         // Life steal logic: 5% chance to heal 1 HP on fire for now (using seeded RNG)

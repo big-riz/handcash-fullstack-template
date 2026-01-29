@@ -20,6 +20,7 @@ import { AirdropSystem, AirdropData } from "../systems/AirdropSystem"
 import { EnemyCombinationSystem } from "../systems/EnemyCombinationSystem"
 import { CharacterModelManager } from "../core/CharacterModelManager"
 import { InstancedSkinnedMesh } from "../core/InstancedSkinnedMesh"
+import { InstancedLevelRenderer } from "../systems/InstancedLevelRenderer"
 
 import { ItemTemplate } from "@/lib/item-templates-storage"
 import { CharacterInfo } from "../types"
@@ -202,6 +203,7 @@ export function useGameEngine({
     const gltfLoaderRef = useRef<GLTFLoader | null>(null)
     const loadedModelsRef = useRef<Map<string, { model: THREE.Group, collisionRadius: number }>>(new Map())
     const sceneGltfObjectsRef = useRef<THREE.Object3D[]>([])
+    const instancedLevelRendererRef = useRef<InstancedLevelRenderer | null>(null)
     const lastProfilerUpdateRef = useRef<number>(0) // Throttle profiler UI updates
 
     const gameStateRef = useRef(gameState)
@@ -223,7 +225,7 @@ export function useGameEngine({
     const cameraTargetRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
     const cameraDistance = 35
     const cameraPitch = 55 * (Math.PI / 180)
-    const cameraZoomRef = useRef<number>(1.0) // Dynamic zoom level (1.0 = default)
+    const cameraZoomRef = useRef<number>(0.65) // Dynamic zoom level (default zoomed out)
     const minZoom = 0.5 // Max zoom out (see more)
     const maxZoom = 2.5 // Max zoom in (see less)
 
@@ -539,6 +541,13 @@ export function useGameEngine({
                 // Auto-clear notification after 4 seconds
                 setTimeout(() => setWaveNotification(null), 4000)
             })
+            spawnSystemRef.current.setVoicelineCallback(async (filename: string, text: string) => {
+                const played = await audioManagerRef.current?.playTimelineVoiceline(filename)
+                if (played) {
+                    setWaveNotification(text)
+                    setTimeout(() => setWaveNotification(null), 4000)
+                }
+            })
             eventSystemRef.current = new EventSystem({ spawnSystem: spawnSystemRef.current, entityManager: em, vfxManager: vm, player: p })
 
             // Reinitialize airdrop system with new RNG
@@ -726,32 +735,34 @@ export function useGameEngine({
                     }
                 }
 
-                // Render scatter objects on top of the texture
+                // Create instanced renderer for level geometry (reduces draw calls)
+                const instancedLevelRenderer = new InstancedLevelRenderer(scene)
+                instancedLevelRendererRef.current = instancedLevelRenderer
+
+                // Render scatter objects using instanced renderer
                 customWorld.paintedAreas.forEach(area => {
                     if (area.type === 'scatter') {
-                        const group = new THREE.Group()
                         const count = Math.floor((area.density || 50) / 5)
-                        let seed = 0;
+                        let seed = 0
                         for (let i = 0; i < area.id.length; i++) {
-                            seed = ((seed << 5) - seed) + area.id.charCodeAt(i);
-                            seed |= 0;
+                            seed = ((seed << 5) - seed) + area.id.charCodeAt(i)
+                            seed |= 0
                         }
 
+                        const points = area.points
+                        const minX = Math.min(...points.map(p => p.x))
+                        const maxX = Math.max(...points.map(p => p.x))
+                        const minZ = Math.min(...points.map(p => p.y))
+                        const maxZ = Math.max(...points.map(p => p.y))
+
                         for (let i = 0; i < count; i++) {
-                            const scatterObject = generateScatterObject(area.meshType || 'grass', seed + i)
-                            const points = area.points
-                            const minX = Math.min(...points.map(p => p.x))
-                            const maxX = Math.max(...points.map(p => p.x))
-                            const minZ = Math.min(...points.map(p => p.y))
-                            const maxZ = Math.max(...points.map(p => p.y))
-                            scatterObject.position.set(
+                            const pos = new THREE.Vector3(
                                 minX + Math.random() * (maxX - minX),
-                                0, 
+                                0,
                                 minZ + Math.random() * (maxZ - minZ)
                             )
-                            group.add(scatterObject)
+                            instancedLevelRenderer.addScatterObject(area.meshType || 'grass', pos, seed + i)
                         }
-                        envGroup.add(group)
                     }
                 })
             }
@@ -763,17 +774,20 @@ export function useGameEngine({
                     gltfLoaderRef.current = new GLTFLoader()
                 }
 
+                // Create instanced renderer if not already created (for maps without scatter)
+                if (!instancedLevelRendererRef.current) {
+                    const instancedLevelRenderer = new InstancedLevelRenderer(scene)
+                    instancedLevelRendererRef.current = instancedLevelRenderer
+                }
+
                 customWorld.meshPlacements.forEach(placement => {
                     // Check if this is a custom mesh (GLB/GLTF)
                     const customDef = customWorld.customMeshDefinitions?.find(d => d.id === placement.meshType)
 
                     if (customDef) {
-                        // ... (same GLTF loading logic)
+                        // GLTF models still need individual handling
                         const handleLoadSuccess = (gltfScene: THREE.Group | THREE.Scene, collisionRadius: number) => {
-                            // Clone and position the model (same positioning as built-in mesh types)
                             const clone = gltfScene.clone(true)
-
-                            // Position using same logic as built-in mesh types (center at placement.position.y)
                             clone.position.set(placement.position.x, placement.position.y, placement.position.z)
                             clone.rotation.set(placement.rotation.x, placement.rotation.y, placement.rotation.z)
                             clone.scale.set(
@@ -781,20 +795,15 @@ export function useGameEngine({
                                 placement.scale.y * (customDef.scale || 1),
                                 placement.scale.z * (customDef.scale || 1)
                             )
-
-                            // Enable shadows
                             clone.traverse((child) => {
                                 if (child instanceof THREE.Mesh) {
                                     child.castShadow = true
                                     child.receiveShadow = true
                                 }
                             })
-
-                            // Track for cleanup and add to scene
                             sceneGltfObjectsRef.current.push(clone)
                             envGroup.add(clone)
 
-                            // Add collision
                             if (placement.hasCollision && collisionRadius > 0) {
                                 currentObstacles.push({
                                     x: placement.position.x,
@@ -806,20 +815,14 @@ export function useGameEngine({
 
                         const handleLoadError = () => {
                             console.warn('Failed to load GLB:', customDef.url)
-                            // Fallback to red cube
                             const fallbackGeometry = new THREE.BoxGeometry(1, 1, 1)
                             const fallbackMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 })
                             const fallbackMesh = new THREE.Mesh(fallbackGeometry, fallbackMaterial)
                             fallbackMesh.position.set(placement.position.x, placement.position.y + 0.5, placement.position.z)
                             fallbackMesh.rotation.set(placement.rotation.x, placement.rotation.y, placement.rotation.z)
-                            fallbackMesh.scale.set(
-                                placement.scale.x,
-                                placement.scale.y,
-                                placement.scale.z
-                            )
+                            fallbackMesh.scale.set(placement.scale.x, placement.scale.y, placement.scale.z)
                             fallbackMesh.castShadow = true
                             fallbackMesh.receiveShadow = true
-
                             sceneGltfObjectsRef.current.push(fallbackMesh)
                             envGroup.add(fallbackMesh)
 
@@ -832,39 +835,22 @@ export function useGameEngine({
                             }
                         }
 
-                        // Check cache first
                         if (loadedModelsRef.current.has(customDef.url)) {
-                            // Use cached model
                             const cached = loadedModelsRef.current.get(customDef.url)
-                            if (cached) {
-                                handleLoadSuccess(cached.model, cached.collisionRadius)
-                            }
+                            if (cached) handleLoadSuccess(cached.model, cached.collisionRadius)
                         } else {
-                            // Load new GLB
                             gltfLoaderRef.current?.load(
                                 customDef.url,
                                 (gltf) => {
                                     const model = gltf.scene
-
-                                    // Center and calculate bounds
                                     const box = new THREE.Box3().setFromObject(model)
                                     const center = box.getCenter(new THREE.Vector3())
                                     const size = box.getSize(new THREE.Vector3())
-
-                                    // Center the model horizontally but keep base at origin
                                     model.position.x -= center.x
                                     model.position.z -= center.z
                                     model.position.y -= center.y
-
-                                    // Calculate collision radius
                                     const collisionRadius = Math.max(size.x, size.z) * (customDef.scale || 1) * 0.5
-
-                                    // Cache the model
-                                    loadedModelsRef.current.set(customDef.url, {
-                                        model: model,
-                                        collisionRadius: collisionRadius
-                                    })
-
+                                    loadedModelsRef.current.set(customDef.url, { model, collisionRadius })
                                     handleLoadSuccess(model, collisionRadius)
                                 },
                                 undefined,
@@ -872,60 +858,16 @@ export function useGameEngine({
                             )
                         }
                     } else {
-                        // Handle built-in mesh types using our new utility
-                        const mesh = generateMeshObject(placement.meshType)
+                        // Built-in mesh types use instanced rendering
+                        const pos = new THREE.Vector3(placement.position.x, placement.position.y, placement.position.z)
+                        const rot = new THREE.Euler(placement.rotation.x, placement.rotation.y, placement.rotation.z)
+                        const scale = new THREE.Vector3(placement.scale.x, placement.scale.y, placement.scale.z)
 
-                        // Apply scale first, then measure LOCAL bounding box before rotation
-                        mesh.scale.set(placement.scale.x, placement.scale.y, placement.scale.z)
+                        instancedLevelRendererRef.current!.addMeshPlacement(placement.meshType, pos, rot, scale)
 
-                        let localSize: THREE.Vector3 | null = null
                         if (placement.hasCollision) {
-                            const localBox = new THREE.Box3().setFromObject(mesh)
-                            localSize = localBox.getSize(new THREE.Vector3())
-                        }
-
-                        // Now apply position and rotation for rendering
-                        mesh.position.set(placement.position.x, placement.position.y, placement.position.z)
-                        mesh.rotation.set(placement.rotation.x, placement.rotation.y, placement.rotation.z)
-
-                        envGroup.add(mesh)
-
-                        if (placement.hasCollision && localSize) {
-                            // Use LOCAL (pre-rotation) dimensions for collision shape
-                            const localLong = Math.max(localSize.x, localSize.z)
-                            const localShort = Math.min(localSize.x, localSize.z)
-                            const aspectRatio = localLong / (localShort || 0.1)
-                            const isLocalZLong = localSize.z >= localSize.x
-
-                            if (aspectRatio > 2.0 && localLong > 1.0) {
-                                // Elongated mesh: distribute circles along the local long axis,
-                                // then rotate circle positions by placement rotation
-                                const segCount = Math.ceil(localLong / localShort)
-                                const segSpacing = localLong / segCount
-                                const rotY = placement.rotation.y
-                                const cosR = Math.cos(rotY)
-                                const sinR = Math.sin(rotY)
-
-                                for (let s = 0; s < segCount; s++) {
-                                    const localOffset = -localLong / 2 + segSpacing * (s + 0.5)
-                                    // Place along local long axis, then rotate into world space
-                                    const localX = isLocalZLong ? 0 : localOffset
-                                    const localZ = isLocalZLong ? localOffset : 0
-                                    const wx = cosR * localX - sinR * localZ
-                                    const wz = sinR * localX + cosR * localZ
-                                    currentObstacles.push({
-                                        x: placement.position.x + wx,
-                                        z: placement.position.z + wz,
-                                        radius: localShort / 2 + 0.1
-                                    })
-                                }
-                            } else {
-                                currentObstacles.push({
-                                    x: placement.position.x,
-                                    z: placement.position.z,
-                                    radius: Math.max(localSize.x, localSize.z) / 2
-                                })
-                            }
+                            const collisions = instancedLevelRendererRef.current!.getCollisionData(placement.meshType, pos, rot, scale)
+                            currentObstacles.push(...collisions)
                         }
                     }
                 })
@@ -933,6 +875,12 @@ export function useGameEngine({
 
             // 3. Render Spline Paths (fences, walls, hedges along curves)
             if (customWorld.splinePaths && customWorld.splinePaths.length > 0) {
+                // Create instanced renderer if not already created
+                if (!instancedLevelRendererRef.current) {
+                    const instancedLevelRenderer = new InstancedLevelRenderer(scene)
+                    instancedLevelRendererRef.current = instancedLevelRenderer
+                }
+
                 customWorld.splinePaths.forEach((sp: SplinePath) => {
                     if (!sp.controlPoints || sp.controlPoints.length < 2) return
 
@@ -949,61 +897,24 @@ export function useGameEngine({
                         const tangent = curve.getTangentAt(t)
                         const angle = Math.atan2(tangent.x, tangent.z)
 
-                        const mesh = generateMeshObject(sp.meshType)
-                        // Apply scale first, measure LOCAL bounding box before rotation
-                        mesh.scale.setScalar(sp.scale)
+                        const pos = point.clone()
+                        const rot = new THREE.Euler(0, angle, 0)
+                        const scale = new THREE.Vector3(sp.scale, sp.scale, sp.scale)
 
-                        let spLocalSize: THREE.Vector3 | null = null
+                        instancedLevelRendererRef.current!.addMeshPlacement(sp.meshType, pos, rot, scale, i)
+
                         if (sp.hasCollision) {
-                            const localBox = new THREE.Box3().setFromObject(mesh)
-                            spLocalSize = localBox.getSize(new THREE.Vector3())
-                        }
-
-                        // Now apply position and rotation for rendering
-                        mesh.position.copy(point)
-                        mesh.rotation.y = angle
-                        mesh.traverse((child: THREE.Object3D) => {
-                            if (child instanceof THREE.Mesh) {
-                                child.castShadow = true
-                                child.receiveShadow = true
-                            }
-                        })
-                        envGroup.add(mesh)
-
-                        if (sp.hasCollision && spLocalSize) {
-                            const localLong = Math.max(spLocalSize.x, spLocalSize.z)
-                            const localShort = Math.min(spLocalSize.x, spLocalSize.z)
-                            const aspectRatio = localLong / (localShort || 0.1)
-                            const isLocalZLong = spLocalSize.z >= spLocalSize.x
-
-                            if (aspectRatio > 2.0 && localLong > 1.0) {
-                                const segCount = Math.ceil(localLong / localShort)
-                                const segSpacing = localLong / segCount
-                                const cosA = Math.cos(angle)
-                                const sinA = Math.sin(angle)
-
-                                for (let s = 0; s < segCount; s++) {
-                                    const localOff = -localLong / 2 + segSpacing * (s + 0.5)
-                                    const localX = isLocalZLong ? 0 : localOff
-                                    const localZ = isLocalZLong ? localOff : 0
-                                    const wx = cosA * localX - sinA * localZ
-                                    const wz = sinA * localX + cosA * localZ
-                                    currentObstacles.push({
-                                        x: point.x + wx,
-                                        z: point.z + wz,
-                                        radius: localShort / 2 + 0.1
-                                    })
-                                }
-                            } else {
-                                currentObstacles.push({
-                                    x: point.x,
-                                    z: point.z,
-                                    radius: Math.max(spLocalSize.x, spLocalSize.z) / 2
-                                })
-                            }
+                            const collisions = instancedLevelRendererRef.current!.getCollisionData(sp.meshType, pos, rot, scale)
+                            currentObstacles.push(...collisions)
                         }
                     }
                 })
+            }
+
+            // Build all instanced meshes (finalize batches)
+            if (instancedLevelRendererRef.current) {
+                instancedLevelRendererRef.current.build()
+                console.log(`[GameEngine] Instanced level renderer: ${instancedLevelRendererRef.current.getDrawCallCount()} draw calls`)
             }
         }
         obstaclesRef.current = currentObstacles
@@ -1090,6 +1001,13 @@ export function useGameEngine({
                 setWaveNotification(message)
                 // Auto-clear notification after 4 seconds
                 setTimeout(() => setWaveNotification(null), 4000)
+            })
+            spawnSystem.setVoicelineCallback(async (filename: string, text: string) => {
+                const played = await audioManagerRef.current?.playTimelineVoiceline(filename)
+                if (played) {
+                    setWaveNotification(text)
+                    setTimeout(() => setWaveNotification(null), 4000)
+                }
             })
 
             const abilitySystem = new AbilitySystem(scene, player, entityManager, vfx, rng, audioManagerRef.current)
@@ -1563,6 +1481,8 @@ benchmark.presets        - List available presets
             playerRef.current?.dispose()
             characterModelManagerRef.current?.dispose()
             instancedSkinnedMeshRef.current?.dispose()
+            instancedLevelRendererRef.current?.dispose()
+            instancedLevelRendererRef.current = null
 
             // Cleanup GLB objects from previous scene
             sceneGltfObjectsRef.current.forEach(obj => {

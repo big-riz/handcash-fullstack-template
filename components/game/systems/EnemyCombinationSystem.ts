@@ -2,7 +2,7 @@
  * EnemyCombinationSystem.ts
  *
  * Monitors enemy positions and merges 10 nearby same-type enemies
- * into a single "super enemy" with combined HP and 10x XP.
+ * into a single "super enemy" with combined HP and 3 XP.
  *
  * Uses centroid-based clustering:
  * 1. Group enemies by type
@@ -152,13 +152,6 @@ export class EnemyCombinationSystem {
             combinedHp // combined HP from all merged enemies
         )
 
-        // Visual effect for combination
-        if (this.vfx) {
-            this.vfx.createEmoji(centroid.x, centroid.z, '💫', 2.0)
-            this.vfx.createDamageNumber(centroid.x, centroid.z, enemies.length, '#FFD700', 2.0)
-        }
-
-        console.log(`[EnemyCombinationSystem] Combined ${enemies.length} ${type} into super enemy with ${combinedHp.toFixed(0)} HP`)
     }
 
     cleanup(): void {

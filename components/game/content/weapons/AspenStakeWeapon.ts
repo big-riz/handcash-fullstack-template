@@ -6,6 +6,7 @@
 
 import { Player } from '../../entities/Player'
 import { EntityManager } from '../../entities/EntityManager'
+import { VFXManager } from '../../systems/VFXManager'
 
 export class AspenStakeWeapon {
     private cooldown = 1.3
@@ -20,6 +21,7 @@ export class AspenStakeWeapon {
     constructor(
         private player: Player,
         private entityManager: EntityManager,
+        private vfx: VFXManager | null,
         private rng: any // SeededRandom
     ) { }
 
@@ -38,6 +40,10 @@ export class AspenStakeWeapon {
             .filter(e => e.isActive)
             .sort((a, b) => a.position.distanceTo(this.player.position) - b.position.distanceTo(this.player.position))
 
+        if (enemies.length === 0) return
+
+        this.vfx?.createEmoji(this.player.position.x, this.player.position.z, '🌲', 0.5)
+
         for (let i = 0; i < Math.min(this.count, enemies.length); i++) {
             const target = enemies[i]
             const dir = target.position.clone().sub(this.player.position).normalize()
@@ -47,7 +53,9 @@ export class AspenStakeWeapon {
                 this.player.position.z,
                 dir.x * this.speed,
                 dir.z * this.speed,
-                this.damage * this.player.stats.damageMultiplier
+                this.damage * this.player.stats.damageMultiplier,
+                false, false, false,
+                '🪵'
             )
         }
     }

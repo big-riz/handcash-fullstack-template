@@ -89,7 +89,9 @@ export class NuclearPigeon {
             this.mesh.position.z,
             dir.x * 20,
             dir.z * 20,
-            finalDamage
+            finalDamage,
+            false, false, false,
+            '🐦'
         )
 
         if (this.vfx) {

@@ -53,7 +53,9 @@ export class RadioactiveAKWeapon {
                     this.player.position.z,
                     vx,
                     vz,
-                    this.damage * this.player.stats.damageMultiplier
+                    this.damage * this.player.stats.damageMultiplier,
+                    false, false, false,
+                    '☢️'
                 )
 
                 if (this.rng.next() < 0.3) {

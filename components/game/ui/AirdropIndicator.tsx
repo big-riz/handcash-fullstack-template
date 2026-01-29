@@ -52,7 +52,7 @@ export function AirdropIndicator({
             const dx = airdrop.x - playerX
             const dz = airdrop.z - playerZ
             const distance = Math.sqrt(dx * dx + dz * dz)
-            const angle = Math.atan2(dx, -dz) // Angle from player, camera is looking -Z
+            const angle = Math.atan2(dx, dz) // Angle from player to airdrop in screen space
 
             // Check if airdrop is within visible area
             const isOnScreen = Math.abs(dx) < halfViewX && Math.abs(dz) < halfViewZ
@@ -66,9 +66,9 @@ export function AirdropIndicator({
             const screenCenterX = screenWidth / 2
             const screenCenterY = screenHeight / 2
 
-            // Direction in screen space (flip Z for screen coords)
+            // Direction in screen space (camera looks from -Z toward +Z, so flip Z for screen Y)
             const screenDirX = dx
-            const screenDirY = dz
+            const screenDirY = -dz
 
             // Normalize
             const len = Math.sqrt(screenDirX * screenDirX + screenDirY * screenDirY)

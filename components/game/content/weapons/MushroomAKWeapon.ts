@@ -86,7 +86,9 @@ export class MushroomAKWeapon {
             this.player.position.z,
             dir.x * 25,
             dir.z * 25,
-            this.damage * this.player.stats.damageMultiplier
+            this.damage * this.player.stats.damageMultiplier,
+            false, false, false,
+            '🍄'
         )
 
         // Drop a spore cloud at enemy position (or player)

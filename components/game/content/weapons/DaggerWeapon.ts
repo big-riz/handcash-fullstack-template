@@ -7,6 +7,7 @@
 
 import { Player } from '../../entities/Player'
 import { EntityManager } from '../../entities/EntityManager'
+import { VFXManager } from '../../systems/VFXManager'
 import { AudioManager } from '../../core/AudioManager'
 
 export class DaggerWeapon {
@@ -23,6 +24,7 @@ export class DaggerWeapon {
     constructor(
         private player: Player,
         private entityManager: EntityManager,
+        private vfx: VFXManager | null,
         private rng: any, // SeededRandom
         private audioManager: AudioManager | null = null
     ) { }
@@ -44,6 +46,8 @@ export class DaggerWeapon {
             .sort((a, b) => a.position.distanceTo(this.player.position) - b.position.distanceTo(this.player.position))
 
         if (enemies.length === 0) return // Don't fire if no enemies
+
+        this.vfx?.createEmoji(this.player.position.x, this.player.position.z, '🔪', 0.5)
 
         // Fire at multiple targets if we have multiple projectiles
         for (let i = 0; i < this.count; i++) {
@@ -68,7 +72,9 @@ export class DaggerWeapon {
                 this.player.position.z,
                 (dx + spread) * this.projectileSpeed,
                 (dz + spread) * this.projectileSpeed,
-                finalDamage
+                finalDamage,
+                false, false, false,
+                '🗡️'
             )
         }
     }

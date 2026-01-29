@@ -28,21 +28,15 @@ interface VFXEffect {
 
 export class VFXManager {
     private effects: VFXEffect[] = []
-    private effectCount = 0 // Track active effects without array mutation
-    private maxEffects = 60 // Hard cap on effects
+    private effectCount = 0
+    private maxEffects = 500
 
     private spritePool: THREE.Sprite[] = []
     private materialPool: THREE.SpriteMaterial[] = []
     private screenShakeIntensity: number = 0
     private screenShakeDecay: number = 0
 
-    // Damage number throttling - less aggressive
-    private damageNumberBuckets: Map<string, number> = new Map()
-    private damageNumberThrottleMs = 50 // Allow more damage numbers
-    private lastCleanup = 0
-
-    // Reusable vectors to avoid allocations
-    private static _tempVec = new THREE.Vector3()
+    // Reusable vectors
     private static _tempScale = new THREE.Vector3()
 
     constructor(private scene: THREE.Scene) {
@@ -72,15 +66,32 @@ export class VFXManager {
             material.map = texture
             material.opacity = 1
             material.visible = true
+            material.depthTest = false
+            material.depthWrite = false
+            material.rotation = 0 // Reset rotation from previous effect
+            sprite.visible = true
+            sprite.renderOrder = 999
         } else if (this.materialPool.length > 0) {
             material = this.materialPool.pop()!
             material.map = texture
             material.opacity = 1
             material.visible = true
+            material.depthTest = false
+            material.depthWrite = false
+            material.rotation = 0 // Reset rotation
             sprite = new THREE.Sprite(material)
+            sprite.visible = true
+            sprite.renderOrder = 999
         } else {
-            material = new THREE.SpriteMaterial({ map: texture, transparent: true })
+            material = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                depthTest: false,
+                depthWrite: false
+            })
             sprite = new THREE.Sprite(material)
+            sprite.visible = true
+            sprite.renderOrder = 999 // Render on top of everything
         }
 
         return sprite
@@ -107,7 +118,7 @@ export class VFXManager {
         // Find an inactive slot
         for (let i = 0; i < this.maxEffects; i++) {
             const effect = this.effects[i]
-            if (effect.life <= 0) {
+            if (effect.life <= 0 || !effect.sprite) {
                 effect.sprite = sprite
                 effect.velocity.set(vx, vy, vz)
                 effect.life = life
@@ -124,33 +135,7 @@ export class VFXManager {
         this.returnToPool(sprite)
     }
 
-    // Check if damage number should be throttled
-    private shouldThrottleDamage(x: number, z: number): boolean {
-        const now = performance.now()
-        // Cleanup old buckets every second
-        if (now - this.lastCleanup > 1000) {
-            this.lastCleanup = now
-            this.damageNumberBuckets.forEach((time, key) => {
-                if (now - time > 500) this.damageNumberBuckets.delete(key)
-            })
-        }
-
-        // Bucket by 2-unit grid cells
-        const bucketKey = `${Math.floor(x / 2)},${Math.floor(z / 2)}`
-        const lastTime = this.damageNumberBuckets.get(bucketKey)
-
-        if (lastTime && now - lastTime < this.damageNumberThrottleMs) {
-            return true
-        }
-
-        this.damageNumberBuckets.set(bucketKey, now)
-        return false
-    }
-
     createDamageNumber(x: number, z: number, amount: number, color: string = 'white', scale: number = 1.0, isCritical: boolean = false, isKill: boolean = false) {
-        // Throttle damage numbers to avoid spam
-        if (this.shouldThrottleDamage(x, z)) return
-
         let finalColor = color
         let finalScale = scale
 
@@ -209,12 +194,32 @@ export class VFXManager {
         const sprite = this.getPooledSprite(texture)
         if (!sprite) return
 
-        sprite.position.set(x, 2, z)
+        // Position above the hit location
+        sprite.position.set(x, 1.5, z)
         const aspectRatio = texture.image ? (texture.image as HTMLCanvasElement).width / (texture.image as HTMLCanvasElement).height : 2
-        VFXManager._tempScale.set(aspectRatio * scale, scale, 1)
-        sprite.scale.copy(VFXManager._tempScale)
+        // Make damage numbers larger and more visible
+        const scaleX = aspectRatio * scale * 1.5
+        const scaleY = scale * 1.5
+        sprite.scale.set(scaleX, scaleY, 1)
 
-        this.addEffect(sprite, 0, 3.5, 0, 0.8, 0, VFXManager._tempScale, 'opacity')
+        // Find an inactive slot and add directly
+        for (let i = 0; i < this.maxEffects; i++) {
+            const effect = this.effects[i]
+            if (effect.life <= 0 || !effect.sprite) {
+                effect.sprite = sprite
+                effect.velocity.set(0, 2.5, 0) // Slower upward movement
+                effect.life = 1.2
+                effect.maxLife = 1.2
+                effect.rotation = 0
+                effect.baseScale.set(scaleX, scaleY, 1)
+                effect.fadeType = 'opacity'
+                this.effectCount++
+                this.scene.add(sprite)
+                return
+            }
+        }
+        // No slot, return to pool
+        this.returnToPool(sprite)
     }
 
     createHealingNumber(x: number, z: number, amount: number) {
@@ -245,10 +250,10 @@ export class VFXManager {
     // Cached particle textures by color
     private static particleTextureCache: Map<string, THREE.Texture> = new Map()
 
-    // Particle burst effect - heavily throttled
+    // Particle burst effect
     createParticleBurst(x: number, z: number, count: number = 8, color: string | number = 0xFFFFFF, speed: number = 5) {
         if (typeof document === 'undefined') return
-        if (this.effectCount >= this.maxEffects - 4) return // Reserve slots
+        if (this.effectCount >= this.maxEffects) return
 
         const colorStr = typeof color === 'number' ? '#' + color.toString(16).padStart(6, '0') : color
 
@@ -270,11 +275,9 @@ export class VFXManager {
             VFXManager.particleTextureCache.set(colorStr, texture)
         }
 
-        // Only spawn 3 particles max
-        const actualCount = Math.min(count, 3)
         VFXManager._tempScale.set(0.5, 0.5, 1)
 
-        for (let i = 0; i < actualCount; i++) {
+        for (let i = 0; i < count; i++) {
             const sprite = this.getPooledSprite(texture)
             if (!sprite) return
 
@@ -289,10 +292,10 @@ export class VFXManager {
     // Cached level up texture
     private static levelUpTexture: THREE.Texture | null = null
 
-    // Level up burst effect - minimal particles
+    // Level up burst effect
     createLevelUpBurst(x: number, z: number) {
         if (typeof document === 'undefined') return
-        if (this.effectCount >= this.maxEffects - 4) return
+        if (this.effectCount >= this.maxEffects) return
 
         if (!VFXManager.levelUpTexture) {
             const canvas = document.createElement('canvas')
@@ -313,12 +316,12 @@ export class VFXManager {
 
         VFXManager._tempScale.set(1.5, 1.5, 1)
 
-        // Only 4 particles for level up
-        for (let i = 0; i < 4; i++) {
+        const particleCount = 12
+        for (let i = 0; i < particleCount; i++) {
             const sprite = this.getPooledSprite(VFXManager.levelUpTexture)
             if (!sprite) return
 
-            const angle = (Math.PI * 2 * i) / 4
+            const angle = (Math.PI * 2 * i) / particleCount
             sprite.position.set(x + Math.cos(angle) * 2, 1, z + Math.sin(angle) * 2)
             sprite.scale.copy(VFXManager._tempScale)
             ;(sprite.material as THREE.SpriteMaterial).blending = THREE.AdditiveBlending
@@ -334,16 +337,9 @@ export class VFXManager {
 
     // Cache for emoji textures
     private static emojiTextureCache: Map<string, THREE.Texture> = new Map()
-    private lastEmojiTime = 0
 
     createEmoji(x: number, z: number, emoji: string, scale: number = 1.0) {
         if (typeof document === 'undefined') return
-
-        // Throttle emojis to max 5 per second
-        const now = performance.now()
-        if (now - this.lastEmojiTime < 200) return
-        this.lastEmojiTime = now
-
         if (this.effectCount >= this.maxEffects) return
 
         let texture = VFXManager.emojiTextureCache.get(emoji)
@@ -379,7 +375,7 @@ export class VFXManager {
 
         for (let i = 0; i < this.maxEffects; i++) {
             const effect = this.effects[i]
-            if (effect.life <= 0) continue
+            if (effect.life <= 0 || !effect.sprite) continue
 
             effect.life -= deltaTime
 
@@ -406,6 +402,7 @@ export class VFXManager {
 
             if (effect.life <= 0) {
                 this.returnToPool(effect.sprite)
+                effect.sprite = null!
                 this.effectCount--
             }
         }

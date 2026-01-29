@@ -6,6 +6,7 @@
 
 import { Player } from '../../entities/Player'
 import { EntityManager } from '../../entities/EntityManager'
+import { VFXManager } from '../../systems/VFXManager'
 import { AudioManager } from '../../core/AudioManager'
 
 export class TT33Weapon {
@@ -21,6 +22,7 @@ export class TT33Weapon {
     constructor(
         private player: Player,
         private entityManager: EntityManager,
+        private vfx: VFXManager | null,
         private rng: any, // SeededRandom
         private audioManager: AudioManager | null = null
     ) { }
@@ -35,6 +37,8 @@ export class TT33Weapon {
 
     fire() {
         this.audioManager?.playPlayerAttack('pistol');
+        this.vfx?.createEmoji(this.player.position.x, this.player.position.z, '🔫', 0.4)
+
         // Find nearest enemy to shoot at, or look forward
         const enemies = this.entityManager.enemies
             .filter(e => e.isActive)
@@ -70,7 +74,9 @@ export class TT33Weapon {
             this.player.position.z,
             dx * this.speed,
             dz * this.speed,
-            finalDamage
+            finalDamage,
+            false, false, false,
+            '💥'
         )
     }
 

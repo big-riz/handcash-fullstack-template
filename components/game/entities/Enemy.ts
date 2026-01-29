@@ -290,11 +290,11 @@ export class Enemy {
             this.stats.xpValue *= 2.0
         }
 
-        // Super enemy: use combined HP and 10x XP (10 enemies merged)
+        // Super enemy: use combined HP, flat 3 XP
         if (isSuperEnemy && combinedHp > 0) {
             this.stats.maxHp = combinedHp
             this.stats.currentHp = combinedHp
-            this.stats.xpValue *= 10
+            this.stats.xpValue = 3
             this.radius *= 2 // Double collision radius
         }
 

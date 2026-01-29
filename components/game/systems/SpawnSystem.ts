@@ -5,6 +5,8 @@ import { WorldData } from '@/components/game/data/worlds'
 import { SeededRandom } from '../../../lib/SeededRandom'
 import { darkForestTimeline, TimelineEvent } from '../data/dark_forest_timeline'
 import { frozenWasteTimeline } from '../data/frozen_waste_timeline'
+import { catacombsTimeline } from '../data/catacombs_timeline'
+import { getVoicelinesForWorld, TimelineVoiceline } from '../data/timeline_voicelines'
 
 export class SpawnSystem {
     private elapsedSeconds = 0
@@ -21,8 +23,17 @@ export class SpawnSystem {
     private difficultyCheckInterval = 120 // Check every 2 minutes
     private timeSinceLastCheck = 0
 
+    // Deterministic spawn counters
+    private spawnCounter = 0
+    private patternIndex = 0
+
     // Wave notification callback
     private onWaveMessage: ((message: string) => void) | null = null
+
+    // Voiceline tracking
+    private currentVoicelines: TimelineVoiceline[] = []
+    private nextVoicelineIndex = 0
+    private onPlayVoiceline: ((filename: string, text: string) => void) | null = null
 
     constructor(
         private entityManager: EntityManager,
@@ -32,6 +43,10 @@ export class SpawnSystem {
 
     setWaveMessageCallback(callback: (message: string) => void) {
         this.onWaveMessage = callback
+    }
+
+    setVoicelineCallback(callback: (filename: string, text: string) => void) {
+        this.onPlayVoiceline = callback
     }
 
     setWorld(world: WorldData) {
@@ -45,6 +60,9 @@ export class SpawnSystem {
         } else if (world.id === 'frozen_waste') {
             this.currentTimeline = frozenWasteTimeline
             console.log(`[SpawnSystem] "${world.name}": Using frozen waste timeline`)
+        } else if (world.id === 'catacombs') {
+            this.currentTimeline = catacombsTimeline
+            console.log(`[SpawnSystem] "${world.name}": Using catacombs timeline`)
         } else {
             // Default to dark forest timeline
             this.currentTimeline = darkForestTimeline
@@ -57,6 +75,13 @@ export class SpawnSystem {
         this.backgroundSpawnTimer = 0
         this.difficultyMultiplier = 1.0
         this.timeSinceLastCheck = 0
+        this.spawnCounter = 0
+        this.patternIndex = 0
+
+        // Load voicelines for this world
+        this.currentVoicelines = getVoicelinesForWorld(world.id)
+        this.nextVoicelineIndex = 0
+        console.log(`[SpawnSystem] Loaded ${this.currentVoicelines.length} voicelines for ${world.id}`)
     }
 
     // Public getter for difficulty
@@ -89,6 +114,19 @@ export class SpawnSystem {
 
         this.elapsedSeconds += deltaTime
 
+        // --- Voiceline playback (based on time defined in voiceline data) ---
+        while (
+            this.nextVoicelineIndex < this.currentVoicelines.length &&
+            this.elapsedSeconds >= this.currentVoicelines[this.nextVoicelineIndex].time
+        ) {
+            const voiceline = this.currentVoicelines[this.nextVoicelineIndex]
+            if (this.onPlayVoiceline) {
+                // Text display is handled by the callback only if audio plays
+                this.onPlayVoiceline(voiceline.file, voiceline.text)
+            }
+            this.nextVoicelineIndex++
+        }
+
         // --- Timeline-based Spawning ---
         while (this.timelineIndex < this.currentTimeline.length && this.elapsedSeconds >= this.currentTimeline[this.timelineIndex].time) {
             const event = this.currentTimeline[this.timelineIndex]
@@ -105,42 +143,59 @@ export class SpawnSystem {
         // Spawn enemies periodically with exponential scaling
         this.backgroundSpawnTimer += deltaTime
 
-        // Calculate dynamic spawn interval (decreases over time, exponentially)
-        // Starts at 5s, decreases to 0.8s minimum
         const minutesElapsed = this.elapsedSeconds / 60
-        const intervalScale = Math.max(0.16, Math.pow(0.85, minutesElapsed)) // 0.85^minutes, min 0.16
-        const currentInterval = Math.max(this.minSpawnInterval, this.baseSpawnInterval * intervalScale)
+        const timelineExhausted = this.timelineIndex >= this.currentTimeline.length
+
+        // Calculate dynamic spawn interval (decreases over time, exponentially)
+        // After timeline ends, interval drops faster to compensate
+        let intervalScale = Math.max(0.16, Math.pow(0.85, minutesElapsed))
+        let minInterval = this.minSpawnInterval
+        if (timelineExhausted) {
+            intervalScale *= 0.5 // Twice as fast after timeline ends
+            minInterval = 0.8 // Allow faster spawns post-timeline
+        }
+        const currentInterval = Math.max(minInterval, this.baseSpawnInterval * intervalScale)
 
         if (this.backgroundSpawnTimer >= currentInterval) {
             this.backgroundSpawnTimer = 0
+            this.spawnCounter++
 
             // Exponential count scaling: starts at 3, grows exponentially
-            // Formula: base * (1 + growthRate)^minutes
-            const baseCount = 3
-            const growthRate = 0.25 // 25% more enemies per minute
+            // After timeline ends, spawn counts increase significantly
+            const baseCount = timelineExhausted ? 8 : 3
+            const growthRate = timelineExhausted ? 0.35 : 0.25
             const timeBasedCount = baseCount * Math.pow(1 + growthRate, minutesElapsed)
 
             // Add bonus enemies based on elapsed time in larger chunks
-            const chunkBonus = Math.floor(minutesElapsed / 3) * 5 // +5 every 3 minutes
+            const chunkBonus = Math.floor(minutesElapsed / 3) * (timelineExhausted ? 10 : 5)
 
             const count = Math.floor(timeBasedCount + chunkBonus)
 
-            // After 5 minutes, occasionally spawn elites in background waves
-            const shouldSpawnElite = minutesElapsed > 5 && this.rng.next() < Math.min(0.4, minutesElapsed / 30)
+            // Deterministic elite spawning: more frequent after timeline
+            const eliteThreshold = timelineExhausted ? 3 : 5
+            const shouldSpawnElite = minutesElapsed > 5 && (this.spawnCounter % eliteThreshold === 0)
 
-            // Select enemy type based on progression
+            // Deterministic enemy type selection - harder enemies after timeline
             let enemyType: EnemyType = 'drifter'
-            if (minutesElapsed > 15) {
-                // Late game: spawn tougher enemies more often
-                const roll = this.rng.next()
-                if (roll < 0.3) enemyType = 'hulk'
-                else if (roll < 0.6) enemyType = 'specter'
+            if (timelineExhausted) {
+                // Post-timeline: cycle through harder enemy types
+                const typeIndex = this.spawnCounter % 5
+                if (typeIndex === 0) enemyType = 'bruiser'
+                else if (typeIndex === 1) enemyType = 'stone_golem'
+                else if (typeIndex === 2) enemyType = 'spirit_wolf'
+                else if (typeIndex === 3) enemyType = 'screecher'
+                else enemyType = 'shadow_stalker'
+            } else if (minutesElapsed > 15) {
+                // Late game: cycle through enemy types deterministically
+                const typeIndex = this.spawnCounter % 3
+                if (typeIndex === 0) enemyType = 'bruiser'
+                else if (typeIndex === 1) enemyType = 'screecher'
                 else enemyType = 'drifter'
             } else if (minutesElapsed > 8) {
-                // Mid game: mix in some variety
-                const roll = this.rng.next()
-                if (roll < 0.2) enemyType = 'hulk'
-                else if (roll < 0.4) enemyType = 'specter'
+                // Mid game: alternate between types
+                const typeIndex = this.spawnCounter % 5
+                if (typeIndex === 0) enemyType = 'bruiser'
+                else if (typeIndex === 1) enemyType = 'screecher'
                 else enemyType = 'drifter'
             }
 
@@ -149,7 +204,7 @@ export class SpawnSystem {
 
             // Log for debugging high-level spawn rates
             if (minutesElapsed > 10) {
-                console.log(`[SPAWN] Level ${Math.floor(minutesElapsed)}: ${count} enemies every ${currentInterval.toFixed(2)}s (Elite: ${shouldSpawnElite})`)
+                console.log(`[SPAWN] ${timelineExhausted ? 'POST-TIMELINE ' : ''}${Math.floor(minutesElapsed)}m: ${count} ${enemyType} every ${currentInterval.toFixed(2)}s (Elite: ${shouldSpawnElite})`)
             }
         }
     }
@@ -168,9 +223,12 @@ export class SpawnSystem {
     }
 
     private spawnGroup(type: EnemyType, count: number, radius: number, isElite: boolean = false) {
-        // Choose a symmetrical spawn pattern
-        const pattern = Math.floor(this.rng.next() * 6)
-        const baseAngle = this.rng.next() * Math.PI * 2 // Random rotation for variety
+        // Deterministic pattern selection: cycle through patterns
+        const pattern = this.patternIndex % 6
+        this.patternIndex++
+
+        // Deterministic angle based on pattern index (rotates 60 degrees each spawn)
+        const baseAngle = (this.patternIndex * Math.PI / 3) % (Math.PI * 2)
         const px = this.player.position.x
         const pz = this.player.position.z
 

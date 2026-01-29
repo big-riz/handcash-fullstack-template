@@ -8,6 +8,7 @@ export class AudioManager {
     private musicGain: GainNode | null = null;
     private sfxGain: GainNode | null = null;
     private basePath = '/audio/';
+    private preloadedSfx: Set<string> = new Set();
 
     // Adaptive music
     private currentMusicIntensity = 0; // 0 = calm, 1 = intense
@@ -37,6 +38,48 @@ export class AudioManager {
             AudioManager.instance = new AudioManager();
         }
         return AudioManager.instance;
+    }
+
+    // Sound variations
+    private soundVariations: Record<string, string[]> = {
+        'whoosh': ['sfx/whoosh.wav', 'sfx/whoosh-var1.wav', 'sfx/whoosh-var2.wav'],
+        'pop': ['sfx/pop.wav'],
+        'punch': ['sfx/punch.wav', 'sfx/punch-var1.wav', 'sfx/punch-var2.wav'],
+        'fanfare': ['sfx/fanfare.wav', 'sfx/fanfare-var1.wav', 'sfx/fanfare-var2.wav'],
+    };
+
+    // Preload all slapstick comedy SFX
+    public async preloadSlapstickSfx() {
+        const allFiles = Object.values(this.soundVariations).flat();
+        await Promise.all(allFiles.map(f => this.loadSound(f)));
+        allFiles.forEach(f => this.preloadedSfx.add(f));
+    }
+
+    // Pick random variation of a sound
+    private getRandomVariation(soundType: string): string {
+        const variations = this.soundVariations[soundType];
+        if (!variations || variations.length === 0) return `sfx/${soundType}.wav`;
+        return variations[Math.floor(Math.random() * variations.length)];
+    }
+
+    // Play a preloaded file-based SFX
+    private async playFileSfx(filename: string, volume = 0.3) {
+        if (!this.audioContext || !this.sfxGain) return;
+        const buffer = await this.loadSound(filename);
+        if (!buffer) return;
+        const source = this.audioContext.createBufferSource();
+        const gain = this.audioContext.createGain();
+        source.buffer = buffer;
+        gain.gain.value = volume;
+        source.connect(gain);
+        gain.connect(this.sfxGain);
+        source.start(0);
+    }
+
+    // Play random variation of a sound type
+    private async playRandomSfx(soundType: string, volume = 0.3) {
+        const filename = this.getRandomVariation(soundType);
+        await this.playFileSfx(filename, volume);
     }
 
     private async loadSound(url: string): Promise<AudioBuffer | null> {
@@ -111,15 +154,15 @@ export class AudioManager {
         const now = this.audioContext.currentTime;
         const oscillator = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(400, now);
-        oscillator.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(500, now);
+        oscillator.frequency.exponentialRampToValueAtTime(300, now + 0.06);
         gainNode.connect(this.sfxGain);
-        gainNode.gain.setValueAtTime(0.12, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        gainNode.gain.setValueAtTime(0.06, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
         oscillator.connect(gainNode);
         oscillator.start(now);
-        oscillator.stop(now + 0.1);
+        oscillator.stop(now + 0.06);
     }
 
     public playUIError() {
@@ -132,49 +175,39 @@ export class AudioManager {
 
     // --- Game Event Sounds ---
     public playLevelUp() {
-        if (!this.audioContext) return;
-        this.playSfx('sine', 440, 0.08, 0.15);
-        setTimeout(() => this.playSfx('sine', 660, 0.08, 0.15), 80);
-        setTimeout(() => this.playSfx('sine', 880, 0.1, 0.18), 160);
+        this.playRandomSfx('fanfare', 0.15);
     }
 
     public playGameOver() {
-        this.playSfx('sawtooth', 220, 0.15, 0.08);
-        setTimeout(() => this.playSfx('sawtooth', 110, 0.2, 0.06), 100);
+        this.playSfx('sawtooth', 150, 0.1, 0.2);
     }
 
     // --- Combat Sounds ---
     public playEnemyHurt() {
-        this.playSfx('square', 180, 0.025, 0.08);
+        this.playSfx('square', 200, 0.04, 0.1);
     }
 
+    private lastEnemyDieTime = 0;
+    private enemyDieCooldown = 50; // Max ~20 pops per second
+
     public playEnemyDie() {
-        this.playSfx('sawtooth', 100, 0.05, 0.1);
+        const now = performance.now();
+        if (now - this.lastEnemyDieTime < this.enemyDieCooldown) return;
+        this.lastEnemyDieTime = now;
+        this.playFileSfx('sfx/pop.wav', 0.15);
     }
 
     public playPlayerHurt() {
-        // Make player damage more noticeable with higher volume, longer duration, and harsher sound
-        if (!this.audioContext || !this.sfxGain) return;
-        const now = this.audioContext.currentTime;
-        const osc = this.audioContext.createOscillator();
-        const gain = this.audioContext.createGain();
-
-        // Use sawtooth for a harsher, more noticeable impact sound
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(300, now);
-        osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
-
-        gain.connect(this.sfxGain);
-        gain.gain.setValueAtTime(0.35, now); // Much louder (was 0.15)
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-
-        osc.connect(gain);
-        osc.start(now);
-        osc.stop(now + 0.12);
+        this.playSfx('sawtooth', 120, 0.08, 0.15); // Quick impact sound
+        this.playVoicePlayerHurt(); // Voice line with cooldown
     }
 
     public playGemPickup() {
-        this.playSfx('sine', 880, 0.06, 0.1);
+        this.playFileSfx('sfx/pop.wav', 0.15);
+    }
+
+    public playWhoosh() {
+        this.playRandomSfx('whoosh', 0.2);
     }
 
     public playPlayerAttack(weaponType: 'whip' | 'axe' | 'pistol' | 'rifle' | 'burst' | 'laser' | 'default' = 'default') {
@@ -245,11 +278,7 @@ export class AudioManager {
 
     // --- Special Event Sounds ---
     public playVictory() {
-        if (!this.audioContext || !this.sfxGain) return;
-        this.playSfx('sine', 523.25, 0.1, 0.15);
-        setTimeout(() => this.playSfx('sine', 659.25, 0.1, 0.15), 100);
-        setTimeout(() => this.playSfx('sine', 783.99, 0.1, 0.15), 200);
-        setTimeout(() => this.playSfx('sine', 1046.50, 0.15, 0.18), 300);
+        this.playRandomSfx('fanfare', 0.35);
     }
 
     public playEvolution() {
@@ -279,7 +308,7 @@ export class AudioManager {
 
     public playEnemySpawn(isElite: boolean) {
         if (isElite) {
-            this.playSfx('sawtooth', 150, 0.1, 0.15);
+            this.playSfx('triangle', 300, 0.08, 0.15);
         }
     }
 
@@ -412,19 +441,7 @@ export class AudioManager {
     }
 
     public playCriticalHit() {
-        if (!this.audioContext || !this.sfxGain) return;
-        const now = this.audioContext.currentTime;
-        const osc = this.audioContext.createOscillator();
-        const gain = this.audioContext.createGain();
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(800, now);
-        osc.frequency.exponentialRampToValueAtTime(1600, now + 0.08);
-        gain.connect(this.sfxGain);
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-        osc.connect(gain);
-        osc.start(now);
-        osc.stop(now + 0.1);
+        this.playRandomSfx('punch', 0.25);
     }
 
     public playStatusEffect(effectType: 'poison' | 'burn' | 'freeze' | 'slow' | 'curse' | 'bleed') {
@@ -451,34 +468,7 @@ export class AudioManager {
     }
 
     public playBossSpawn() {
-        if (!this.audioContext || !this.sfxGain) return;
-        const now = this.audioContext.currentTime;
-
-        // Deep rumble
-        const osc1 = this.audioContext.createOscillator();
-        const gain1 = this.audioContext.createGain();
-        osc1.type = 'sawtooth';
-        osc1.frequency.setValueAtTime(50, now);
-        gain1.connect(this.sfxGain);
-        gain1.gain.setValueAtTime(0.3, now);
-        gain1.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
-        osc1.connect(gain1);
-        osc1.start(now);
-        osc1.stop(now + 1.0);
-
-        // High impact
-        setTimeout(() => {
-            const osc2 = this.audioContext!.createOscillator();
-            const gain2 = this.audioContext!.createGain();
-            osc2.type = 'square';
-            osc2.frequency.setValueAtTime(200, now + 0.3);
-            gain2.connect(this.sfxGain!);
-            gain2.gain.setValueAtTime(0.25, now + 0.3);
-            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-            osc2.connect(gain2);
-            osc2.start(now + 0.3);
-            osc2.stop(now + 0.8);
-        }, 300);
+        this.playSfx('sawtooth', 80, 0.2, 0.3);
     }
 
     public playAchievementUnlock() {
@@ -498,5 +488,226 @@ export class AudioManager {
                 this.playSfx('sine', freq, 0.08, 0.2);
             }, i * 100);
         }
+    }
+
+    // --- Voice Lines ---
+    private voiceGain: GainNode | null = null;
+    private voiceVolume = 0.7;
+
+    // Flavor voice lines by category (50% chance to play one randomly)
+    private flavorLines: Record<string, string[]> = {
+        'upgrade': [
+            'flavor-upgrade-1-pick-wrong-one-potatoes.mp3',
+            'flavor-upgrade-2-not-multiple-choice.mp3',
+            'flavor-upgrade-3-babushka-knows.mp3',
+            'flavor-upgrade-4-ancestors-watching.mp3',
+        ],
+        'evolved': [
+            'flavor-evolved-1-real-firepower.mp3',
+            'flavor-evolved-2-new-lada.mp3',
+        ],
+        'boss': [
+            'flavor-boss-1-three-winters.mp3',
+            'flavor-boss-2-show-what-made-of.mp3',
+        ],
+        'death': [
+            'flavor-death-1-drink-vodka.mp3',
+            'flavor-death-2-grandmother-lasted.mp3',
+            'flavor-death-3-back-to-gulag.mp3',
+        ],
+        'victory': [
+            'flavor-victory-1-slavic-warrior.mp3',
+            'flavor-victory-2-motherland-celebrates.mp3',
+            'flavor-victory-3-celebrate-borscht.mp3',
+        ],
+        'damage': [
+            'damage-01.mp3',
+            'damage-02.mp3',
+            'damage-03.mp3',
+            'damage-04.mp3',
+            'damage-05.mp3',
+            'damage-06.mp3',
+            'damage-07.mp3',
+            'damage-08.mp3',
+            'damage-09.mp3',
+            'damage-10.mp3',
+        ],
+    };
+
+    // Track damage voiceline so it can be interrupted
+    private currentDamageSource: AudioBufferSourceNode | null = null;
+    private lastDamageVoiceTime = 0;
+    private damageVoiceCooldown = 3000; // Min 3 seconds between damage voicelines
+
+    private async playVoiceLine(filename: string) {
+        if (!this.audioContext || !this.sfxGain) return;
+
+        if (!this.voiceGain) {
+            this.voiceGain = this.audioContext.createGain();
+            this.voiceGain.connect(this.masterGain!);
+            this.voiceGain.gain.value = this.voiceVolume;
+        }
+
+        const buffer = await this.loadSound(`voicelines/${filename}`);
+        if (!buffer) return;
+
+        const source = this.audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(this.voiceGain);
+        source.start(0);
+    }
+
+    private playFlavorLine(category: string, delayMs: number = 1500) {
+        // 50% chance to skip flavor
+        if (Math.random() < 0.5) return;
+
+        const lines = this.flavorLines[category];
+        if (!lines || lines.length === 0) return;
+
+        const randomLine = lines[Math.floor(Math.random() * lines.length)];
+        setTimeout(() => this.playVoiceLine(randomLine), delayMs);
+    }
+
+    private stopDamageVoiceline() {
+        if (this.currentDamageSource) {
+            try {
+                this.currentDamageSource.stop();
+            } catch (e) {
+                // Already stopped
+            }
+            this.currentDamageSource = null;
+        }
+    }
+
+    private stopAllInterruptibleVoicelines() {
+        this.stopTimelineVoiceline();
+        this.stopDamageVoiceline();
+    }
+
+    public async playVoicePlayerHurt() {
+        // Cooldown to prevent spam
+        const now = Date.now();
+        if (now - this.lastDamageVoiceTime < this.damageVoiceCooldown) return;
+        this.lastDamageVoiceTime = now;
+
+        if (!this.audioContext || !this.sfxGain) return;
+
+        if (!this.voiceGain) {
+            this.voiceGain = this.audioContext.createGain();
+            this.voiceGain.connect(this.masterGain!);
+            this.voiceGain.gain.value = this.voiceVolume;
+        }
+
+        const lines = this.flavorLines['damage'];
+        const randomLine = lines[Math.floor(Math.random() * lines.length)];
+        const buffer = await this.loadSound(`voicelines/${randomLine}`);
+        if (!buffer) return;
+
+        // Stop previous damage voiceline if playing
+        this.stopDamageVoiceline();
+
+        const source = this.audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(this.voiceGain);
+        source.onended = () => {
+            if (this.currentDamageSource === source) {
+                this.currentDamageSource = null;
+            }
+        };
+        this.currentDamageSource = source;
+        source.start(0);
+    }
+
+    public playVoiceChooseUpgrade() {
+        this.stopAllInterruptibleVoicelines();
+        this.playVoiceLine('func-choose-upgrade.mp3');
+        this.playFlavorLine('upgrade');
+    }
+
+    public playVoiceWeaponEvolved() {
+        this.stopAllInterruptibleVoicelines();
+        this.playVoiceLine('func-weapon-evolved.mp3');
+        this.playFlavorLine('evolved');
+    }
+
+    public playVoiceBossApproaching() {
+        this.stopAllInterruptibleVoicelines();
+        this.playVoiceLine('func-boss-incoming.mp3');
+        this.playFlavorLine('boss');
+    }
+
+    public playVoiceYouDied() {
+        this.stopAllInterruptibleVoicelines();
+        this.playVoiceLine('func-game-over.mp3');
+        this.playFlavorLine('death');
+    }
+
+    public playVoiceVictory() {
+        this.stopAllInterruptibleVoicelines();
+        this.playVoiceLine('func-victory.mp3');
+        this.playFlavorLine('victory');
+    }
+
+    public setVoiceVolume(volume: number) {
+        this.voiceVolume = Math.max(0, Math.min(1, volume));
+        if (this.voiceGain && this.audioContext) {
+            this.voiceGain.gain.setValueAtTime(this.voiceVolume, this.audioContext.currentTime);
+        }
+    }
+
+    public getVoiceVolume(): number {
+        return this.voiceVolume;
+    }
+
+    // --- Timeline Voicelines ---
+    private timelineVoicelineCache: Map<string, AudioBuffer> = new Map();
+    private currentTimelineSource: AudioBufferSourceNode | null = null;
+
+    public async playTimelineVoiceline(filename: string): Promise<boolean> {
+        if (!this.audioContext || !this.sfxGain) return false;
+
+        if (!this.voiceGain) {
+            this.voiceGain = this.audioContext.createGain();
+            this.voiceGain.connect(this.masterGain!);
+            this.voiceGain.gain.value = this.voiceVolume;
+        }
+
+        const fullPath = `voicelines/timeline/${filename}`;
+        const buffer = await this.loadSound(fullPath);
+        if (!buffer) {
+            console.warn(`[AudioManager] Timeline voiceline not found: ${fullPath}`);
+            return false;
+        }
+
+        // Stop any currently playing timeline voiceline
+        this.stopTimelineVoiceline();
+
+        const source = this.audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(this.voiceGain);
+        source.onended = () => {
+            if (this.currentTimelineSource === source) {
+                this.currentTimelineSource = null;
+            }
+        };
+        this.currentTimelineSource = source;
+        source.start(0);
+        return true;
+    }
+
+    public stopTimelineVoiceline() {
+        if (this.currentTimelineSource) {
+            try {
+                this.currentTimelineSource.stop();
+            } catch (e) {
+                // Already stopped
+            }
+            this.currentTimelineSource = null;
+        }
+    }
+
+    public async preloadTimelineVoicelines(filenames: string[]) {
+        const promises = filenames.map(f => this.loadSound(`voicelines/timeline/${f}`));
+        await Promise.all(promises);
     }
 }

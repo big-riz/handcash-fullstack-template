@@ -216,12 +216,12 @@ export class AbilitySystem {
         let ability: any
 
         // Existing Mappings
-        if (type === 'dagger') ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+        if (type === 'dagger') ability = new DaggerWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
         else if (type === 'holywater') ability = new HolyWaterWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'stake') ability = new AspenStakeWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+        else if (type === 'stake') ability = new AspenStakeWeapon(this.player, this.entityManager, this.vfx, this.rng)
         else if (type === 'cross') ability = new CrossWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
         else if (type === 'salt') ability = new SaltLineWeapon(this.scene, this.player, this.entityManager, this.vfx, this.rng)
-        else if (type === 'tt33') ability = new TT33Weapon(this.player, this.entityManager, this.rng, this.audioManager)
+        else if (type === 'tt33') ability = new TT33Weapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
         else if (type === 'ak_radioactive') ability = new RadioactiveAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
         else if (type === 'ak_ghzel') ability = new GhzelAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
         else if (type === 'ak_corrupted') ability = new CorruptedAKWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
@@ -264,7 +264,7 @@ export class AbilitySystem {
 
         // STILLETO - Multi-target knives (10 dmg * 2 / 0.67s = 30 DPS)
         else if (type === 'stilleto') {
-            ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability = new DaggerWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.projectileSpeed = 20
             ability.projectileLife = 1.0 // Good range
             ability.cooldown = 0.67
@@ -276,7 +276,7 @@ export class AbilitySystem {
 
         // PEPPERMILL GUN - Spray (7 dmg / 0.2s = 35 DPS)
         else if (type === 'peppermill') {
-            ability = new TT33Weapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability = new TT33Weapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.cooldown = 0.2
             ability.damage = 7
         }
@@ -312,7 +312,7 @@ export class AbilitySystem {
 
         // KABAR KNIFE - Armor piercer (27 dmg / 0.6s = 45 DPS)
         else if (type === 'kabar') {
-            ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability = new DaggerWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.projectileSpeed = 14
             ability.projectileLife = 0.6
             ability.cooldown = 0.6
@@ -373,7 +373,7 @@ export class AbilitySystem {
 
         // ORTHODOX VISORS - Laser (38 dmg / 0.5s = 76 DPS)
         else if (type === 'visors') {
-            ability = new TT33Weapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability = new TT33Weapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.damage = 38
             ability.cooldown = 0.5
         }
@@ -401,7 +401,7 @@ export class AbilitySystem {
             ability.damage *= 4
             ability.radius *= 1.6
         } else if (type === 'silver_tt33') {
-            ability = new TT33Weapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability = new TT33Weapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.level = 8
             ability.damage *= 3
             ability.cooldown *= 0.5
@@ -411,7 +411,7 @@ export class AbilitySystem {
             ability.damage *= 5
             ability.cooldown *= 0.4
         } else if (type === 'vodka_flamethrower') {
-            ability = new TT33Weapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability = new TT33Weapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.level = 8
             ability.damage = 45
             ability.cooldown = 0.1
@@ -441,7 +441,7 @@ export class AbilitySystem {
             ability.level = 8
             ability.damage *= 4
         } else if (type === 'assassins_edge') {
-            ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability = new DaggerWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.level = 8
             ability.damage = 60
             ability.cooldown = 0.3
@@ -464,21 +464,21 @@ export class AbilitySystem {
             ability.level = 8
             ability.damage *= 4
         } else if (type === 'storm_blades') {
-            ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability = new DaggerWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.level = 8
             ability.damage = 35
             ability.cooldown = 0.15
             ability.count = 5
             ability.projectileSpeed = 28
         } else if (type === 'bone_daggers') {
-            ability = new DaggerWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability = new DaggerWeapon(this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.level = 8
             ability.damage = 45
             ability.cooldown = 0.35
             ability.count = 4
             ability.projectileSpeed = 18
         } else if (type === 'blazing_stakes') {
-            ability = new AspenStakeWeapon(this.player, this.entityManager, this.rng, this.audioManager)
+            ability = new AspenStakeWeapon(this.player, this.entityManager, this.vfx, this.rng)
             ability.level = 8
             ability.damage *= 5
             ability.cooldown *= 0.4
@@ -506,6 +506,7 @@ export class AbilitySystem {
             this.abilities.delete(rule.baseAbility)
             this.createAbilityInstance(rule.evolvedAbility)
             this.audioManager?.playEvolution()
+            this.audioManager?.playVoiceWeaponEvolved()
             if (this.vfx) {
                 this.vfx.createEmoji(this.player.position.x, this.player.position.z, '🌟', 2.0)
             }

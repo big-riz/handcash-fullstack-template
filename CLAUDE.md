@@ -397,3 +397,10 @@ The project includes a comprehensive level editor (`components/game/debug/LevelE
 - **Visual Editor**: 3D isometric preview with camera controls (WASD pan, mouse wheel zoom)
 
 Custom levels are stored via `lib/custom-levels-storage.ts` with API-first approach (localhost only) and localStorage fallback.
+
+## Voice Generation (MiniMax TTS)
+
+When generating voicelines for the game using MiniMax TTS:
+- **Always use voice ID**: `Russian_AttractiveGuy`
+- Output directory: `public/audio/voicelines/`
+- Timeline voicelines go in: `public/audio/voicelines/timeline/`

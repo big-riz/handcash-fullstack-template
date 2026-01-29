@@ -215,7 +215,7 @@ export class EntityManager {
         gem.spawn(x, z, value)
     }
 
-    spawnProjectile(x: number, z: number, vx: number, vz: number, damage: number, isEnemyProjectile: boolean = false, appliesSlow: boolean = false, appliesCurse: boolean = false) {
+    spawnProjectile(x: number, z: number, vx: number, vz: number, damage: number, isEnemyProjectile: boolean = false, appliesSlow: boolean = false, appliesCurse: boolean = false, hitEmoji: string = '⚔️') {
         let projectile: Projectile | undefined
 
         for (const p of this.inactiveProjectileSet) {
@@ -228,7 +228,7 @@ export class EntityManager {
             projectile = new Projectile()
             this.projectiles.push(projectile)
         }
-        projectile.spawn(x, z, vx, vz, damage, isEnemyProjectile, appliesSlow, appliesCurse)
+        projectile.spawn(x, z, vx, vz, damage, isEnemyProjectile, appliesSlow, appliesCurse, hitEmoji)
     }
 
     spawnMeleeSwing(x: number, z: number, facingAngle: number, damage: number, radius: number = 3.0, swingDuration: number = 0.3, arcAngle: number = Math.PI * 0.6, color: number = 0xcccccc) {
@@ -394,7 +394,8 @@ export class EntityManager {
             // Update all instance transforms
             for (const enemy of this.enemies) {
                 if (enemy.isActive && enemy.useInstancedSkinning && enemy.instancedSkinIndex >= 0) {
-                    const color = ENEMY_COLORS[enemy.type] || 0xff4444
+                    // White flash when hit, otherwise base color
+                    const color = enemy.hitFlashTimer > 0 ? 0xffffff : (ENEMY_COLORS[enemy.type] || 0xff4444)
                     // Scale model to match collision radius, with multiplier for elite/super
                     const eliteMultiplier = enemy.isSuperEnemy ? 2.0 : (enemy.isElite ? 1.5 : 1.0)
                     const modelScale = (enemy.radius / BASE_MODEL_RADIUS) * eliteMultiplier
@@ -650,10 +651,24 @@ export class EntityManager {
                                     this.totalDamageDealt += projectile.damage;
                                     this.player.onDealDamage(projectile.damage); // Lifesteal
                                     this.audioManager?.playEnemyHurt();
-                                    if (this.vfx) this.vfx.createEmoji(enemy.position.x, enemy.position.z, '⚔️', 0.8);
+                                    if (this.vfx) this.vfx.createEmoji(enemy.position.x, enemy.position.z, projectile.hitEmoji, 0.8);
                                     projectile.despawn();
                                     break;
                                 }
+                            }
+                        }
+                    }
+
+                    // Obstacle collision for all projectiles
+                    if (projectile.isActive) {
+                        for (const obs of this.obstacles) {
+                            const odx = projectile.position.x - obs.x;
+                            const odz = projectile.position.z - obs.z;
+                            const distSq = odx * odx + odz * odz;
+                            const radii = projectile.radius + obs.radius;
+                            if (distSq < radii * radii) {
+                                projectile.despawn();
+                                break;
                             }
                         }
                     }
@@ -705,6 +720,7 @@ export class EntityManager {
                     if (hazard.type === 'poison' && hazard.shouldApplyDamage()) {
                         this.player.takeDamage(hazard.damage)
                         this.totalDamageTaken += hazard.damage
+                        this.audioManager?.playPlayerHurt()
                     } else if (hazard.type === 'slow') {
                         this.player.isSlowed = true
                         this.player.slowFactor = hazard.slowFactor

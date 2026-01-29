@@ -156,10 +156,13 @@ export function SlavicSurvivors() {
 
         if (gameState === "levelUp") {
             audioManagerRef.current.playLevelUp();
+            audioManagerRef.current.playVoiceChooseUpgrade();
         } else if (gameState === "gameOver") {
             audioManagerRef.current.playGameOver();
+            setTimeout(() => audioManagerRef.current?.playVoiceYouDied(), 600);
         } else if (gameState === "gameVictory") {
             audioManagerRef.current.playVictory();
+            setTimeout(() => audioManagerRef.current?.playVoiceVictory(), 800);
         }
     }, [gameState]);
 

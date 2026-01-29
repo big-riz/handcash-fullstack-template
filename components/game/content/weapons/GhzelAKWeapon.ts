@@ -59,7 +59,9 @@ export class GhzelAKWeapon {
             this.player.position.z,
             dir.x * this.speed,
             dir.z * this.speed,
-            finalDamage
+            finalDamage,
+            false, false, false,
+            '🏺'
         )
 
         if (isCrit && this.vfx) {

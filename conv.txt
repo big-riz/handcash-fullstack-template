@@ -1,0 +1,2043 @@
+
+ ▐▛███▜▌   Claude Code v2.1.23
+▝▜█████▛▘  Opus 4.5 · Claude Max
+  ▘▘ ▝▝    ~\Documents\GitHub\squatzonedeuce\handcash-fullstack-template
+
+> /clear 
+  ⎿  (no content)
+
+> /mcp 
+  ⎿  MCP dialog dismissed
+
+> use minimax to generate all of the voicelines in the flavor messages for  
+  each world's timeline. the flavor messages should only appear every 30    
+  seconds or so in game time                                                
+
+● Searched for 3 patterns, read 3 files (ctrl+o to expand)
+
+● Let me check how messages are displayed in the game and the voicelines folder
+  structure.
+
+● Searched for 1 pattern (ctrl+o to expand)
+
+● Bash(dir "C:\Users\Miker\Documents\GitHub\squatzonedeuce\handcash-fullstack-te
+      mplate\public\audio\voicelines" 2>nul || echo "Directory is empty or does
+      not exist")
+  ⎿  flavor-boss-1-three-winters.mp3
+     flavor-boss-2-show-what-made-of.mp3
+     flavor-death-1-drink-vodka.mp3
+     … +16 lines (ctrl+o to expand)
+
+● Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● I need to create voicelines for the timeline flavor messages. Let me first
+  create a script to generate all the voicelines and update the timelines to
+  space messages every 30 seconds.
+
+● Write(scripts\generate-timeline-voicelines.ts)
+  ⎿  Wrote 1 lines to scripts\generate-timeline-voicelines.ts
+      1 // Script to define all timeline flavor messages
+      2 // These will be generated using MiniMax TTS
+      3 
+      4 export interface FlavorMessage {
+      5     id: string;
+      6     time: number;
+      7     text: string;
+      8     world: 'dark_forest' | 'catacombs' | 'frozen_waste';
+      9 }
+  ⎿ Success. System Voices: ['Name: Expressive Narrator, ID: English_expres
+    sive_narrator', 'Name: Radiant Girl, ID: English_radiant_girl', 'Name:
+    Magnetic-voiced Male, ID: English_magnetic_voiced_man', 'Name: Compelli
+    … +241 lines (ctrl+o to expand)
+
+
+
+● I'll use the "English_PassionateWarrior" voice for an energetic Slavic
+  narrator feel. Let me generate the voicelines for all three worlds. I'll start
+   with the dark forest messages.
+
+● minimax - text_to_audio (MCP)(text: "Ah, they come for your borscht,
+                               comrade!", voice_id: "English_PassionateWarrior",
+                                output_directory: "C:\\Users\\Miker\\Documents\\
+                               GitHub\\squatzonedeuce\\handcash-fullstack-templa
+                               te\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230320-HtgUwoYDMBWHQGPB.mp3?Expires=1769
+    785400&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=dZujOvHdGm6UOi
+    Tjxf9e56rR4gA%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "They scream louder than accordion at
+                               village party!", voice_id:
+                               "English_PassionateWarrior", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿  Error: Interrupted by user
+
+● minimax - text_to_audio (MCP)(text: "Domovoi swarm! House spirits very angry
+                               about dirty boots!", voice_id:
+                               "English_PassionateWarrior", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿  Error: Interrupted by user
+
+● minimax - text_to_audio (MCP)(text: "Mushrooms! But not the good kind babushka
+                                puts in soup!", voice_id:
+                               "English_PassionateWarrior", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿  Error: Interrupted by user
+
+● minimax - text_to_audio (MCP)(text: "Golems! Heavy like mother-in-law's
+                               cooking!", voice_id: "English_PassionateWarrior",
+                                output_directory: "C:\\Users\\Miker\\Documents\\
+                               GitHub\\squatzonedeuce\\handcash-fullstack-templa
+                               te\\public\\audio\\voicelines\\timeline")
+  ⎿  Error: Interrupted by user
+  ⎿  Interrupted · What should Claude do instead?
+
+> no 
+  ⎿  Interrupted · What should Claude do instead?
+
+> no. use attractiveman russian. every time. note this in your claude.md    
+  file too for the future.                                                  
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(CLAUDE.md)
+  ⎿  Added 7 lines
+      397  - **Visual Editor**: 3D isometric preview with camera controls
+            (WASD pan, mouse wheel zoom)
+      398 
+      399  Custom levels are stored via `lib/custom-levels-storage.ts` wi
+           th API-first approach (localhost only) and localStorage fallba
+           ck.
+      400 +
+      401 +## Voice Generation (MiniMax TTS)
+      402 +
+      403 +When generating voicelines for the game using MiniMax TTS:
+      404 +- **Always use voice ID**: `Russian_AttractiveGuy`
+      405 +- Output directory: `public/audio/voicelines/`
+      406 +- Timeline voicelines go in: `public/audio/voicelines/timeline
+          +/`
+
+● Now generating voicelines with Russian_AttractiveGuy. Starting with Dark
+  Forest messages:
+
+● minimax - text_to_audio (MCP)(text: "Ah, they come for your borscht,
+                               comrade!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230438-BOeHZaIQFezHobkX.mp3?Expires=1769
+    785479&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=ifg4rtf%2Bw4ld
+    RgwKq8RbEbT2494%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "They scream louder than accordion at
+                               village party!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230439-UrjkVnwKzKBweywD.mp3?Expires=1769
+    785480&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=Eb%2BFVJ2X5iwV
+    WU6DfUwd0K9Gdqk%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Domovoi swarm! House spirits very angry
+                               about dirty boots!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230441-YqucxuJNomvNudjf.mp3?Expires=1769
+    785482&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=3%2Bwj7Ky7SlLT
+    9XpLWrdT683GD6w%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Mushrooms! But not the good kind babushka
+                                puts in soup!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230443-bZCdRmdIWZtYWPsN.mp3?Expires=1769
+    785483&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=ZbxA8bRKl2hVGg
+    HdUZCOVKYnrKM%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Golems! Heavy like mother-in-law's
+                               cooking!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230444-KTvdNkmrzLrJEDDD.mp3?Expires=1769
+    785485&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=qMojOK9OkhU7WK
+    wDVB7bIhqH01Y%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Werewolf! Even hairier than uncle
+                               Dmitri!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230446-anmqlxuoyeHixNCE.mp3?Expires=1769
+    785487&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=oRCxUM1S0%2FIH
+    70j9zzF0o0%2FOm7s%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "More enemies than potatoes in harvest
+                               season!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230458-YQZzvrkmdcGztzog.mp3?Expires=1769
+    785499&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=BBRqSHJJzgyQoh
+    c7U4erCj1FS2w%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ghost wolves! They howl for your
+                               pierogis!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230459-vGQKFpwWVZNWMkMr.mp3?Expires=1769
+    785500&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=TqpXZfgQ26KMI%
+    2BZNBMsleXZkyp8%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Leshy Shamans! Forest magic goes
+                               brrrrr!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230501-ZejZEFmQPGLQCFat.mp3?Expires=1769
+    785502&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=hgW981vMnuegNE
+    aiTBY8vynCtQM%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "BIG BOSS IS COMING! Hide behind the
+                               turnips!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230502-csjhivTYyaYkiedq.mp3?Expires=1769
+    785503&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=ClJ6sTYdIAflrz
+    gAiJ%2BCI7b0M0I%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Two werewolves! Double the fleas!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230504-QgcHTMNCsWJfsvGY.mp3?Expires=1769
+    785505&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=%2BPswuiZdM7FG
+    ikgXa2JkZ%2BtQpgY%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "More golems! They have stones for
+                               brains!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230505-AsMyHBxVHzkcLVpH.mp3?Expires=1769
+    785506&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=W%2FKhEoFt%2B1
+    Of6vflsk%2FMcaX%2B%2FRg%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ghost pack! They want belly rubs from
+                               beyond!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230517-cNAFoEKALougPzqH.mp3?Expires=1769
+    785518&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=AKggmMAzH%2BuC
+    B9tweJ8aL4dCM%2Bc%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Mushroom army! Nature's revenge for all
+                               that foraging!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230519-eYIemCXkcRqGRbiQ.mp3?Expires=1769
+    785520&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=mG%2BNnc08x0ye
+    IfY09VQUW445qFg%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ancient Treant! This tree has been angry
+                               for 1000 years!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230520-JMDvfirjcHTxkJDv.mp3?Expires=1769
+    785521&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=LiaXvMFh%2Bqda
+    RrIV6f%2FSe3RsKTw%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Baby trees! They grow up so fast, then
+                               attack you!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230522-ibaaXeTTvLPYHElR.mp3?Expires=1769
+    785523&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=KONRwgoQHE6NjM
+    UcUCgvgQhaUC8%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Wolf spirits! They still want treats from
+                                beyond grave!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230524-KufcJBdBlbVoQVsn.mp3?Expires=1769
+    785525&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=gTzzagvROw%2FC
+    aM7l5bYl9G68gSY%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Werewolf pack! Like very angry book
+                               club!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230525-jdbBcElNxTMrLWwn.mp3?Expires=1769
+    785526&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=bhjsF50eKlh2Au
+    oT2Q9j0GKjFLU%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Wasps! Run faster than babushka chasing
+                               grandchildren!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230538-AOZyEvUFLdtwhjMI.mp3?Expires=1769
+    785539&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=SfLzGmWibupC6D
+    ckTDx6Bxty8%2Fs%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Domovoi everywhere! House is very
+                               unclean!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230540-YAmMcKRLPmZSUPfJ.mp3?Expires=1769
+    785541&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=vV9%2FFsPtKcJ0
+    aauURUiXmmxRlOg%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Shaman convention! Very magical, very
+                               dangerous!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230541-KxyfyvJpOZbzYzDC.mp3?Expires=1769
+    785542&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=1pGpcV05GCDG11
+    d9oyxOB23XZ%2F8%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "40 screechers! Like 40 mother-in-laws at
+                               once!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230543-NzaItNGUrFBGqFDA.mp3?Expires=1769
+    785544&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=rpwgDAysIn2mvZ
+    llwrBS6tY%2BH5s%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Shadow stalkers! They follow you like tax
+                                collector!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230544-YHKswpMwsqZnIBWB.mp3?Expires=1769
+    785545&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=Ud3PEgi5L6tZW3
+    xU%2BDxxFyxkJDE%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "100 Domovoi! Did entire village forget to
+                                clean?!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230546-PnDaOyyoCtYSxIQp.mp3?Expires=1769
+    785547&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=PEkgOkIVCxvnJ%
+    2BtLZCBWx5vatI4%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Two Treants! Forest having family
+                               reunion!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230558-YYyssbreFrLjKSml.mp3?Expires=1769
+    785559&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=ubXD1wKK5KgJUB
+    TrWQOt0AQ9uhI%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Elite Golems! They skip leg day never!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230559-GqTUmBmTLBejqGJk.mp3?Expires=1769
+    785560&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=L3JEK2SWe19egl
+    X%2BL%2F7DZTPRC%2B8%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Shaman army! Forest magic at maximum
+                               blyat!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230601-eblFwmxbEwtvcotN.mp3?Expires=1769
+    785562&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=QJl7OeHSTtTvnl
+    FUxfyDytbUVsE%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "40 ghost wolves! They still want
+                               walkies!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230603-WNObJZGWSXZBXNvG.mp3?Expires=1769
+    785564&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=AYJpBHKURLdzK1
+    6fmp1Xffmv7ZI%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Werewolf army! Full moon special
+                               discount!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230605-bMLlsiiiIsYxdjNp.mp3?Expires=1769
+    785566&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=lOtNoQBlMDhk3W
+    xZuVwD%2FB0u%2Fyk%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "CHERNOBOG! Dark lord himself! Even bears
+                               run from this one!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230607-rnDXTrQApyFvIKph.mp3?Expires=1769
+    785568&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=prSmObGPLtCaLN
+    eppu8D6k5qBos%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "VICTORY! You are champion! Even the bears
+                                applaud!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230619-bVoXDHnqOVTFkoEX.mp3?Expires=1769
+    785580&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=ICcMMecWZT2UxG
+    ORdEdSJMBjUP4%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "You descend into the ancient
+                               catacombs...", voice_id: "Russian_AttractiveGuy",
+                                output_directory: "C:\\Users\\Miker\\Documents\\
+                               GitHub\\squatzonedeuce\\handcash-fullstack-templa
+                               te\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230621-DBeMzzdDpYRrZkLC.mp3?Expires=1769
+    785581&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=5XZgCxm8tvK%2F
+    S1JA%2FdoepEv26AE%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Bones rattle in the darkness! Very spooky
+                                down here!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230622-oiOUCNWBUSADRiCC.mp3?Expires=1769
+    785583&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=ZwT7Vq%2Fzy9tm
+    dBbgIfX2o0W3YB4%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Tiny creatures swarm from cracks in the
+                               walls!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230624-OWhqoIuFpJkuwUeT.mp3?Expires=1769
+    785585&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=h5LS7WGcQel6jC
+    b8dWRD1eTXqvo%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The smell! Like uncle's socks after
+                               harvest festival!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230625-aNFxnAlChmmTCEbV.mp3?Expires=1769
+    785586&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=jbDhDJr%2BQbN5
+    ljs2xxvIa5wSlhM%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Burning spirits emerge from the walls!
+                               Hot hot hot!", voice_id: "Russian_AttractiveGuy",
+                                output_directory: "C:\\Users\\Miker\\Documents\\
+                               GitHub\\squatzonedeuce\\handcash-fullstack-templa
+                               te\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230627-lZIYdPgFuOYreqFa.mp3?Expires=1769
+    785588&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=xUwgZ9quDX9voY
+    VIuYl4xCFfS00%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "More skeletons! They need calcium,
+                               comrade!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230638-PmDSMTDlzvZdYoES.mp3?Expires=1769
+    785599&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=CCqwmCyjfWuxSM
+    ASIcroBt%2B74vc%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Stone sentinels guard the deeper
+                               passages!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230639-XUJfdnGaYOKKdCzB.mp3?Expires=1769
+    785600&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=pcBi8hPKx1jp3J
+    be0JwDT%2FDZq8o%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "A massive Bone Horror claws its way up!",
+                                voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230641-esWFxpgLskDYeOGO.mp3?Expires=1769
+    785602&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=hiZA4l6Lfz3H9q
+    zC%2B%2Fkd7wFbML0%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frost bats! They want your warm blood!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230642-halpQCfvGKjgwsjU.mp3?Expires=1769
+    785603&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=dntA%2BzTzdFAs
+    mXLj1El3j69mp0s%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The walls are closing in! Or maybe that's
+                                claustrophobia!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230644-egYvuEzjVJgwcpLp.mp3?Expires=1769
+    785605&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=3xtyiG9UDFYY%2
+    BW5GhB76ed1eaaY%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The Crypt Lord awakens! He slept for
+                               centuries!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230646-RPHxouuQaJjngcwc.mp3?Expires=1769
+    785606&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=z5KwRxrfsXFA%2
+    Fm0w2zhM%2FYrKlbY%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Flame wraiths everywhere! Like disco
+                               inferno!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230657-prdMZgnvMLwDMgxw.mp3?Expires=1769
+    785618&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=9SrGzMDbu7IzSr
+    AgdC8X4M6Jw8A%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Stone golems march! They are not rolling
+                               stones!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230658-CqFSpiECflMaHeMN.mp3?Expires=1769
+    785619&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=lFb4gHyqa%2BE%
+    2BsWFyRe%2BXP1Tj8Ow%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "An Infernal Wraith rises from the
+                               depths!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230700-YcKQffcGxHnDsVkA.mp3?Expires=1769
+    785621&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=3JIM1YUM3V4YrN
+    mW%2B6L57CyhLNs%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "More crawlers! They have too many legs!",
+                                voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230701-poufOGMbvBEjBEwO.mp3?Expires=1769
+    785622&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=xmZV%2FxDXNljR
+    k3%2BaSvxc9ES1VCk%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The ground shakes! Something big is
+                               coming!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230703-kKoykYWQsgbkpJOk.mp3?Expires=1769
+    785624&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=jsrBZM7Ze1JQ2f
+    0gi2mopJnIOAQ%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ancient bones reform! They don't stay
+                               dead!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230704-ZFUiBNfZfmNdJSYh.mp3?Expires=1769
+    785625&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=PZIiYlBLQ3h5%2
+    FIWnfP0ydrY6AHs%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Screechers echo! My ears, comrade!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230716-VEyGSmfRjbHLoLYM.mp3?Expires=1769
+    785637&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=1qgjcJtAXnm86G
+    GWzI%2BJ6i6eGw0%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The Crypt Guardian awakens from its
+                               eternal vigil!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230718-hjTuYToOTCeYxxdz.mp3?Expires=1769
+    785639&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=FFeFQuZY7rjCqq
+    g%2BiXsbq3VwodU%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Fire and ice mix! Like hot borscht with
+                               cold vodka!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230720-BWgsWSnYssVxyCsx.mp3?Expires=1769
+    785641&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=Mb%2BoOQfr8cjK
+    lWEMnpyD8DMnzy8%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "A Stone Sentinel rises! Very rocky
+                               situation!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230722-mCdlEirzfbRnSWJu.mp3?Expires=1769
+    785642&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=NH8PdP14GzttI9
+    sOJeVoa49D5cA%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Bruisers charge! Like bulls in porcelain
+                               shop!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230723-PbPShJGyIybfkLKn.mp3?Expires=1769
+    785644&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=6IcsTUQq8%2Bbr
+    1psW%2FhuuYU6sEE0%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The deeper we go, the worse it gets!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230725-MtOObAdmvBWHuqEP.mp3?Expires=1769
+    785645&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=XRNO4ryhxg9hLu
+    XNCP308jCKHK4%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Elite bone crawler! Extra crunchy!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230737-xRAnaDKIqQqipfzZ.mp3?Expires=1769
+    785657&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=RG%2FxKe5BFv%2
+    F%2F6uJZkHp54FByegE%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Domovoi found their way down here too!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230738-OeeNPxKDAKtwqCQQ.mp3?Expires=1769
+    785659&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=F1FrQIAK26s4Dz
+    wc8G3vD%2FXmePw%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Flame wraiths multiply! Too hot to
+                               handle!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230740-MSjbiVmMjXXjTABf.mp3?Expires=1769
+    785661&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=pgNqpwReeZQBka
+    bH9QMPWHCEEVw%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Stone golem elite! Twice the rock, twice
+                               the pain!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230742-qOHEnaCjLTHOoRQi.mp3?Expires=1769
+    785663&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=sRYWgPF%2BPWtp
+    3MKePjtKZMiuBqA%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "We are getting close to the bottom!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230743-eDHQmDoXlEGOUalP.mp3?Expires=1769
+    785664&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=9%2FeGp5FWlKSH
+    6jDBAfG2381wwTU%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "A Titanic Golem blocks the path!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230744-xEshWvnlAWLtbEgm.mp3?Expires=1769
+    785665&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=L8mvU%2FXSdhQN
+    BClx4TCR9VMboew%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Another Crypt Guardian stirs!", voice_id:
+                                "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230756-hBJNTFnsdlqtdsDM.mp3?Expires=1769
+    785677&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=EDrRsRMt%2F29F
+    azaRjJjUMegeJG8%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The army of the dead marches!", voice_id:
+                                "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230758-PxlheTqaJIktqGRp.mp3?Expires=1769
+    785678&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=ZrWv%2BVVJueWn
+    jCSN7dbK0FQ2KGA%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Elite wraiths! They burn with ancient
+                               hatred!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230759-xkXIMaHUvizVmwBB.mp3?Expires=1769
+    785680&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=%2FYlDiAgp8rYE
+    %2BU%2BDh%2F2qhqatGdY%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Stone sentinels everywhere! Like garden
+                               gnomes of doom!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230801-aOwesIbnNiSXsUkq.mp3?Expires=1769
+    785682&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=bf%2B3EXp1lHaF
+    0mL%2FrqTSQ6i0EtE%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The catacombs shake! Something
+                               approaches!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230802-TpqbaOPcwZPxVMkR.mp3?Expires=1769
+    785683&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=EhL8lz5L%2FC%2
+    F1ytthlE3kPMJCl7A%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Wave after wave! They just keep coming!",
+                                voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230804-mQMaTeptWSqZsoqI.mp3?Expires=1769
+    785685&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=C0aW7sl%2FzCGV
+    0LQMjvqJULmTiKI%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frost golems join the fight! Now we have
+                               two problems!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230816-nZujpYBQdaBWjGcb.mp3?Expires=1769
+    785697&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=95XmXW3pwWdQML
+    OXMyAab2Xt3y4%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Elite stone golem! Built like brick
+                               house!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230817-jtvCDFnugUhpdVEl.mp3?Expires=1769
+    785698&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=WcYiurt%2Fvd7k
+    2T7inL%2F87u%2BnXZ4%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Another flame wraith elite! Fire sale
+                               continues!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230819-iXHvWKbNjIzblWuh.mp3?Expires=1769
+    785700&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=mbCHLiG9FMkV0j
+    DujJFTyrkioFg%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The deepest level approaches!", voice_id:
+                                "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230820-zsUXpqGvhlbGUJOP.mp3?Expires=1769
+    785701&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=Mks173yEw98GQO
+    ToHR2xQYJ4%2Bcs%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The Ancient Crypt Lord rises from the
+                               deepest tomb!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230822-NFVuazCSAizMdnjv.mp3?Expires=1769
+    785702&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=AtLQURnj2ArthW
+    9I3610WQ9HCOE%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Final battle begins! Fight for
+                               motherland!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230823-GEqnndQSFDMvUtEa.mp3?Expires=1769
+    785704&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=DOTPwAe866eP%2
+    B9b%2BeBQZdMpSvYc%3D
+
+
+
+
+● Now generating Frozen Waste voicelines:
+
+● minimax - text_to_audio (MCP)(text: "Frozen spirits emerge from the
+                               blizzard...", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230836-mVqYivjXitGmUPJZ.mp3?Expires=1769
+    785716&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=%2BJpBTO40W%2F
+    QSSJiCKJuZoQFODmc%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ice witches weave their snares! Very cold
+                                magic!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230837-UDtnQNWnHvPXxFkx.mp3?Expires=1769
+    785718&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=7CWOQNb5wu7CIK
+    v3KUHJ7hfT7%2B8%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frost wolves hunt in the storm! They
+                               smell your fear!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230839-oDoScqjdjDTPwucb.mp3?Expires=1769
+    785720&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=ZnDs3wxCMG7DYJ
+    hu3Qr4Bzowr7A%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frozen giants awaken! Big boys from
+                               Siberia!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230840-SdJAkuMaQtOJLZEd.mp3?Expires=1769
+    785721&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=d3NioXKA2mefw7
+    y%2Fk9annf9DNXo%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The cold bites deep! Like ex-girlfriend's
+                                words!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230842-ioZGyPXGmEMmSNEn.mp3?Expires=1769
+    785723&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=2b3HouCksQh06h
+    wVZxT3aRHhTcs%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ice golems march forward! Coolest enemies
+                                yet!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230844-qyOcJOVeBxJSFzqF.mp3?Expires=1769
+    785724&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=STiqHUcD0GiNbp
+    CzIrGKTknCi8E%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "A Frost Wraith materializes from the
+                               ice!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230854-rFaaonOvuaBxNXda.mp3?Expires=1769
+    785735&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=sMLnPpzlId2xtF
+    qsZCWwIFd3nxc%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Living ice forms from the permafrost!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230856-etgMbDZcarqgpEBb.mp3?Expires=1769
+    785737&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=Gk7JLm%2Fxsgtr
+    gO3YYHsqyz3lDM8%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Kikimora spirits! Very annoying house
+                               ghosts!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230858-pZAYPdmBbGwHPRVf.mp3?Expires=1769
+    785738&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=PNfVSk0i5FtGaj
+    wzLA9tnP%2FI6Ao%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The blizzard intensifies! Cannot see hand
+                                in front of face!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230859-JyDhzRnCbAkpUfZj.mp3?Expires=1769
+    785740&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=tz1VbgMO2w0ulI
+    QHRWHmN%2BAjogY%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "A colossal Ice Golem rises from the
+                               permafrost!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230901-laZQPfAjuuRKKNAZ.mp3?Expires=1769
+    785742&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=C7haLE7Xs9GGRZ
+    3qoLyqWAxrzm0%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The Ice Maiden's song fills the air!
+                               Cover ears!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230902-bEXBnMJagxEoVpEi.mp3?Expires=1769
+    785743&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=SEadOc5uC0IKTC
+    Vj%2B6JNMqhhxrg%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "More zmora! Sleep demons want your
+                               dreams!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230914-svPCDsosDxxbnGTN.mp3?Expires=1769
+    785755&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=oSeWgspH5YurIF
+    izRQ8WANYgxs4%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ice shards fly! Nature's angry snowball
+                               fight!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230915-NGcYbnGKWITzYUyL.mp3?Expires=1769
+    785756&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=P6VhwgsM%2BGNa
+    dU1DSMkl0%2BzWLGg%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Snow wraiths phase through the
+                               blizzard!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230917-mANQkbYUdFPYGClm.mp3?Expires=1769
+    785758&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=MEIv9ueS7mcmYM
+    w3eGxrBYIvSrQ%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ancient ice-covered treants stir! Frozen
+                               forest walks!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230919-wjGxccwajtZswhRf.mp3?Expires=1769
+    785759&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=l1p8dS855ymQG5
+    v1QwENuXVuC70%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frost bats swarm! They want warm blood!",
+                                voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230920-WsvyqShjozNZxKKa.mp3?Expires=1769
+    785761&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=9FohAgegFju%2F
+    AumL%2FXLl4F2Deu8%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The temperature drops! Colder than
+                               mother's heart when you forget her birthday!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230922-MAJxnfBYpjelwZWD.mp3?Expires=1769
+    785763&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=sDbOH6AmXN7pxb
+    gsReKJlaiGHJ0%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "A Frost Giant awakens from eternal
+                               slumber!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230933-wHZuWVoSyfPyWZsQ.mp3?Expires=1769
+    785774&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=SPpj7%2BCVATBz
+    3fE4LXQUMacREss%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ice elementals form! Winter is very much
+                               here!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230934-fCqHrFzcszGdTFzl.mp3?Expires=1769
+    785775&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=WxMPi%2BXMWiVf
+    32CFh3ehJFDNvxk%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Another Ice Golem emerges from the
+                               blizzard!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230936-nvMJaKRzugSwAutT.mp3?Expires=1769
+    785777&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=QNG52%2FJwcp%2
+    FWA%2BB2qb0sdpMSqCQ%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frozen werewolves! Even fleas are
+                               frozen!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230937-msPFJTIWuvsfllHC.mp3?Expires=1769
+    785778&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=ZBzxoyeAT2IzUk
+    R%2BUJfBcRHrThc%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The permafrost cracks! Something ancient
+                               stirs!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230939-uyMOCgfbZRMZwFcx.mp3?Expires=1769
+    785780&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=JGYl5TI7lmOTeR
+    2NAlxzxPG92zY%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Screechers join the frozen horde!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230940-yoAhjJBYkRKCHstR.mp3?Expires=1769
+    785781&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=FI%2Bf9%2BP%2F
+    nxKpTykzQPEc2zTfatU%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "An Ice Golem shatters through the
+                               glacier!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230951-qTnFlynseeAnlcGC.mp3?Expires=1769
+    785792&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=DhHGXzXNP7kTVv
+    akOttmzTqErsM%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Stone golems covered in ice! Double
+                               trouble!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230952-RIRhYdXAlYZxCccB.mp3?Expires=1769
+    785793&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=4rAixjh8ipmHgn
+    %2BG9dQC5SQYVQ0%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The wind howls like babushka at lazy
+                               grandson!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230954-qTinvnraatyZVJWp.mp3?Expires=1769
+    785795&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=AUA7hYkqzraUuC
+    O5njoZRL8uAhs%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Elite ice wraith! Extra frosty!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230956-hhLAqewzoDbZNwgN.mp3?Expires=1769
+    785796&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=Iw3o9J4LP8VBxM
+    OHTrXV3sN7uQQ%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "An Ice Wraith descends upon you!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230958-cHaFetcRnGsCVfmt.mp3?Expires=1769
+    785798&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=CB1Gx2R%2BjT4B
+    eorszyhJBVm7qRg%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frozen undead march! They do not feel
+                               cold!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129230959-bzgAkMMEnbOYLaob.mp3?Expires=1769
+    785800&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=rUPAXGQtP4lvYr
+    bdggdQbeiGgw8%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The Ancient Frozen Treant awakens!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231011-qiSSACrCoOJHRSeQ.mp3?Expires=1769
+    785811&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=7oJGBHAh0X5bc4
+    QcFqR4Yp3JIGs%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "More frost giants! Like family reunion in
+                                Siberia!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231012-faZHHuLCPsBUXyuT.mp3?Expires=1769
+    785813&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=FMNOoid20qzNwb
+    1ISN0PPs9Podc%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ice storms rage! Even vodka is frozen!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231014-lKuTEXHBhOhdOWIq.mp3?Expires=1769
+    785815&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=JOG7TjGNKzHvFT
+    DcEGgS3zBbuIU%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Kikimora multiply! House spirits have
+                               union meeting!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231015-QGMaLCWmWMVBvPTI.mp3?Expires=1769
+    785816&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=u0HxDRpdRmaL2D
+    ZnXzUcvWzI3oQ%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The frozen army grows stronger!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231017-yiQkknrtpgwYWztI.mp3?Expires=1769
+    785818&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=eYtCmXNagQ5Ah9
+    36cf8cvapfzXg%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Zmora horde! Nightmares become real!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231018-odvCIOkefCKvdPrk.mp3?Expires=1769
+    785819&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=9K8FAWIjrJRGK7
+    KPzljX1svn87I%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Another Frost Giant joins the hunt!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231030-rFszoWnSzJuxBDAv.mp3?Expires=1769
+    785830&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=EPOVT4mGTozZ9P
+    impURe4%2Bma%2Fks%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ice golems everywhere! Like frozen
+                               statues of doom!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231031-sJLeNXQNfrwsvNCp.mp3?Expires=1769
+    785832&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=kPYJUs1MR5FgrI
+    sIuc4uulOT00M%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The wasteland shows no mercy!", voice_id:
+                                "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231033-xqWOwgxgdCOTBwLR.mp3?Expires=1769
+    785834&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=QrKc7w%2FYL2Im
+    CzW4tpYdDho9cao%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The Frost Colossus appears! Biggest ice
+                               cube ever!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231034-ANCbqKHegrCnGROe.mp3?Expires=1769
+    785835&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=qJjjymk0cHMnQl
+    8OkTMfkBoq%2F8w%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Elite enemies swarm! This is getting
+                               serious!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231036-AdbAOSuulkEZRZdB.mp3?Expires=1769
+    785837&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=vP8xgVNitMW2zZ
+    e5%2FujnkIyg81E%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frozen wraiths multiply! Like snow in
+                               winter!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231037-CokXqSTXKaOtxmUM.mp3?Expires=1769
+    785838&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=sOR3Pv%2FHWego
+    i1jxsD%2BEeLVXR6k%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ancient ice spirits join the battle!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231048-TFWTPuRHgDjQpjfl.mp3?Expires=1769
+    785849&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=DhEqQf0BRjknhq
+    BKQXsxNyjXHCE%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The blizzard reaches maximum fury!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231050-fldicSYxYYZAAoLh.mp3?Expires=1769
+    785850&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=MncX3vMpyw01se
+    4ApWBn2tdGhjw%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Stone sentinels frozen in ice march
+                               forward!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231051-bldcOwzAbakPthum.mp3?Expires=1769
+    785852&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=foxAkBgYDEnPyc
+    LOqflysYRFfjQ%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "More elite enemies! They mean business!",
+                                voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231054-kvFhewPPkcIRvElS.mp3?Expires=1769
+    785855&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=vnCWJtoHmoQKnE
+    B3vqmKRH292Bg%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frost giants form battle line!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231055-jyMiZRMceQjNpcjg.mp3?Expires=1769
+    785856&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=0QqGwuMhNyA1%2
+    BGm3BvwHRWtBpIA%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The ice cracks beneath your feet!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231056-FdEGVBKJBgfBqjra.mp3?Expires=1769
+    785857&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=6bW%2FPfdU1R%2
+    FpgRaR4ByExqlYXNA%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Werewolves join the frozen pack!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231108-MkOrpjZbWmUnnhTM.mp3?Expires=1769
+    785869&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=BAX2ChtIT1SUPB
+    URJ%2FJsL04bdiE%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Another Frost Colossus emerges!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231110-FxflslSocDfmIujf.mp3?Expires=1769
+    785871&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=cglJfb6C4AZ70P
+    w9L5FWEJnWjYw%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The frozen wastes throw everything at
+                               you!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231111-bDuxvpzRludpBmFs.mp3?Expires=1769
+    785872&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=99PqOXj7OBWh8%
+    2FM5Ku5nrJylWnc%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Elite ice golems! Ice age begins!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231113-VfcdxTxZmUMMsXxI.mp3?Expires=1769
+    785874&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=wCMU2YXMIH%2BC
+    6NcwtbgsZ3rBIVk%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Ancient frozen treants awaken! Forest
+                               revenge!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231115-uYoKOfGllexJgAeU.mp3?Expires=1769
+    785875&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=O39Efyphsj5IaQ
+    ycVVOGIMeD9Mw%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Stone golems join ice army!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231116-TVmUCpcqRwLkweIt.mp3?Expires=1769
+    785877&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=As4sCYOv0b2QCR
+    Ct74BTGj9HvzM%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Kikimora elite! Head house spirit very
+                               angry!", voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231127-wjBpkyBkNqgQjuQp.mp3?Expires=1769
+    785888&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=US8gmR4kFdefgA
+    0L%2FClTRSaWWZM%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "The final wave approaches!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231128-eTeWwaHAlEqwGzmD.mp3?Expires=1769
+    785889&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=fdkzEiRdQIiHl3
+    RQGxSarX4rqpE%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frozen undead army marches!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231130-rNlVmwdFUmPITzMa.mp3?Expires=1769
+    785891&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=lcAqZ1d7gR4OEt
+    JLhXzxv1FiwKI%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Frost Colossus leads the charge!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231132-jkDckFYGTSgiRWbG.mp3?Expires=1769
+    785892&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=PqYe%2B7C26Urj
+    2FJ8Ess0Iu%2BTmXI%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "MOROZKO, the Frost King approaches!",
+                               voice_id: "Russian_AttractiveGuy",
+                               output_directory: "C:\\Users\\Miker\\Documents\\G
+                               itHub\\squatzonedeuce\\handcash-fullstack-templat
+                               e\\public\\audio\\voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231133-gPwmbalRthUeLogP.mp3?Expires=1769
+    785894&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=u4qTI021aSfZVF
+    5C%2BmdFELWO%2F8A%3D
+
+
+
+
+● minimax - text_to_audio (MCP)(text: "Morozko, the Frost King, has arrived!
+                               FINAL BATTLE!", voice_id:
+                               "Russian_AttractiveGuy", output_directory:
+                               "C:\\Users\\Miker\\Documents\\GitHub\\squatzonede
+                               uce\\handcash-fullstack-template\\public\\audio\\
+                               voicelines\\timeline")
+  ⎿ Success. Audio URL: https://minimax-algeng-chat-tts-us.oss-us-east-1.al
+    iyuncs.com/audio%2Ftts-20260129231136-iXqoJvovHAvIegsy.mp3?Expires=1769
+    785897&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=id1lFBvtBD88cg
+    nY%2BtNVkVSfdtg%3D
+
+
+
+
+● All voicelines generated. Let me check what files were created and set up the
+  integration.
+
+● Bash(dir "C:\Users\Miker\Documents\GitHub\squatzonedeuce\handcash-fullstack-te
+      mplate\public\audio\voicelines\timeline" 2>nul || echo "Directory empty or
+       missing")
+  ⎿  Directory empty or missing
+
+● The files weren't saved. Let me create the directory and a mapping file, then
+  update the code to integrate the voicelines.
+
+● Bash(mkdir "C:\Users\Miker\Documents\GitHub\squatzonedeuce\handcash-fullstack-
+      template\public\audio\voicelines\timeline" 2>nul || echo "exists")
+  ⎿  (No content)
+
+● Write(components\game\data\timeline_voicelines.ts)
+  ⎿  Wrote 1 lines to components\game\data\timeline_voicelines.ts
+       1 // Timeline voiceline mappings - maps message text to audio file
+          names
+       2 // Audio files are in public/audio/voicelines/timeline/
+       3 
+       4 export interface TimelineVoiceline {
+       5     text: string;
+       6     file: string;
+       7     time: number; // Time in seconds when this should play
+       8 }
+       9 
+      10 // Dark Forest voicelines - every 30 seconds
+
+● Now let me update the AudioManager to add timeline voiceline playback:
+
+● Update(components\game\core\AudioManager.ts)
+  ⎿  Added 30 lines
+      579      public getVoiceVolume(): number {
+      580          return this.voiceVolume;
+      581      }
+      582 +
+      583 +    // --- Timeline Voicelines ---
+      584 +    private timelineVoicelineCache: Map<string, AudioBuffer> =
+          + new Map();
+      585 +
+      586 +    public async playTimelineVoiceline(filename: string) {
+      587 +        if (!this.audioContext || !this.sfxGain) return;
+      588 +
+      589 +        if (!this.voiceGain) {
+      590 +            this.voiceGain = this.audioContext.createGain();
+      591 +            this.voiceGain.connect(this.masterGain!);
+      592 +            this.voiceGain.gain.value = this.voiceVolume;
+      593 +        }
+      594 +
+      595 +        const fullPath = `voicelines/timeline/${filename}`;
+      596 +        const buffer = await this.loadSound(fullPath);
+      597 +        if (!buffer) {
+      598 +            console.warn(`[AudioManager] Timeline voiceline no
+          +t found: ${fullPath}`);
+      599 +            return;
+      600 +        }
+      601 +
+      602 +        const source = this.audioContext.createBufferSource();
+      603 +        source.buffer = buffer;
+      604 +        source.connect(this.voiceGain);
+      605 +        source.start(0);
+      606 +    }
+      607 +
+      608 +    public async preloadTimelineVoicelines(filenames: string[]
+          +) {
+      609 +        const promises = filenames.map(f => this.loadSound(`vo
+          +icelines/timeline/${f}`));
+      610 +        await Promise.all(promises);
+      611 +    }
+      612  }
+
+● Read 1 file (ctrl+o to expand)
+
+● Update(components\game\systems\SpawnSystem.ts)
+  ⎿  Added 6 lines
+       5  import { SeededRandom } from '../../../lib/SeededRandom'
+       6  import { darkForestTimeline, TimelineEvent } from '../data/dark
+          _forest_timeline'
+       7  import { frozenWasteTimeline } from '../data/frozen_waste_timel
+          ine'
+       8 +import { getVoicelinesForWorld, TimelineVoiceline } from '../da
+         +ta/timeline_voicelines'
+       9 
+      10  export class SpawnSystem {
+      11      private elapsedSeconds = 0
+     ...
+      29      // Wave notification callback
+      30      private onWaveMessage: ((message: string) => void) | null =
+           null
+      31 
+      32 +    // Voiceline tracking
+      33 +    private currentVoicelines: TimelineVoiceline[] = []
+      34 +    private nextVoicelineIndex = 0
+      35 +    private onPlayVoiceline: ((filename: string, text: string)
+         +=> void) | null = null
+      36 +
+      37      constructor(
+      38          private entityManager: EntityManager,
+      39          private player: Player,
+
+● Update(components\game\systems\SpawnSystem.ts)
+  ⎿  Added 4 lines
+      44          this.onWaveMessage = callback
+      45      }
+      46 
+      47 +    setVoicelineCallback(callback: (filename: string, text: str
+         +ing) => void) {
+      48 +        this.onPlayVoiceline = callback
+      49 +    }
+      50 +
+      51      setWorld(world: WorldData) {
+      52          this.currentWorld = world
+      53 
+
+● Update(components\game\systems\SpawnSystem.ts)
+  ⎿  Added 5 lines
+      73          this.timeSinceLastCheck = 0
+      74          this.spawnCounter = 0
+      75          this.patternIndex = 0
+      76 +
+      77 +        // Load voicelines for this world
+      78 +        this.currentVoicelines = getVoicelinesForWorld(world.id
+         +)
+      79 +        this.nextVoicelineIndex = 0
+      80 +        console.log(`[SpawnSystem] Loaded ${this.currentVoiceli
+         +nes.length} voicelines for ${world.id}`)
+      81      }
+      82 
+      83      // Public getter for difficulty
+
+● Update(components\game\systems\SpawnSystem.ts)
+  ⎿  Added 16 lines
+      110 
+      111          this.elapsedSeconds += deltaTime
+      112 
+      113 +        // --- Voiceline playback (every 30 seconds) ---
+      114 +        while (
+      115 +            this.nextVoicelineIndex < this.currentVoicelines.l
+          +ength &&
+      116 +            this.elapsedSeconds >= this.currentVoicelines[this
+          +.nextVoicelineIndex].time
+      117 +        ) {
+      118 +            const voiceline = this.currentVoicelines[this.next
+          +VoicelineIndex]
+      119 +            if (this.onPlayVoiceline) {
+      120 +                this.onPlayVoiceline(voiceline.file, voiceline
+          +.text)
+      121 +            }
+      122 +            // Also trigger wave message for the text display
+      123 +            if (this.onWaveMessage) {
+      124 +                this.onWaveMessage(voiceline.text)
+      125 +            }
+      126 +            this.nextVoicelineIndex++
+      127 +        }
+      128 +
+      129          // --- Timeline-based Spawning ---
+      130          while (this.timelineIndex < this.currentTimeline.lengt
+           h && this.elapsedSeconds >= this.currentTimeline[this.timeline
+           Index].time) {
+      131              const event = this.currentTimeline[this.timelineIn
+           dex]
+
+● Searched for 2 patterns (ctrl+o to expand)
+
+> /export conv.txt 
+
+● Skill(export)
+  ⎿  Initializing…
+  ⎿  Error: Skill export is not a prompt-based skill
+
+● Read 1 file (ctrl+o to expand)
+  ⎿  Interrupted · What should Claude do instead?
