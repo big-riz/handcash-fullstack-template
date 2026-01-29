@@ -146,7 +146,7 @@ export class Enemy {
                 this.radius = 0.3
                 break;
             case 'screecher':
-                this.stats = { maxHp: 10, currentHp: 10, moveSpeed: 5.8, damage: 12, xpValue: 1 }
+                this.stats = { maxHp: 10, currentHp: 10, moveSpeed: 5.0, damage: 12, xpValue: 1 }
                 this.radius = 0.25
                 break;
             case 'bruiser':
@@ -174,7 +174,7 @@ export class Enemy {
                 this.radius = 0.35
                 break;
             case 'werewolf':
-                this.stats = { maxHp: 120, currentHp: 120, moveSpeed: 4.8, damage: 25, xpValue: 5 }
+                this.stats = { maxHp: 120, currentHp: 120, moveSpeed: 4.2, damage: 25, xpValue: 5 }
                 this.radius = 0.45
                 break;
             case 'forest_wraith':
@@ -198,7 +198,7 @@ export class Enemy {
                 this.radius = 0.8;
                 break;
             case 'spirit_wolf':
-                this.stats = { maxHp: 52, currentHp: 52, moveSpeed: 6.0, damage: 20, xpValue: 3 };
+                this.stats = { maxHp: 52, currentHp: 52, moveSpeed: 5.5, damage: 20, xpValue: 3 };
                 this.radius = 0.35;
                 this.canPhaseThrough = true;
                 break;
@@ -220,7 +220,7 @@ export class Enemy {
                 this.radius = 1.3;
                 break;
             case 'shadow_stalker':
-                this.stats = { maxHp: 97, currentHp: 97, moveSpeed: 7.0, damage: 35, xpValue: 6 };
+                this.stats = { maxHp: 97, currentHp: 97, moveSpeed: 5.5, damage: 35, xpValue: 6 };
                 this.radius = 0.3;
                 break;
             case 'chernobog':
@@ -228,7 +228,7 @@ export class Enemy {
                 this.radius = 2.0;
                 break;
             case 'frost_bat':
-                this.stats = { maxHp: 15, currentHp: 15, moveSpeed: 7.0, damage: 8, xpValue: 1 };
+                this.stats = { maxHp: 15, currentHp: 15, moveSpeed: 5.5, damage: 8, xpValue: 1 };
                 this.radius = 0.2;
                 break;
             case 'bone_crawler':
@@ -257,7 +257,7 @@ export class Enemy {
                 this.radius = 1.1;
                 break;
             case 'blizzard_wolf':
-                this.stats = { maxHp: 35, currentHp: 35, moveSpeed: 6.5, damage: 16, xpValue: 2 };
+                this.stats = { maxHp: 35, currentHp: 35, moveSpeed: 5.5, damage: 16, xpValue: 2 };
                 this.radius = 0.3;
                 break;
         }

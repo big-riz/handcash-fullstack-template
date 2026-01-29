@@ -987,6 +987,7 @@ export function useGameEngine({
             entityManager.setObstacles(currentObstacles)
             if (selectedWorldId === 'frozen_waste') {
                 entityManager.setGemTheme(0x0044bb, 0x0088ff)
+                entityManager.setHealthPickupTheme(0x007722, 0x005511)
             } else {
                 entityManager.setGemTheme(0x00cccc, 0x00ffff)
             }

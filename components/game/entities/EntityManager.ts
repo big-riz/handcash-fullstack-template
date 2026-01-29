@@ -147,6 +147,8 @@ export class EntityManager {
 
     private gemColor = 0x00cccc
     private gemEmissive = 0x00ffff
+    private healthPickupColor = 0x00ff44
+    private healthPickupEmissive = 0x00ff00
 
     constructor(scene: THREE.Scene, player: Player, vfx: VFXManager, audioManager: AudioManager, spriteSystem: SpriteSystem | null = null, characterModelManager: CharacterModelManager | null = null) {
         this.scene = scene
@@ -190,6 +192,14 @@ export class EntityManager {
         this.instancedGems.setColor(color, emissive)
     }
 
+    setHealthPickupTheme(color: number, emissive: number) {
+        this.healthPickupColor = color
+        this.healthPickupEmissive = emissive
+        for (const pickup of this.healthPickups) {
+            pickup.setColor(color, emissive)
+        }
+    }
+
     setRNG(rng: SeededRandom) {
         this.rng = rng
     }
@@ -228,7 +238,7 @@ export class EntityManager {
 
         if (!pickup) {
             pickup = new XPGem()
-            pickup.createMesh(this.scene, 0x00ff44, 0x00ff00)
+            pickup.createMesh(this.scene, this.healthPickupColor, this.healthPickupEmissive)
             this.healthPickups.push(pickup)
         }
         pickup.spawn(x, z, healAmount)

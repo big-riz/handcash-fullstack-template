@@ -85,7 +85,7 @@ const enemies = [
         "name": "Spirit Wolf",
         "hp": 80,
         "damage": 30,
-        "speed": 6.0,
+        "speed": 5.5,
         "description": "Very fast, can pass through obstacles."
     },
     {
@@ -125,7 +125,7 @@ const enemies = [
         "name": "Shadow Stalker",
         "hp": 75,
         "damage": 35,
-        "speed": 7.0,
+        "speed": 5.5,
         "description": "Becomes invisible and dashes to the player's last location."
     },
     {
@@ -149,7 +149,7 @@ const enemies = [
         "name": "Werewolf Alpha",
         "hp": 1200,
         "damage": 50,
-        "speed": 6.5,
+        "speed": 4.2,
         "description": "Elite enemy. Heals itself and enrages at low health."
     },
     {
@@ -175,7 +175,7 @@ const enemies = [
         "name": "Frost Bat",
         "hp": 15,
         "damage": 8,
-        "speed": 7.0,
+        "speed": 5.5,
         "description": "Fast flying creature. Hard to hit but fragile."
     },
     {
@@ -232,7 +232,7 @@ const enemies = [
         "name": "Blizzard Wolf",
         "hp": 35,
         "damage": 16,
-        "speed": 6.5,
+        "speed": 5.5,
         "description": "Fast frost-touched pack hunter. Attacks in groups."
     }
 ];
