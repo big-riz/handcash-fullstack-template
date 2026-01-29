@@ -486,6 +486,19 @@ export class Player {
         return null
     }
 
+    resetCombatState() {
+        this.statusEffects = []
+        this.isSlowed = false
+        this.slowFactor = 1.0
+        this.slowTimer = 0
+        this.isCursed = false
+        this.curseMultiplier = 1.0
+        this.curseTimer = 0
+        this.iframeTimer = 0
+        this.healSoundCooldown = 0
+        this.previousPosition.copy(this.position)
+    }
+
     dispose() {
         if (this.characterModelManager && this.characterInstance) {
             this.characterModelManager.removeInstance('player')

@@ -97,6 +97,8 @@ export class Enemy {
     private bossAbility1Cooldown = 0
     private bossAbility2Cooldown = 0
     private bossAbility3Cooldown = 0
+    private dashDelayTimer = 0
+    private bossFlashTimer = 0
 
     constructor(type: EnemyType = 'drifter') {
         this.position = new THREE.Vector3()
@@ -355,6 +357,16 @@ export class Enemy {
             this.hitFlashTimer -= deltaTime
         }
 
+        // Update boss flash timer (Chernobog ability visual)
+        if (this.bossFlashTimer > 0) {
+            this.bossFlashTimer -= deltaTime
+            if (this.bossFlashTimer <= 0 && this.mesh) {
+                const mat = this.mesh.material as THREE.MeshStandardMaterial
+                mat.emissive.setHex(0x000000)
+                mat.emissiveIntensity = 0
+            }
+        }
+
         // Ghost flicker
         if (this.type === 'zmora' || this.type === 'forest_wraith') {
             this.flickerTimer += deltaTime
@@ -404,13 +416,7 @@ export class Enemy {
                     const mat = this.mesh.material as THREE.MeshStandardMaterial
                     mat.emissive.setHex(0xff0000)
                     mat.emissiveIntensity = 1.0
-                    setTimeout(() => {
-                        if (this.mesh) {
-                            const mat = this.mesh.material as THREE.MeshStandardMaterial
-                            mat.emissive.setHex(0x000000)
-                            mat.emissiveIntensity = 0
-                        }
-                    }, 300)
+                    this.bossFlashTimer = 0.3
                 }
             }
         }
@@ -504,6 +510,12 @@ export class Enemy {
                         }
                     }
                 }
+            } else if (this.dashDelayTimer > 0) {
+                this.dashDelayTimer -= deltaTime
+                if (this.dashDelayTimer <= 0) {
+                    this.isDashing = true
+                    this.dashDuration = 0.5
+                }
             } else if (this.dashCooldown <= 0) {
                 this.dashCooldown = 5.0
                 this.dashTargetX = player.position.x
@@ -513,10 +525,7 @@ export class Enemy {
                     mat.opacity = 0.1
                     mat.transparent = true
                 }
-                setTimeout(() => {
-                    this.isDashing = true
-                    this.dashDuration = 0.5
-                }, 500)
+                this.dashDelayTimer = 0.5
             }
         }
 

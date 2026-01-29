@@ -191,6 +191,7 @@ export function useGameEngine({
     // replayRef passed from prop
     const replayPlayerRef = useRef<ReplayPlayer | null>(null)
     const pendingReplaySeed = useRef<string | null>(null) // Stores seed for replay that needs to be initialized
+    const isInitializingRef = useRef(false) // Tracks async initializeGame() in progress
     const allowPostVictoryRef = useRef(false) // Legacy - allows continuing after final victory
     const shownVictoryMilestonesRef = useRef<Set<number>>(new Set()) // Tracks which victory levels (10, 20, 30) have been shown
     const pendingLevelUpAfterVictoryRef = useRef(false) // Tracks if level-up should show after victory screen
@@ -453,6 +454,7 @@ export function useGameEngine({
             pendingLevelUpAfterVictoryRef.current = false // Reset pending level-up flag
             p.position.set(0, 0, 0)
             p.velocity.set(0, 0, 0)
+            p.resetCombatState()
             p.stats.currentHp = 100
             p.stats.maxHp = 100
             p.stats.level = 1
@@ -943,6 +945,7 @@ export function useGameEngine({
         // spriteSystemRef.current = spriteSystem
 
         const initializeGame = async () => {
+            isInitializingRef.current = true
             // Initialize character model manager (for player)
             const characterModelManager = new CharacterModelManager()
             characterModelManagerRef.current = characterModelManager
@@ -1034,6 +1037,16 @@ export function useGameEngine({
             // Enemy combination system
             const enemyCombinationSystem = new EnemyCombinationSystem(entityManager, vfx)
             enemyCombinationSystemRef.current = enemyCombinationSystem
+
+            isInitializingRef.current = false
+
+            // If a replay was requested while we were initializing, apply it now
+            if (pendingReplaySeed.current && gameStateRef.current === "replaying") {
+                const seed = pendingReplaySeed.current
+                pendingReplaySeed.current = null
+                resetGame(true, seed)
+                gameLoopRef.current?.start()
+            }
         }
 
         // Call async initialization
@@ -1083,22 +1096,15 @@ export function useGameEngine({
                 if (gameStateRef.current !== "playing" && gameStateRef.current !== "replaying") break;
 
                 let movement = { x: 0, z: 0 };
+                let replayEvents: any[] = [];
                 if (gameStateRef.current === "replaying" && replayPlayerRef.current) {
-                    const events = replayPlayerRef.current.getEventsForFrame(replayFrameRef.current);
-                    for (const event of events) {
+                    replayEvents = replayPlayerRef.current.getEventsForFrame(replayFrameRef.current);
+                    for (const event of replayEvents) {
                         const type = event[0];
                         if (type === ReplayEventType.LEVEL_UP) {
                             handleUpgrade(event[2], true);
                         } else if (type === ReplayEventType.DEATH) {
                             setGameState("gameOver");
-                        } else if (type === ReplayEventType.CHECKPOINT) {
-                            replayPlayerRef.current.verifyCheckpoint(
-                                event,
-                                p.position.x,
-                                p.position.z,
-                                p.stats.level,
-                                em.totalKills
-                            );
                         }
                     }
                     movement = replayPlayerRef.current.currentInput;
@@ -1323,7 +1329,18 @@ export function useGameEngine({
                     replayRef.current.update()
                 }
 
-                if (gameStateRef.current === "replaying") {
+                if (gameStateRef.current === "replaying" && replayPlayerRef.current) {
+                    for (const event of replayEvents) {
+                        if (event[0] === ReplayEventType.CHECKPOINT) {
+                            replayPlayerRef.current.verifyCheckpoint(
+                                event,
+                                p.position.x,
+                                p.position.z,
+                                p.stats.level,
+                                em.totalKills
+                            );
+                        }
+                    }
                     replayFrameRef.current++
                 }
 
@@ -1511,11 +1528,12 @@ benchmark.presets        - List available presets
 
     useEffect(() => {
         if (gameState === "playing" || gameState === "replaying") {
-            // If we have a pending replay, initialize it with the correct seed
-            if (gameState === "replaying" && pendingReplaySeed.current) {
+            // If we have a pending replay and initializeGame() is NOT running, apply now.
+            // If initializeGame() IS running, it will handle the seed when it completes.
+            if (gameState === "replaying" && pendingReplaySeed.current && !isInitializingRef.current) {
                 const seed = pendingReplaySeed.current
-                pendingReplaySeed.current = null // Clear the pending seed
-                resetGame(true, seed) // forReplay = true, overrideSeed = seed
+                pendingReplaySeed.current = null
+                resetGame(true, seed)
             }
             gameLoopRef.current?.start()
         } else {
