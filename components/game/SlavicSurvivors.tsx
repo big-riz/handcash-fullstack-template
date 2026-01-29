@@ -602,14 +602,18 @@ export function SlavicSurvivors() {
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [profilerMetrics, profilerWarnings, fpsHistory, toggleUncapped])
 
-    // Access Check
+    // Access Check - use stable user ID to avoid re-triggering on profile refresh
+    const userId = user?.publicProfile?.id || user?.publicProfile?.handle
     useEffect(() => {
         const checkAccess = async () => {
-            if (!user) {
+            if (!userId) {
                 setIsCheckingAuth(false)
                 setHasCompletedAuthCheck(false)
                 return
             }
+
+            // Already authorized — don't re-check
+            if (isAuthorized === true) return
 
             setIsCheckingAuth(true)
             setHasCompletedAuthCheck(false)
@@ -638,7 +642,8 @@ export function SlavicSurvivors() {
             }
         }
         checkAccess()
-    }, [user])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userId])
 
     // Prevent accidental reload during gameplay
     useEffect(() => {
