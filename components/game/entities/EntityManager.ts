@@ -228,10 +228,10 @@ export class EntityManager {
 
         if (!pickup) {
             pickup = new XPGem()
+            pickup.createMesh(this.scene, 0x00ff44, 0x00ff00)
             this.healthPickups.push(pickup)
         }
         pickup.spawn(x, z, healAmount)
-        pickup.setColor(0x00ff44, 0x00ff00)
     }
 
     spawnProjectile(x: number, z: number, vx: number, vz: number, damage: number, isEnemyProjectile: boolean = false, appliesSlow: boolean = false, appliesCurse: boolean = false, hitEmoji: string = '⚔️') {
@@ -940,6 +940,11 @@ export class EntityManager {
         }
         for (const pickup of this.healthPickups) {
             pickup.despawn()
+            if (pickup.mesh) {
+                this.scene.remove(pickup.mesh)
+                pickup.mesh.geometry.dispose()
+                if (pickup.mesh.material instanceof THREE.Material) pickup.mesh.material.dispose()
+            }
         }
         for (const projectile of this.projectiles) {
             projectile.despawn()
