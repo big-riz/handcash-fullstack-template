@@ -35,10 +35,28 @@ npm run db:generate  # Generate migration files (production)
 npm run db:studio    # Open Drizzle Studio (database GUI)
 ```
 
+### Testing
+```bash
+npm run test              # Run all Playwright tests
+npm run test:ui           # Run tests with Playwright UI mode
+npm run test:headed       # Run tests with browser windows visible
+npm run test:debug        # Run tests in debug mode
+npm run test:e2e          # Run e2e tests only
+npm run test:api          # Run API tests only
+npm run test:report       # Show test report
+
+# Run a single test file
+npx playwright test path/to/test.ts
+
+# Run tests matching a pattern
+npx playwright test -g "test name pattern"
+```
+
 ### Scripts
 ```bash
 npm run bulk-payment      # Run bulk payment script
-npm run chaos-test        # Run automated game testing
+npm run chaos-test        # Run automated chaos test (Playwright)
+npm run ci:game           # Run CI game tests
 tsx scripts/seed-item-templates.ts      # Seed item templates
 tsx scripts/simulate-game.ts            # Run game simulation
 tsx scripts/query-minted-items.ts       # Query minted items
@@ -253,9 +271,8 @@ Sprites use AI-generated sprite sheets with animation frames:
 
 ### Mathematical Balance System
 
-The game uses a comprehensive mathematical balance system for enemy spawning and difficulty curves. See `.claude/MATHEMATICAL_BALANCE_SYSTEM.md` for complete documentation.
+The game uses a comprehensive mathematical balance system for enemy spawning and difficulty curves:
 
-**Key Features:**
 - Three-phase difficulty curve (Early/Mid/Late game)
 - Smooth sigmoid transitions between phases
 - Boss waves every 5 minutes with 3.5x HP and 1.75x spawn multipliers
@@ -267,48 +284,23 @@ The game uses a comprehensive mathematical balance system for enemy spawning and
 npx tsx scripts/regenerate-timelines.ts
 ```
 
-Edit configuration in the script to adjust:
-- Enemy spawn rates and intervals
-- Boss/elite event placement
-- Enemy type progressions and weights
-- Level duration and narrative messages
-
-See `.claude/TIMELINE_REGENERATION_SUMMARY.md` for detailed information on the regeneration process.
+Edit configuration in the script to adjust enemy spawn rates, boss/elite events, enemy progressions, and level duration.
 
 ### Performance Profiling
 
-Comprehensive performance profiling system for analyzing rendering performance with hundreds of enemies on screen. See `.claude/PERFORMANCE_PROFILING_GUIDE.md` for complete documentation.
+Performance profiling system for analyzing rendering with hundreds of enemies:
 
 **Key Components:**
-- `PerformanceProfiler` - Core profiling engine tracking FPS, frame time, entity counts, render stats
-- `ProfiledGameLoop` - Drop-in replacement for GameLoop with integrated profiling
-- `PerformanceOverlay` - Real-time visual overlay showing metrics and warnings
-- `BenchmarkMode` - Stress testing tool for spawning large enemy waves
-- Performance benchmark suite - Automated testing with detailed reports
+- `PerformanceProfiler` (`components/game/core/`) - Core profiling engine
+- `ProfiledGameLoop` - Drop-in GameLoop replacement with profiling
+- `PerformanceOverlay` (`components/game/ui/`) - Real-time visual overlay
+- `BenchmarkMode` (`components/game/debug/`) - Stress testing tool
 
 **Quick Usage:**
 - Press `F3` to toggle performance overlay
 - Press `F4` to export detailed performance report
 - Console: `benchmark.start('heavy')` to spawn 500 enemies
 - Console: `benchmark.help()` for all commands
-
-**Integration Steps:**
-```typescript
-// 1. Replace GameLoop with ProfiledGameLoop
-import { ProfiledGameLoop } from "../core/ProfiledGameLoop"
-const loop = new ProfiledGameLoop(update, render, () => {}, true)
-
-// 2. Add timing markers in update/render
-loop.mark('entityUpdate')
-entityManager.update(deltaTime)
-loop.measureEnd('entityUpdate')
-
-// 3. Update metrics for overlay
-const profiler = loop.getProfiler()
-setProfilerMetrics(profiler.getMetrics())
-```
-
-See `.claude/PERFORMANCE_PROFILING_INTEGRATION.md` for copy-paste integration code.
 
 ## Database Patterns
 

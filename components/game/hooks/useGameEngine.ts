@@ -16,6 +16,10 @@ import { EventSystem } from "../systems/EventSystem"
 import { AudioManager } from "../core/AudioManager"
 import { SpriteSystem } from "../core/SpriteSystem"
 import { BenchmarkMode } from "../debug/BenchmarkMode"
+import { AirdropSystem, AirdropData } from "../systems/AirdropSystem"
+import { EnemyCombinationSystem } from "../systems/EnemyCombinationSystem"
+import { CharacterModelManager } from "../core/CharacterModelManager"
+import { InstancedSkinnedMesh } from "../core/InstancedSkinnedMesh"
 
 import { ItemTemplate } from "@/lib/item-templates-storage"
 import { CharacterInfo } from "../types"
@@ -178,6 +182,10 @@ export function useGameEngine({
     const eventSystemRef = useRef<EventSystem | null>(null)
     const vfxManagerRef = useRef<VFXManager | null>(null)
     const spriteSystemRef = useRef<SpriteSystem | null>(null)
+    const airdropSystemRef = useRef<AirdropSystem | null>(null)
+    const enemyCombinationSystemRef = useRef<EnemyCombinationSystem | null>(null)
+    const characterModelManagerRef = useRef<CharacterModelManager | null>(null)
+    const instancedSkinnedMeshRef = useRef<InstancedSkinnedMesh | null>(null)
     const rngRef = useRef<SeededRandom | null>(null)
     // replayRef passed from prop
     const replayPlayerRef = useRef<ReplayPlayer | null>(null)
@@ -185,6 +193,7 @@ export function useGameEngine({
     const allowPostVictoryRef = useRef(false) // Legacy - allows continuing after final victory
     const shownVictoryMilestonesRef = useRef<Set<number>>(new Set()) // Tracks which victory levels (10, 20, 30) have been shown
     const pendingLevelUpAfterVictoryRef = useRef(false) // Tracks if level-up should show after victory screen
+    const pendingAirdropLevelUpRef = useRef(false) // Tracks if airdrop triggered level-up
     const replayFrameRef = useRef<number>(0)
     const gameTimeRef = useRef<number>(0)
     const obstaclesRef = useRef<{ x: number, z: number, radius: number }[]>([])
@@ -496,6 +505,8 @@ export function useGameEngine({
             em.setObstacles(obstaclesRef.current)
             vm.cleanup()
             abilitySystemRef.current?.cleanup()
+            airdropSystemRef.current?.cleanup()
+            enemyCombinationSystemRef.current?.cleanup()
 
             const newSeed = overrideSeed || Date.now().toString()
             const gameRNG = new SeededRandom(newSeed + "_game")
@@ -528,6 +539,19 @@ export function useGameEngine({
                 setTimeout(() => setWaveNotification(null), 4000)
             })
             eventSystemRef.current = new EventSystem({ spawnSystem: spawnSystemRef.current, entityManager: em, vfxManager: vm, player: p })
+
+            // Reinitialize airdrop system with new RNG
+            if (airdropSystemRef.current && scene) {
+                airdropSystemRef.current = new AirdropSystem(scene, p, gameRNG)
+                airdropSystemRef.current.setCollectCallback(() => {
+                    pendingAirdropLevelUpRef.current = true
+                })
+            }
+
+            // Reinitialize enemy combination system
+            if (enemyCombinationSystemRef.current) {
+                enemyCombinationSystemRef.current = new EnemyCombinationSystem(em, vm)
+            }
         }
         cameraTargetRef.current.set(0, 0, 0)
     }
@@ -1007,15 +1031,44 @@ export function useGameEngine({
         // spriteSystemRef.current = spriteSystem
 
         const initializeGame = async () => {
+            // Initialize character model manager (for player)
+            const characterModelManager = new CharacterModelManager()
+            characterModelManagerRef.current = characterModelManager
+            characterModelManager.setScene(scene)
+            try {
+                await characterModelManager.load('/models/lil-gop.glb')
+            } catch (error) {
+                console.warn('[GameEngine] Failed to load character model, using fallback:', error)
+            }
+
+            // Initialize GPU-instanced skinned mesh for enemies (single draw call)
+            const instancedSkinnedMesh = new InstancedSkinnedMesh(scene, 500)
+            instancedSkinnedMeshRef.current = instancedSkinnedMesh
+            try {
+                await instancedSkinnedMesh.load('/models/lil-gop.glb')
+                console.log('[GameEngine] Instanced skinned mesh ready')
+            } catch (error) {
+                console.warn('[GameEngine] Failed to load instanced skinned mesh:', error)
+            }
+
             const player = new Player(0, 0, audioManagerRef.current)
             player.useSpriteMode = false
-            player.createMesh(scene)
+            player.use3DModel = true
+            player.createMesh(scene, undefined, characterModelManager)
             playerRef.current = player
 
             const vfx = new VFXManager(scene)
             vfxManagerRef.current = vfx
 
-            const entityManager = new EntityManager(scene, player, vfx, audioManagerRef.current as AudioManager, null)
+            const entityManager = new EntityManager(scene, player, vfx, audioManagerRef.current as AudioManager, null, characterModelManager)
+
+            // Enable GPU-instanced skinned mesh for enemies
+            if (instancedSkinnedMesh.isReady()) {
+                entityManager.setInstancedSkinnedMesh(instancedSkinnedMesh)
+                console.log('[GameEngine] Instanced skinned mesh enabled for enemies')
+            } else {
+                console.warn('[GameEngine] Instanced skinned mesh not ready, enemies will use colored shapes')
+            }
             entityManager.setObstacles(currentObstacles)
             if (selectedWorldId === 'frozen_waste') {
                 entityManager.setGemTheme(0x0044bb, 0x0088ff)
@@ -1050,6 +1103,18 @@ export function useGameEngine({
 
             const eventSystem = new EventSystem({ spawnSystem, entityManager, vfxManager: vfx, player })
             eventSystemRef.current = eventSystem
+
+            // Airdrop system
+            const airdropSystem = new AirdropSystem(scene, player, rng)
+            airdropSystem.setCollectCallback(() => {
+                // Trigger airdrop level-up (single choice)
+                pendingAirdropLevelUpRef.current = true
+            })
+            airdropSystemRef.current = airdropSystem
+
+            // Enemy combination system
+            const enemyCombinationSystem = new EnemyCombinationSystem(entityManager, vfx)
+            enemyCombinationSystemRef.current = enemyCombinationSystem
         }
 
         // Call async initialization
@@ -1107,6 +1172,14 @@ export function useGameEngine({
                             handleUpgrade(event[2], true);
                         } else if (type === ReplayEventType.DEATH) {
                             setGameState("gameOver");
+                        } else if (type === ReplayEventType.CHECKPOINT) {
+                            replayPlayerRef.current.verifyCheckpoint(
+                                event,
+                                p.position.x,
+                                p.position.z,
+                                p.stats.level,
+                                em.totalKills
+                            );
                         }
                     }
                     movement = replayPlayerRef.current.currentInput;
@@ -1124,6 +1197,7 @@ export function useGameEngine({
                 p.update(deltaTime, movement.x, movement.z)
                 ss.update(deltaTime)
                 em.update(deltaTime)
+                em.update3DModels(deltaTime)
                 if (loop) loop.measureEnd('entityUpdate')
 
                 // Profile ability system
@@ -1135,6 +1209,16 @@ export function useGameEngine({
                 if (loop) loop.mark('particleSystem')
                 vm.update(deltaTime)
                 if (loop) loop.measureEnd('particleSystem')
+
+                // Update airdrop system
+                if (airdropSystemRef.current) {
+                    airdropSystemRef.current.update(deltaTime, p.stats.level)
+                }
+
+                // Update enemy combination system
+                if (enemyCombinationSystemRef.current) {
+                    enemyCombinationSystemRef.current.update(deltaTime)
+                }
 
                 eventSystemRef.current?.update(deltaTime)
 
@@ -1279,18 +1363,42 @@ export function useGameEngine({
                         submitScore(p.stats.level)
                         break
                     }
+
+                    // Check for airdrop-triggered level-up
+                    if (pendingAirdropLevelUpRef.current) {
+                        pendingAirdropLevelUpRef.current = false
+                        // Get all choices and show just 1 random one
+                        const allChoices = getLevelUpChoices().filter(c => !c.locked)
+                        if (allChoices.length > 0) {
+                            if (!rngRef.current) throw new Error("RNG required for airdrop selection")
+                            const randomIndex = Math.floor(rngRef.current.next() * allChoices.length)
+                            levelUpChoices.current = [allChoices[randomIndex]]
+                            setGameState("airdropLevelUp")
+                            break
+                        }
+                    }
                 }
 
                 if (gameStateRef.current === "playing" && replayRef.current) {
                     replayRef.current.recordInput(movement.x, movement.z)
+                    // Record checkpoint every 60 frames (1 second) for replay verification
+                    const frameCount = replayRef.current['currentFrame']
+                    if (frameCount > 0 && frameCount % 60 === 0) {
+                        replayRef.current.recordCheckpoint(
+                            p.position.x,
+                            p.position.z,
+                            p.stats.level,
+                            em.totalKills
+                        )
+                    }
                     replayRef.current.update()
                 }
 
-                gameTimeRef.current += deltaTime
-            }
+                if (gameStateRef.current === "replaying") {
+                    replayFrameRef.current++
+                }
 
-            if (gameStateRef.current === "replaying") {
-                replayFrameRef.current++
+                gameTimeRef.current += deltaTime
             }
 
             setPlayerHp(p.stats.currentHp)
@@ -1445,7 +1553,11 @@ benchmark.presets        - List available presets
             botControllerRef.current?.cleanup()
             entityManagerRef.current?.cleanup()
             vfxManagerRef.current?.cleanup()
+            airdropSystemRef.current?.cleanup()
+            enemyCombinationSystemRef.current?.cleanup()
             playerRef.current?.dispose()
+            characterModelManagerRef.current?.dispose()
+            instancedSkinnedMeshRef.current?.dispose()
 
             // Cleanup GLB objects from previous scene
             sceneGltfObjectsRef.current.forEach(obj => {
@@ -1476,6 +1588,11 @@ benchmark.presets        - List available presets
         }
     }, [gameState])
 
+    // Get active airdrops for UI indicator
+    const getActiveAirdrops = (): AirdropData[] => {
+        return airdropSystemRef.current?.getActiveAirdrops() || []
+    }
+
     return {
         gameLoopRef,
         inputManagerRef,
@@ -1485,6 +1602,7 @@ benchmark.presets        - List available presets
         abilitySystemRef,
         eventSystemRef,
         vfxManagerRef,
+        airdropSystemRef,
         rngRef,
         replayRef,
         replayPlayerRef,
@@ -1492,6 +1610,7 @@ benchmark.presets        - List available presets
         pendingLevelUpAfterVictoryRef,
         levelUpChoices,
         getLevelUpChoices,
+        getActiveAirdrops,
         resetGame,
         startReplay,
         handleUpgrade

@@ -13,6 +13,7 @@ import { Player } from './Player'
 import { VFXManager } from '../systems/VFXManager'
 import { SpriteSystem, EntitySprite } from '../core/SpriteSystem'
 import { GooglyEyes, EyeExpression } from '../core/GooglyEyes'
+import { CharacterModelManager, CharacterInstance } from '../core/CharacterModelManager'
 
 export interface EnemyStats {
     maxHp: number
@@ -52,11 +53,23 @@ export class Enemy {
     googlyEyes: GooglyEyes | null = null
     isActive = false
     isBoss = false
+    isSuperEnemy = false
+    combinedHp: number = 0 // Stores combined HP from merged enemies
     onDie: ((x: number, z: number, xp: number) => void) | null = null
 
     // Sprite rendering (alternative to mesh)
     entitySprite: EntitySprite | null = null
     useSpriteMode: boolean = false
+
+    // 3D model rendering
+    characterInstance: CharacterInstance | null = null
+    use3DModel: boolean = false
+    characterModelManager: CharacterModelManager | null = null
+    modelInstanceId: string = ''
+
+    // GPU-instanced skinned mesh rendering
+    instancedSkinIndex: number = -1
+    useInstancedSkinning: boolean = false
 
     // Behaviors
     private flickerTimer = 0
@@ -247,9 +260,11 @@ export class Enemy {
         }
     }
 
-    spawn(type: EnemyType, x: number, z: number, isElite: boolean = false, difficultyMultiplier: number = 1.0) {
+    spawn(type: EnemyType, x: number, z: number, isElite: boolean = false, difficultyMultiplier: number = 1.0, isSuperEnemy: boolean = false, combinedHp: number = 0) {
         this.type = type
         this.isBoss = BOSS_TYPES.has(type)
+        this.isSuperEnemy = isSuperEnemy
+        this.combinedHp = combinedHp
         this.position.set(x, 0, z)
         this.isActive = true
         this.isInvulnerable = false
@@ -274,6 +289,14 @@ export class Enemy {
             this.stats.xpValue *= 2.0
         }
 
+        // Super enemy: use combined HP and 5x XP
+        if (isSuperEnemy && combinedHp > 0) {
+            this.stats.maxHp = combinedHp
+            this.stats.currentHp = combinedHp
+            this.stats.xpValue *= 5
+            this.radius *= 2 // Double collision radius
+        }
+
         // Boss mesh
         if (this.mesh) {
             this.mesh.position.set(this.position.x, this.radius, this.position.z)
@@ -286,6 +309,25 @@ export class Enemy {
         if (this.googlyEyes) {
             this.googlyEyes.setVisible(true)
             this.googlyEyes.update(this.position, this.velocity, this.radius * 2)
+        }
+
+        // 3D model
+        if (this.characterModelManager && this.modelInstanceId) {
+            this.characterModelManager.setInstanceVisible(this.modelInstanceId, true)
+            // Apply elite/super enemy visual effects
+            if (isSuperEnemy) {
+                this.characterModelManager.setInstanceGlow(this.modelInstanceId, 0xffd700, 0.8) // Gold glow
+                const baseScale = 0.4 + (this.radius * 1.2)
+                this.characterModelManager.setInstanceScale(this.modelInstanceId, baseScale * 2)
+            } else if (isElite) {
+                this.characterModelManager.setInstanceGlow(this.modelInstanceId, 0xffd700, 0.5) // Gold glow
+                const baseScale = 0.4 + (this.radius * 1.2)
+                this.characterModelManager.setInstanceScale(this.modelInstanceId, baseScale * 1.5)
+            } else {
+                this.characterModelManager.clearInstanceTint(this.modelInstanceId)
+                const baseScale = 0.4 + (this.radius * 1.2)
+                this.characterModelManager.setInstanceScale(this.modelInstanceId, baseScale)
+            }
         }
 
         // Sprite mode
@@ -520,7 +562,8 @@ export class Enemy {
         this.position.x += this.velocity.x * deltaTime
         this.position.z += this.velocity.z * deltaTime
 
-        // Update boss mesh position (regular enemies rendered via InstancedRenderer)
+        // 3D model updates handled by EntityManager.update3DModels() for performance
+        // Update boss mesh position (bosses use individual meshes, not 3D models)
         if (this.mesh && this.isBoss) {
             this.mesh.position.set(this.position.x, this.radius, this.position.z)
         }
@@ -529,6 +572,12 @@ export class Enemy {
         if (this.googlyEyes && this.isActive) {
             this.googlyEyes.update(this.position, this.velocity, this.radius * 2)
         }
+    }
+
+    // 3D model updates are now handled in batch by EntityManager.update3DModels()
+    // This method is kept for backwards compatibility but does nothing
+    update3DModel(_deltaTime: number): void {
+        // No-op: batch updates in EntityManager handle this now
     }
 
     updateSprite(deltaTime: number, cameraPos: THREE.Vector3, spriteSystem: SpriteSystem): void {
@@ -560,7 +609,7 @@ export class Enemy {
         return false
     }
 
-    die() {
+    die(skipXpDrop: boolean = false) {
         if (!this.isActive) return
         this.isActive = false
 
@@ -570,7 +619,10 @@ export class Enemy {
             this.entitySprite.sprite.sprite.visible = false
             this.entitySprite.sprite.shadow.visible = false
         }
-        if (this.onDie) {
+        if (this.characterModelManager && this.modelInstanceId) {
+            this.characterModelManager.setInstanceVisible(this.modelInstanceId, false)
+        }
+        if (this.onDie && !skipXpDrop) {
             this.onDie(this.position.x, this.position.z, this.stats.xpValue)
         }
     }
@@ -579,7 +631,25 @@ export class Enemy {
      * Create visuals. Boss enemies get individual 3D meshes + googly eyes.
      * Regular enemies skip mesh creation (rendered via InstancedRenderer).
      */
-    createMesh(scene: THREE.Scene, color = 0xff4444, spriteSystem?: SpriteSystem): THREE.Mesh | null {
+    createMesh(scene: THREE.Scene, color = 0xff4444, spriteSystem?: SpriteSystem, characterModelManager?: CharacterModelManager, instanceId?: string): THREE.Mesh | null {
+        // 3D model mode for non-boss enemies
+        if (this.use3DModel && characterModelManager && instanceId && !this.isBoss) {
+            this.characterModelManager = characterModelManager
+            this.modelInstanceId = instanceId
+
+            // Scale based on radius - smaller enemies are smaller models
+            // Base scale around 0.5, adjusted by radius (typical radius is 0.3)
+            const scale = 0.4 + (this.radius * 1.2)
+
+            // Use the enemy's color as flat color material
+            this.characterInstance = characterModelManager.createInstance(instanceId, scale, color, false)
+            if (this.characterInstance) {
+                this.characterInstance.model.visible = this.isActive
+                return null
+            }
+            this.use3DModel = false
+        }
+
         // Boss enemies: individual 3D mesh with shadows + googly eyes
         if (this.isBoss) {
             let geometry: THREE.BufferGeometry

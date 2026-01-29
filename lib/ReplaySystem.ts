@@ -8,7 +8,8 @@ export enum ReplayEventType {
     INPUT = 0,
     LEVEL_UP = 1,
     DEATH = 2,
-    START = 3
+    START = 3,
+    CHECKPOINT = 4
 }
 
 /**
@@ -16,6 +17,7 @@ export enum ReplayEventType {
  * INPUT: [0, frame, x, z] (x, z rounded to 2 decimals)
  * LEVEL_UP: [1, frame, abilityId]
  * DEATH: [2, frame, level, time]
+ * CHECKPOINT: [4, frame, x*100, z*100, level, kills]
  */
 export type CompactEvent = [number, number, ...any[]];
 
@@ -68,6 +70,17 @@ export class ReplayRecorder {
             ReplayEventType.LEVEL_UP,
             this.currentFrame,
             abilityId
+        ]);
+    }
+
+    recordCheckpoint(playerX: number, playerZ: number, level: number, kills: number) {
+        this.data.events.push([
+            ReplayEventType.CHECKPOINT,
+            this.currentFrame,
+            Math.round(playerX * 100),
+            Math.round(playerZ * 100),
+            level,
+            kills
         ]);
     }
 
@@ -146,5 +159,23 @@ export class ReplayPlayer {
 
     isFinished(): boolean {
         return this.eventIndex >= this.data.events.length;
+    }
+
+    verifyCheckpoint(event: CompactEvent, playerX: number, playerZ: number, level: number, kills: number): boolean {
+        if (event[0] !== ReplayEventType.CHECKPOINT) return true;
+
+        const [, frame, expectedX, expectedZ, expectedLevel, expectedKills] = event;
+        const actualX = Math.round(playerX * 100);
+        const actualZ = Math.round(playerZ * 100);
+
+        if (actualX !== expectedX || actualZ !== expectedZ || level !== expectedLevel || kills !== expectedKills) {
+            console.error(
+                `REPLAY DIVERGENCE at frame ${frame}: ` +
+                `pos (${actualX},${actualZ}) != (${expectedX},${expectedZ}), ` +
+                `level ${level} != ${expectedLevel}, kills ${kills} != ${expectedKills}`
+            );
+            return false;
+        }
+        return true;
     }
 }

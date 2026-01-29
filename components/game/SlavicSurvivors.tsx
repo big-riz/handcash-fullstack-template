@@ -33,10 +33,11 @@ import { LevelEditor, CustomLevelData } from "./debug/LevelEditor"
 import { loadCustomLevels, getCustomLevel } from "@/lib/custom-levels-storage"
 import { PerformanceOverlay } from "./ui/PerformanceOverlay"
 import { PerformanceMetrics, GameStatsHistory } from "./core/PerformanceProfiler"
+import { AirdropIndicator } from "./ui/AirdropIndicator"
 
 export function SlavicSurvivors() {
     const containerRef = useRef<HTMLDivElement>(null)
-    const [gameState, setGameState] = useState<"menu" | "characterSelect" | "playing" | "paused" | "gameOver" | "levelUp" | "replaying" | "leaderboard" | "gameVictory" | "myHistory" | "achievements">("menu")
+    const [gameState, setGameState] = useState<"menu" | "characterSelect" | "playing" | "paused" | "gameOver" | "levelUp" | "airdropLevelUp" | "replaying" | "leaderboard" | "gameVictory" | "myHistory" | "achievements">("menu")
     const [customLevels, setCustomLevels] = useState<CustomLevelData[]>([])
     
     // Stats
@@ -84,6 +85,7 @@ export function SlavicSurvivors() {
     const [activeSynergies, setActiveSynergies] = useState<{name: string, description: string}[]>([])
     const [levelEditorOpen, setLevelEditorOpen] = useState(false)
     const [waveNotification, setWaveNotification] = useState<string | null>(null)
+    const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
     // Performance Profiler
     const [profilerVisible, setProfilerVisible] = useState(false)
@@ -405,6 +407,7 @@ export function SlavicSurvivors() {
         startReplay,
         handleUpgrade,
         getLevelUpChoices,
+        getActiveAirdrops,
         levelUpChoices,
         allowPostVictoryRef,
         pendingLevelUpAfterVictoryRef,
@@ -495,6 +498,14 @@ export function SlavicSurvivors() {
         const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement)
         document.addEventListener('fullscreenchange', handleFullscreenChange)
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }, [])
+
+    // Window size for airdrop indicator
+    useEffect(() => {
+        const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
+        updateSize()
+        window.addEventListener('resize', updateSize)
+        return () => window.removeEventListener('resize', updateSize)
     }, [])
 
     const toggleFullscreen = async () => {
@@ -664,6 +675,17 @@ export function SlavicSurvivors() {
                     waveNotification={waveNotification}
                 />
 
+                {/* Airdrop Direction Indicator */}
+                {gameState === "playing" && playerRef.current && windowSize.width > 0 && (
+                    <AirdropIndicator
+                        airdrops={getActiveAirdrops()}
+                        playerX={playerRef.current.position.x}
+                        playerZ={playerRef.current.position.z}
+                        screenWidth={windowSize.width}
+                        screenHeight={windowSize.height}
+                    />
+                )}
+
                 {/* Mobile Fullscreen Toggle */}
                 {(gameState === "playing" || gameState === "paused" || gameState === "levelUp") && (
                     <div className={`absolute ${isMobile ? 'top-20 right-2' : 'top-24 right-4'} pointer-events-auto z-40 flex flex-col gap-2 items-end safe-area-inset-top safe-area-inset-right`}>
@@ -813,6 +835,20 @@ export function SlavicSurvivors() {
                             }
                         }}
                         audioManager={audioManagerRef.current}
+                    />
+                )}
+
+                {gameState === "airdropLevelUp" && (
+                    <LevelUp
+                        key={`airdrop-${choicesRefreshKey}`}
+                        selectedWorldId={selectedWorldId}
+                        playerLevel={playerLevel}
+                        choices={levelUpChoices.current}
+                        onChoose={handleUpgrade}
+                        rerolls={0}
+                        onReroll={() => {}}
+                        audioManager={audioManagerRef.current}
+                        isAirdrop={true}
                     />
                 )}
 

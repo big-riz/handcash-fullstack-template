@@ -18,7 +18,18 @@
       "Bash(npm run lint:*)",
       "Bash(tsx scripts/regenerate-timelines.ts:*)",
       "Bash(grep:*)",
-      "Bash(node -e \"require\\(''./components/game/screens/GameOver.tsx''\\)\")"
+      "Bash(node -e \"require\\(''./components/game/screens/GameOver.tsx''\\)\")",
+      "Bash(timeout 30 npm run dev:*)",
+      "WebSearch",
+      "mcp__blender__get_scene_info",
+      "mcp__blender__get_object_info",
+      "mcp__blender__get_viewport_screenshot",
+      "mcp__blender__execute_blender_code",
+      "WebFetch(domain:www.lucky3d.fr)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "blender"
+  ]
 }

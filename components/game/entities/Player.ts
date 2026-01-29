@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { AudioManager } from '../core/AudioManager'
 import { StatusEffect, StatusEffectType } from '../types'
 import { SpriteSystem, EntitySprite } from '../core/SpriteSystem'
+import { CharacterModelManager, CharacterInstance } from '../core/CharacterModelManager'
 
 export interface PlayerStats {
     maxHp: number
@@ -61,6 +62,11 @@ export class Player {
     // Sprite rendering (alternative to mesh)
     entitySprite: EntitySprite | null = null
     useSpriteMode: boolean = false
+
+    // 3D model rendering
+    characterInstance: CharacterInstance | null = null
+    use3DModel: boolean = false
+    private characterModelManager: CharacterModelManager | null = null
 
     // Previous position for interpolation
     previousPosition: THREE.Vector3
@@ -174,8 +180,35 @@ export class Player {
             }
         }
 
+        // Update 3D model if using model mode
+        if (this.use3DModel && this.characterInstance && this.characterModelManager) {
+            this.characterModelManager.updateInstance(
+                'player',
+                new THREE.Vector3(this.position.x, 0, this.position.z),
+                this.velocity,
+                deltaTime,
+                this.stats.moveSpeed
+            )
+
+            // Handle iframe flashing and status effects
+            if (this.iframeTimer > 0) {
+                const flash = Math.floor(Date.now() / 80) % 2 === 0
+                if (flash) {
+                    this.characterModelManager.setInstanceTint('player', new THREE.Color(0xff0000))
+                } else {
+                    this.characterModelManager.clearInstanceTint('player')
+                }
+            } else {
+                const statusColor = this.getStatusEffectColor()
+                if (statusColor) {
+                    this.characterModelManager.setInstanceTint('player', statusColor)
+                } else {
+                    this.characterModelManager.clearInstanceTint('player')
+                }
+            }
+        }
         // Update mesh position and material if using mesh mode
-        if (this.mesh && !this.useSpriteMode) {
+        else if (this.mesh && !this.useSpriteMode) {
             this.mesh.position.set(this.position.x, 0.5 + this.radius, this.position.z)
 
             const mat = this.mesh.material as THREE.MeshStandardMaterial
@@ -250,7 +283,24 @@ export class Player {
     /**
      * Create visual mesh for the player
      */
-    createMesh(scene: THREE.Scene, spriteSystem?: SpriteSystem): THREE.Mesh {
+    createMesh(scene: THREE.Scene, spriteSystem?: SpriteSystem, characterModelManager?: CharacterModelManager): THREE.Mesh {
+        // Try 3D model mode first
+        if (this.use3DModel && characterModelManager) {
+            this.characterModelManager = characterModelManager
+            // Player uses original model textures, scale 1.0 for proper size
+            this.characterInstance = characterModelManager.createInstance('player', 1.0, undefined, true)
+            if (this.characterInstance) {
+                // Create dummy mesh for compatibility
+                const dummyGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1)
+                const dummyMaterial = new THREE.MeshBasicMaterial({ visible: false })
+                this.mesh = new THREE.Mesh(dummyGeometry, dummyMaterial)
+                this.mesh.visible = false
+                return this.mesh
+            }
+            console.warn('Failed to create player 3D model, falling back')
+            this.use3DModel = false
+        }
+
         if (this.useSpriteMode && spriteSystem && spriteSystem.isInitialized()) {
             try {
                 this.entitySprite = spriteSystem.createEntity('player')
@@ -437,6 +487,9 @@ export class Player {
     }
 
     dispose() {
+        if (this.characterModelManager && this.characterInstance) {
+            this.characterModelManager.removeInstance('player')
+        }
         if (this.mesh) {
             this.mesh.geometry.dispose()
             if (this.mesh.material instanceof THREE.Material) {

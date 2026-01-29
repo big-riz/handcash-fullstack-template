@@ -188,10 +188,9 @@ export class AbilitySystem {
         startingWeapons: AbilityType[] = ['tt33'],
         startingPassives: PassiveType[] = []
     ) {
-        // Safety check for RNG
+        // RNG is required for deterministic gameplay
         if (!this.rng || typeof this.rng.next !== 'function') {
-            console.warn("AbilitySystem: Invalid RNG provided, falling back to Math.random wrapper");
-            this.rng = { next: () => Math.random() };
+            throw new Error("AbilitySystem: RNG is required for deterministic gameplay");
         }
 
         startingWeapons.forEach(w => this.addAbility(w));

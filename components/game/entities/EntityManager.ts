@@ -12,6 +12,8 @@ import { SpriteSystem } from '../core/SpriteSystem'
 import { InstancedRenderer } from '../systems/InstancedRenderer'
 import { InstancedHealthBars, InstancedGems, InstancedProjectiles } from '../systems/InstancedBatch'
 import { SeededRandom } from '@/lib/SeededRandom'
+import { CharacterModelManager } from '../core/CharacterModelManager'
+import { InstancedSkinnedMesh } from '../core/InstancedSkinnedMesh'
 
 export interface Obstacle {
     x: number
@@ -107,13 +109,17 @@ export class EntityManager {
     private vfx: VFXManager | null = null
     private audioManager: AudioManager | null = null
     private spriteSystem: SpriteSystem | null = null
+    private characterModelManager: CharacterModelManager | null = null
     private rng: SeededRandom | null = null
+    private enemyModelCounter = 0
 
     // Instanced rendering
     private instancedRenderer: InstancedRenderer
     private instancedHealthBars: InstancedHealthBars
     private instancedGems: InstancedGems
     private instancedProjectiles: InstancedProjectiles
+    private instancedSkinnedMesh: InstancedSkinnedMesh | null = null
+    private useInstancedSkinning = false
 
     // Optimized Object Pools
     private inactiveEnemies: Map<string, Enemy[]> = new Map()
@@ -128,12 +134,13 @@ export class EntityManager {
     private gemColor = 0x00cccc
     private gemEmissive = 0x00ffff
 
-    constructor(scene: THREE.Scene, player: Player, vfx: VFXManager, audioManager: AudioManager, spriteSystem: SpriteSystem | null = null) {
+    constructor(scene: THREE.Scene, player: Player, vfx: VFXManager, audioManager: AudioManager, spriteSystem: SpriteSystem | null = null, characterModelManager: CharacterModelManager | null = null) {
         this.scene = scene
         this.player = player
         this.vfx = vfx
         this.audioManager = audioManager
         this.spriteSystem = spriteSystem
+        this.characterModelManager = characterModelManager
         const worldBounds = { x: 0, y: 0, width: 1000, height: 1000 };
         this.enemyQuadtree = new Quadtree(worldBounds, 4);
 
@@ -155,6 +162,12 @@ export class EntityManager {
 
     setObstacles(obstacles: Obstacle[]) {
         this.obstacles = obstacles
+    }
+
+    setInstancedSkinnedMesh(mesh: InstancedSkinnedMesh) {
+        this.instancedSkinnedMesh = mesh
+        this.useInstancedSkinning = mesh.isReady()
+        console.log(`[EntityManager] Instanced skinned mesh set, ready: ${this.useInstancedSkinning}`)
     }
 
     setGemTheme(color: number, emissive: number) {
@@ -228,21 +241,35 @@ export class EntityManager {
         this.obstacles.push(obstacle)
     }
 
-    spawnEnemy(type: EnemyType, x: number, z: number, isElite: boolean = false, difficultyMultiplier: number = 1.0): Enemy {
+    spawnEnemy(type: EnemyType, x: number, z: number, isElite: boolean = false, difficultyMultiplier: number = 1.0, isSuperEnemy: boolean = false, combinedHp: number = 0): Enemy {
         const pool = this.inactiveEnemies.get(type) || []
         let enemy = pool.pop()
+        const color = ENEMY_COLORS[type] || 0xff4444
 
         if (!enemy) {
             enemy = new Enemy(type)
-            const color = ENEMY_COLORS[type] || 0xff4444
 
             enemy.useSpriteMode = false
-            // createMesh: bosses get real 3D mesh + googly eyes, regular enemies get only health bars
-            enemy.createMesh(this.scene, color, this.spriteSystem || undefined)
+            enemy.use3DModel = false
 
-            // Lazily register unknown types with InstancedRenderer
-            if (!enemy.isBoss && !this.instancedRenderer.hasType(type)) {
-                this.instancedRenderer.registerEnemyType(type, enemy.radius, color)
+            // Use GPU-instanced skinning for non-boss enemies if available
+            if (!enemy.isBoss && this.useInstancedSkinning && this.instancedSkinnedMesh) {
+                const instanceIndex = this.instancedSkinnedMesh.allocate()
+                if (instanceIndex >= 0) {
+                    enemy.useInstancedSkinning = true
+                    enemy.instancedSkinIndex = instanceIndex
+                }
+            }
+
+            // Fallback: createMesh for bosses or if instanced skinning unavailable
+            if (!enemy.useInstancedSkinning) {
+                const instanceId = enemy.use3DModel ? `enemy_${this.enemyModelCounter++}` : undefined
+                enemy.createMesh(this.scene, color, this.spriteSystem || undefined, this.characterModelManager || undefined, instanceId)
+
+                // Register with InstancedRenderer for non-boss enemies
+                if (!enemy.isBoss && !this.instancedRenderer.hasType(type)) {
+                    this.instancedRenderer.registerEnemyType(type, enemy.radius, color)
+                }
             }
 
             // Scale boss meshes
@@ -267,15 +294,32 @@ export class EntityManager {
             this.enemies.push(enemy)
         }
 
-        enemy.spawn(type, x, z, isElite, difficultyMultiplier)
-        this.audioManager?.playEnemySpawn(isElite);
+        enemy.spawn(type, x, z, isElite, difficultyMultiplier, isSuperEnemy, combinedHp)
 
-        // Scale boss mesh for elite
+        // Update instanced skin instance
+        if (enemy.useInstancedSkinning && this.instancedSkinnedMesh && enemy.instancedSkinIndex >= 0) {
+            const scale = isSuperEnemy ? 2.0 : (isElite ? 1.5 : 1.0)
+            this.instancedSkinnedMesh.setInstance(
+                enemy.instancedSkinIndex,
+                enemy.position,
+                0,
+                0.5 * scale, // Base scale
+                color
+            )
+        }
+        this.audioManager?.playEnemySpawn(isElite || isSuperEnemy);
+
+        // Scale boss mesh for elite or super enemy
         if (enemy.mesh && enemy.isBoss) {
             const mat = enemy.mesh.material as THREE.MeshStandardMaterial
             const baseScale = BOSS_SCALES[type] || 1
 
-            if (isElite) {
+            if (isSuperEnemy) {
+                // Super enemy: golden glow + 2x scale
+                mat.emissive.set(0xffd700)
+                mat.emissiveIntensity = 0.6
+                enemy.mesh.scale.set(baseScale * 2, baseScale * 2, baseScale * 2)
+            } else if (isElite) {
                 mat.emissive.set(0xffd700)
                 mat.emissiveIntensity = 0.5
                 enemy.mesh.scale.set(baseScale * 1.5, baseScale * 1.5, baseScale * 1.5)
@@ -296,6 +340,56 @@ export class EntityManager {
                 enemy.updateSprite(deltaTime, cameraPos, this.spriteSystem)
             }
         }
+    }
+
+    update3DModels(deltaTime: number): void {
+        // GPU-instanced skinned mesh - single draw call for all enemies
+        if (this.useInstancedSkinning && this.instancedSkinnedMesh) {
+            // Update shared animation once
+            this.instancedSkinnedMesh.updateAnimation(deltaTime)
+
+            // Update all instance transforms
+            for (const enemy of this.enemies) {
+                if (enemy.isActive && enemy.useInstancedSkinning && enemy.instancedSkinIndex >= 0) {
+                    const color = ENEMY_COLORS[enemy.type] || 0xff4444
+                    const scale = enemy.isSuperEnemy ? 1.0 : (enemy.isElite ? 0.75 : 0.5)
+                    const rotation = Math.atan2(enemy.velocity.x, enemy.velocity.z)
+                    this.instancedSkinnedMesh.setInstance(
+                        enemy.instancedSkinIndex,
+                        enemy.position,
+                        rotation,
+                        scale,
+                        color
+                    )
+                }
+            }
+            return
+        }
+
+        // Fallback: per-instance CharacterModelManager
+        if (!this.characterModelManager) return
+
+        this.characterModelManager.updateSharedAnimation(deltaTime)
+
+        const updates: Array<{
+            id: string
+            position: THREE.Vector3
+            velocity: THREE.Vector3
+            baseMovementSpeed: number
+        }> = []
+
+        for (const enemy of this.enemies) {
+            if (enemy.isActive && enemy.use3DModel && enemy.modelInstanceId) {
+                updates.push({
+                    id: enemy.modelInstanceId,
+                    position: new THREE.Vector3(enemy.position.x, 0, enemy.position.z),
+                    velocity: enemy.velocity,
+                    baseMovementSpeed: enemy.stats.moveSpeed
+                })
+            }
+        }
+
+        this.characterModelManager.updateAllEnemyInstances(updates)
     }
 
     update(deltaTime: number) {
@@ -338,6 +432,10 @@ export class EntityManager {
                     }
                 }
             } else {
+                // Hide instanced skin instance when enemy becomes inactive
+                if (enemy.useInstancedSkinning && this.instancedSkinnedMesh && enemy.instancedSkinIndex >= 0) {
+                    this.instancedSkinnedMesh.setVisible(enemy.instancedSkinIndex, false)
+                }
                 const pool = this.inactiveEnemies.get(enemy.type) || []
                 if (!pool.includes(enemy)) pool.push(enemy)
                 this.inactiveEnemies.set(enemy.type, pool)
@@ -408,19 +506,20 @@ export class EntityManager {
             }
         }
 
-        // --- Sync InstancedRenderer for non-boss enemies ---
+        // --- Sync InstancedRenderer for non-boss enemies (skip those using 3D models or instanced skinning) ---
         const instanceData: Array<{
-            type: string; x: number; z: number; radius: number; scale: number; isActive: boolean
+            type: string; x: number; z: number; radius: number; scale: number; isActive: boolean; isSuperEnemy?: boolean
         }> = []
         for (const enemy of this.enemies) {
-            if (!enemy.isBoss && enemy.isActive) {
+            if (!enemy.isBoss && enemy.isActive && !enemy.use3DModel && !enemy.useInstancedSkinning) {
                 instanceData.push({
                     type: enemy.type,
                     x: enemy.position.x,
                     z: enemy.position.z,
                     radius: enemy.radius,
-                    scale: enemy.isElite ? 1.5 : 1,
+                    scale: enemy.isSuperEnemy ? 2.0 : (enemy.isElite ? 1.5 : 1),
                     isActive: true,
+                    isSuperEnemy: enemy.isSuperEnemy,
                 })
             }
         }
@@ -702,7 +801,19 @@ export class EntityManager {
                     enemy.mesh.material.dispose()
                 }
             }
+            // Cleanup 3D model instance
+            if (enemy.characterInstance && this.characterModelManager) {
+                this.characterModelManager.removeInstance(enemy.modelInstanceId)
+            }
+            // Free instanced skin instance
+            if (enemy.useInstancedSkinning && this.instancedSkinnedMesh && enemy.instancedSkinIndex >= 0) {
+                this.instancedSkinnedMesh.free(enemy.instancedSkinIndex)
+                enemy.instancedSkinIndex = -1
+                enemy.useInstancedSkinning = false
+            }
         }
+        // Reset enemy model counter
+        this.enemyModelCounter = 0
         for (const gem of this.gems) {
             gem.despawn()
         }
