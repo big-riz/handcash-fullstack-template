@@ -86,13 +86,11 @@ function createFrozenWasteEffects(): EnvironmentEffect[] {
     return [
         {
             id: 'blizzard_event',
-            cooldown: 60.0,
-            currentCooldown: 45.0,
+            cooldown: 120.0,
+            currentCooldown: 90.0,
             execute: (ctx) => {
-                // Activate blizzard: slow player, spawn enemies faster for duration
                 blizzardActive = true
-                blizzardTimer = 12.0 // 12 second blizzard
-                // Slow player during blizzard
+                blizzardTimer = 6.0
                 ctx.player.isSlowed = true
                 ctx.player.slowFactor = 0.84
                 ctx.vfxManager.createEmoji(ctx.player.position.x, ctx.player.position.z, '❄️', 3.0)
@@ -102,9 +100,7 @@ function createFrozenWasteEffects(): EnvironmentEffect[] {
                     blizzardTimer -= deltaTime
                     if (blizzardTimer <= 0) {
                         blizzardActive = false
-                        // Don't reset slow here - let hazard zone system handle it
                     } else {
-                        // Spawn extra enemies during blizzard
                         if (Math.floor(blizzardTimer * 2) % 2 === 0) {
                             const angle = ctx.rng.next() * Math.PI * 2
                             const dist = 12 + ctx.rng.next() * 6
@@ -115,7 +111,6 @@ function createFrozenWasteEffects(): EnvironmentEffect[] {
                                 ctx.player.position.z + Math.sin(angle) * dist
                             )
                         }
-                        // Keep player slowed during blizzard
                         ctx.player.isSlowed = true
                         ctx.player.slowFactor = 0.84
                     }
@@ -124,17 +119,16 @@ function createFrozenWasteEffects(): EnvironmentEffect[] {
         },
         {
             id: 'ice_patches',
-            cooldown: 12.0,
-            currentCooldown: 8.0,
+            cooldown: 25.0,
+            currentCooldown: 20.0,
             execute: (ctx) => {
-                // Create slow patches around player path
-                for (let i = 0; i < 3; i++) {
+                for (let i = 0; i < 2; i++) {
                     const angle = ctx.rng.next() * Math.PI * 2
-                    const dist = 4 + ctx.rng.next() * 6
+                    const dist = 5 + ctx.rng.next() * 8
                     ctx.entityManager.spawnHazardZone(
                         ctx.player.position.x + Math.cos(angle) * dist,
                         ctx.player.position.z + Math.sin(angle) * dist,
-                        'slow' as HazardType, 3.0, 12.0, 0
+                        'slow' as HazardType, 2.5, 8.0, 0
                     )
                 }
             }
