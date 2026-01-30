@@ -14,6 +14,7 @@ import { VFXManager } from '../systems/VFXManager'
 import { SpriteSystem, EntitySprite } from '../core/SpriteSystem'
 import { GooglyEyes, EyeExpression } from '../core/GooglyEyes'
 import { CharacterModelManager, CharacterInstance } from '../core/CharacterModelManager'
+import { BossPhaseState, BossAbilityContext, BOSS_PHASE_CONFIGS } from '../systems/BossPhaseManager'
 
 export interface EnemyStats {
     maxHp: number
@@ -100,6 +101,27 @@ export class Enemy {
     private dashDelayTimer = 0
     private bossFlashTimer = 0
 
+    // Boss phase system
+    public bossPhaseState: BossPhaseState | null = null
+    private baseMoveSpeed = 0
+    private baseDamage = 0
+
+    // Enemy ability system
+    public providesWeakenAura = false // Wraiths: weaken player attacks nearby
+    public weakenAuraRadius = 5.0
+    public weakenFactor = 0.7 // 30% damage reduction to player
+    public fleeFromPlayer = false // Goblin: zigzag away from player
+    private fleeZigzagTimer = 0
+    private slamCooldown = 0 // Golems: ground slam
+    private trapCooldown = 0 // Web/trap enemies
+    private pullCooldown = 0 // Aquatic pull ability
+    public pullWarningTimer = 0 // Telegraph before pull fires
+    public pullWarningActive = false
+    private icePatchCooldown = 0 // Ice enemies: create slippery patches
+    private healAuraCooldown = 0 // Shamans: heal nearby enemies
+    public providesHealAura = false
+    public healAuraRadius = 6.0
+
     constructor(type: EnemyType = 'drifter') {
         this.position = new THREE.Vector3()
         this.velocity = new THREE.Vector3()
@@ -140,6 +162,12 @@ export class Enemy {
     }
 
     private setStatsByType(type: EnemyType) {
+        // Reset ability flags
+        this.providesBuffAura = false
+        this.providesWeakenAura = false
+        this.providesHealAura = false
+        this.canPhaseThrough = false
+
         switch (type) {
             case 'drifter':
                 this.stats = { maxHp: 20, currentHp: 20, moveSpeed: 3.8, damage: 16, xpValue: 1 }
@@ -162,6 +190,7 @@ export class Enemy {
                 this.radius = 0.15
                 break;
             case 'kikimora':
+                // Trap enemy: places slowing webs on death (existing) + periodically drops webs
                 this.stats = { maxHp: 33, currentHp: 33, moveSpeed: 2.8, damage: 15, xpValue: 2 }
                 this.radius = 0.4
                 break;
@@ -170,6 +199,7 @@ export class Enemy {
                 this.radius = 1.2
                 break;
             case 'vodnik':
+                // Aquatic: pulls player at intervals
                 this.stats = { maxHp: 16, currentHp: 16, moveSpeed: 3.0, damage: 8, xpValue: 2, isRanged: true }
                 this.radius = 0.35
                 break;
@@ -178,8 +208,12 @@ export class Enemy {
                 this.radius = 0.45
                 break;
             case 'forest_wraith':
+                // Wraith: weakens player attacks via proximity aura
                 this.stats = { maxHp: 200, currentHp: 200, moveSpeed: 3.5, damage: 30, xpValue: 8, isRanged: true }
                 this.radius = 0.5
+                this.providesWeakenAura = true
+                this.weakenAuraRadius = 6.0
+                this.weakenFactor = 0.7
                 break;
             case 'guardian_golem':
                 this.stats = { maxHp: 800, currentHp: 800, moveSpeed: 2.0, damage: 50, xpValue: 20 }
@@ -194,6 +228,7 @@ export class Enemy {
                 this.radius = 0.4;
                 break;
             case 'stone_golem':
+                // Golem: periodic ground slam knockback
                 this.stats = { maxHp: 130, currentHp: 130, moveSpeed: 1.5, damage: 30, xpValue: 5 };
                 this.radius = 0.8;
                 break;
@@ -203,9 +238,12 @@ export class Enemy {
                 this.canPhaseThrough = true;
                 break;
             case 'leshy_shaman':
+                // Shaman: heals nearby enemies + buff aura
                 this.stats = { maxHp: 78, currentHp: 78, moveSpeed: 2.5, damage: 25, xpValue: 4, isRanged: true };
                 this.radius = 0.4;
                 this.providesBuffAura = true;
+                this.providesHealAura = true;
+                this.healAuraRadius = 6.0;
                 break;
             case 'ancient_treant':
                 this.stats = { maxHp: 3250, currentHp: 3250, moveSpeed: 1.0, damage: 60, xpValue: 100 };
@@ -232,25 +270,35 @@ export class Enemy {
                 this.radius = 0.2;
                 break;
             case 'bone_crawler':
+                // Trap enemy: places slowing webs periodically
                 this.stats = { maxHp: 45, currentHp: 45, moveSpeed: 3.0, damage: 22, xpValue: 2 };
                 this.radius = 0.35;
                 break;
             case 'flame_wraith':
+                // Wraith: weakens player via proximity aura
                 this.stats = { maxHp: 70, currentHp: 70, moveSpeed: 5.0, damage: 28, xpValue: 3 };
                 this.radius = 0.35;
+                this.providesWeakenAura = true;
+                this.weakenAuraRadius = 4.0;
+                this.weakenFactor = 0.75;
                 break;
             case 'crypt_guardian':
                 this.stats = { maxHp: 12000, currentHp: 12000, moveSpeed: 1.8, damage: 80, xpValue: 200 };
                 this.radius = 1.2;
                 break;
             case 'frost_elemental':
+                // Ice enemy: creates slippery patches
                 this.stats = { maxHp: 55, currentHp: 55, moveSpeed: 4.0, damage: 22, xpValue: 2 };
                 this.radius = 0.4;
                 break;
             case 'snow_wraith':
+                // Wraith: weakens player attacks + phases through
                 this.stats = { maxHp: 180, currentHp: 180, moveSpeed: 5.5, damage: 48, xpValue: 5 };
                 this.radius = 0.45;
                 this.canPhaseThrough = true;
+                this.providesWeakenAura = true;
+                this.weakenAuraRadius = 5.0;
+                this.weakenFactor = 0.65;
                 break;
             case 'ice_golem':
                 this.stats = { maxHp: 7000, currentHp: 7000, moveSpeed: 1.5, damage: 65, xpValue: 150 };
@@ -273,6 +321,11 @@ export class Enemy {
         this.isInvulnerable = false
         this.isElite = isElite
         this.flickerTimer = 0
+        this.isEnraged = false
+        this.fleeFromPlayer = false
+        this.fleeZigzagTimer = 0
+        this.pullWarningActive = false
+        this.pullWarningTimer = 0
 
         this.setStatsByType(type)
 
@@ -300,6 +353,16 @@ export class Enemy {
             this.radius *= 2 // Double collision radius
         }
 
+        // Initialize boss phase system
+        this.baseMoveSpeed = this.stats.moveSpeed
+        this.baseDamage = this.stats.damage
+        const phaseConfig = BOSS_PHASE_CONFIGS[type]
+        if (phaseConfig && this.isBoss) {
+            this.bossPhaseState = new BossPhaseState(phaseConfig)
+        } else {
+            this.bossPhaseState = null
+        }
+
         // Boss mesh
         if (this.mesh) {
             this.mesh.position.set(this.position.x, this.radius, this.position.z)
@@ -308,10 +371,12 @@ export class Enemy {
             mat.opacity = (this.type === 'zmora' || this.type === 'spirit_wolf') ? 0.6 : 1.0
         }
 
-        // Googly eyes
+        // Googly eyes — account for boss mesh scale
         if (this.googlyEyes) {
             this.googlyEyes.setVisible(true)
-            this.googlyEyes.update(this.position, this.velocity, this.radius * 2)
+            const meshScale = this.mesh ? this.mesh.scale.y : 1
+            const localHalfHeight = (this.radius > 0.4) ? (0.4 + this.radius) : this.radius
+            this.googlyEyes.update(this.position, this.velocity, this.radius + localHalfHeight * meshScale)
         }
 
         // 3D model
@@ -348,7 +413,8 @@ export class Enemy {
         spawnEnemy?: (type: EnemyType, x: number, z: number) => void,
         createMeleeSwing?: (x: number, z: number, facingAngle: number, damage: number, radius: number) => void,
         spawnObstacle?: (x: number, z: number, radius: number, duration: number) => void,
-        rng?: { next: () => number }
+        rng?: { next: () => number },
+        spawnHazardZone?: (x: number, z: number, type: string, radius: number, duration: number, damage: number) => void
     ) {
         if (!this.isActive) return
 
@@ -381,63 +447,46 @@ export class Enemy {
             }
         }
 
-        // Chernobog abilities
-        if (this.type === 'chernobog' && spawnEnemy && spawnProjectile && createMeleeSwing && rng) {
-            this.bossAbility1Cooldown -= deltaTime
-            if (this.bossAbility1Cooldown <= 0) {
-                this.bossAbility1Cooldown = 15.0
-                const minionTypes: EnemyType[] = ['drifter', 'screecher', 'domovoi', 'zmora', 'bruiser']
-                for (let i = 0; i < 5; i++) {
-                    const angle = rng.next() * Math.PI * 2
-                    const spawnDist = 3.0
-                    const spawnX = this.position.x + Math.cos(angle) * spawnDist
-                    const spawnZ = this.position.z + Math.sin(angle) * spawnDist
-                    const randomType = minionTypes[Math.floor(rng.next() * minionTypes.length)]
-                    spawnEnemy(randomType, spawnX, spawnZ)
-                }
+        // Boss phase system - handles all boss abilities via BossPhaseManager
+        if (this.isBoss && this.bossPhaseState && rng && spawnProjectile && spawnEnemy && createMeleeSwing && spawnObstacle) {
+            const hpPercent = this.stats.currentHp / this.stats.maxHp
+            const hazardFn = spawnHazardZone || ((_x: number, _z: number, _t: string, _r: number, _d: number, _dmg: number) => {})
+            const ctx: BossAbilityContext = {
+                bossX: this.position.x,
+                bossZ: this.position.z,
+                playerX: player.position.x,
+                playerZ: player.position.z,
+                bossDamage: this.baseDamage,
+                bossRadius: this.radius,
+                spawnEnemy,
+                spawnProjectile,
+                createMeleeSwing,
+                spawnObstacle,
+                spawnHazardZone: hazardFn,
+                rng
             }
 
-            this.bossAbility2Cooldown -= deltaTime
-            if (this.bossAbility2Cooldown <= 0) {
-                this.bossAbility2Cooldown = 4.0
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i / 8) * Math.PI * 2
-                    const vx = Math.cos(angle) * 8
-                    const vz = Math.sin(angle) * 8
-                    spawnProjectile(this.position.x, this.position.z, vx, vz, this.stats.damage * 0.8)
-                }
-            }
-
-            this.bossAbility3Cooldown -= deltaTime
-            if (this.bossAbility3Cooldown <= 0) {
-                this.bossAbility3Cooldown = 10.0
-                createMeleeSwing(this.position.x, this.position.z, 0, this.stats.damage * 2, 8.0)
-                if (this.mesh) {
+            // Check for phase transition
+            const transitioned = this.bossPhaseState.checkPhaseTransition(hpPercent, ctx)
+            if (transitioned && this.mesh) {
+                const phase = this.bossPhaseState.getCurrentPhase()
+                if (phase.emissiveColor !== undefined) {
                     const mat = this.mesh.material as THREE.MeshStandardMaterial
-                    mat.emissive.setHex(0xff0000)
-                    mat.emissiveIntensity = 1.0
-                    this.bossFlashTimer = 0.3
+                    mat.emissive.setHex(phase.emissiveColor)
+                    mat.emissiveIntensity = phase.emissiveIntensity || 0.5
                 }
             }
+
+            // Apply phase multipliers
+            const phase = this.bossPhaseState.getCurrentPhase()
+            this.stats.moveSpeed = this.baseMoveSpeed * phase.moveSpeedMultiplier
+            this.stats.damage = this.baseDamage * phase.damageMultiplier
+
+            // Update abilities
+            this.bossPhaseState.update(deltaTime, ctx)
         }
 
-        // Guardian Golem walls
-        if (this.type === 'guardian_golem' && spawnObstacle) {
-            this.wallCooldown -= deltaTime
-            if (this.wallCooldown <= 0) {
-                this.wallCooldown = 10.0
-                const dirToPlayer = player.position.clone().sub(this.position).normalize()
-                const angle = Math.atan2(dirToPlayer.z, dirToPlayer.x)
-                for (let i = 0; i < 5; i++) {
-                    const wallAngle = angle + (i - 2) * (Math.PI / 6)
-                    const wallX = player.position.x + Math.cos(wallAngle) * 4.0
-                    const wallZ = player.position.z + Math.sin(wallAngle) * 4.0
-                    spawnObstacle(wallX, wallZ, 0.8, 8.0)
-                }
-            }
-        }
-
-        // Golem Destroyer charge
+        // Golem Destroyer charge (kept separate since it modifies movement directly)
         if (this.type === 'golem_destroyer') {
             this.chargeCooldown -= deltaTime
             if (this.isCharging) {
@@ -446,12 +495,13 @@ export class Enemy {
                     this.isCharging = false
                     if (this.mesh) {
                         const mat = this.mesh.material as THREE.MeshStandardMaterial
-                        mat.emissive.setHex(0x000000)
-                        mat.emissiveIntensity = 0
+                        mat.emissive.setHex(this.bossPhaseState?.getCurrentPhase().emissiveColor || 0x000000)
+                        mat.emissiveIntensity = this.bossPhaseState?.getCurrentPhase().emissiveIntensity || 0
                     }
                 }
             } else if (this.chargeCooldown <= 0) {
-                this.chargeCooldown = 7.0
+                const chargeCd = this.bossPhaseState && this.bossPhaseState.currentPhaseIndex > 0 ? 4.0 : 7.0
+                this.chargeCooldown = chargeCd
                 this.isCharging = true
                 this.chargeDuration = 2.0
                 if (this.mesh) {
@@ -459,26 +509,6 @@ export class Enemy {
                     mat.emissive.setHex(0xff0000)
                     mat.emissiveIntensity = 0.6
                 }
-            }
-        }
-
-        // Ancient Treant summon + stomp
-        if (this.type === 'ancient_treant' && spawnEnemy && createMeleeSwing && rng) {
-            this.summonCooldown -= deltaTime
-            if (this.summonCooldown <= 0) {
-                this.summonCooldown = 8.0
-                const angleOffset = rng.next() * Math.PI * 2
-                for (let i = 0; i < 3; i++) {
-                    const angle = angleOffset + (i * Math.PI * 2 / 3)
-                    const spawnX = this.position.x + Math.cos(angle) * 2.5
-                    const spawnZ = this.position.z + Math.sin(angle) * 2.5
-                    spawnEnemy('sapling', spawnX, spawnZ)
-                }
-            }
-            this.stompCooldown -= deltaTime
-            if (this.stompCooldown <= 0) {
-                this.stompCooldown = 6.0
-                createMeleeSwing(this.position.x, this.position.z, 0, this.stats.damage * 1.5, 4.0)
             }
         }
 
@@ -549,8 +579,117 @@ export class Enemy {
             }
         }
 
+        // Stone Golem ground slam (knockback player)
+        if (this.type === 'stone_golem' && createMeleeSwing) {
+            this.slamCooldown -= deltaTime
+            if (this.slamCooldown <= 0) {
+                this.slamCooldown = 8.0
+                const dx = player.position.x - this.position.x
+                const dz = player.position.z - this.position.z
+                const dist = Math.sqrt(dx * dx + dz * dz)
+                if (dist < 5.0) {
+                    createMeleeSwing(this.position.x, this.position.z, Math.atan2(dz, dx), this.stats.damage * 1.2, 3.5)
+                    // Knockback: push player away
+                    if (dist > 0.1) {
+                        player.position.x += (dx / dist) * 4
+                        player.position.z += (dz / dist) * 4
+                    }
+                }
+            }
+        }
+
+        // Kikimora/Bone Crawler: periodically drop slowing web traps
+        if ((this.type === 'kikimora' || this.type === 'bone_crawler') && spawnHazardZone) {
+            this.trapCooldown -= deltaTime
+            if (this.trapCooldown <= 0) {
+                this.trapCooldown = this.type === 'kikimora' ? 10.0 : 8.0
+                spawnHazardZone(this.position.x, this.position.z, 'slow', 2.0, 6.0, 0)
+            }
+        }
+
+        // Vodnik: telegraph then pull player toward self
+        if (this.type === 'vodnik') {
+            if (this.pullWarningActive) {
+                this.pullWarningTimer -= deltaTime
+                if (this.pullWarningTimer <= 0) {
+                    this.pullWarningActive = false
+                    const dx = this.position.x - player.position.x
+                    const dz = this.position.z - player.position.z
+                    const dist = Math.sqrt(dx * dx + dz * dz)
+                    if (dist < 12.0 && dist > 1.0 && !player.isPulled) {
+                        const pullStrength = Math.min(2.0, dist * 0.3)
+                        const targetX = player.position.x + (dx / dist) * pullStrength
+                        const targetZ = player.position.z + (dz / dist) * pullStrength
+                        player.startPull(targetX, targetZ)
+                    }
+                }
+            } else {
+                this.pullCooldown -= deltaTime
+                if (this.pullCooldown <= 0) {
+                    this.pullCooldown = 6.0
+                    const dx = this.position.x - player.position.x
+                    const dz = this.position.z - player.position.z
+                    const dist = Math.sqrt(dx * dx + dz * dz)
+                    if (dist < 12.0 && dist > 1.0) {
+                        this.pullWarningActive = true
+                        this.pullWarningTimer = 0.8
+                    }
+                }
+            }
+        }
+
+        // Frost Elemental: create icy slow patches
+        if (this.type === 'frost_elemental' && spawnHazardZone) {
+            this.icePatchCooldown -= deltaTime
+            if (this.icePatchCooldown <= 0) {
+                this.icePatchCooldown = 7.0
+                spawnHazardZone(this.position.x, this.position.z, 'slow', 2.5, 8.0, 0)
+            }
+        }
+
+        // Flee AI (treasure goblin): orbit around player, staying in vicinity
+        if (this.fleeFromPlayer) {
+            const dx = this.position.x - player.position.x
+            const dz = this.position.z - player.position.z
+            const dist = Math.sqrt(dx * dx + dz * dz)
+            const idealDist = 8.0 // Stay roughly 8 units from player
+            const maxDist = 12.0
+
+            this.fleeZigzagTimer += deltaTime
+
+            // Tangent direction (orbit around player)
+            const tangentX = -dz
+            const tangentZ = dx
+            const tangentLen = Math.sqrt(tangentX * tangentX + tangentZ * tangentZ) || 1
+            let moveX = tangentX / tangentLen
+            let moveZ = tangentZ / tangentLen
+
+            // Flip orbit direction periodically for unpredictability
+            if (Math.sin(this.fleeZigzagTimer * 1.5) < 0) {
+                moveX = -moveX
+                moveZ = -moveZ
+            }
+
+            // Radial correction: push away if too close, pull back if too far
+            if (dist > 0.1) {
+                const radialX = dx / dist
+                const radialZ = dz / dist
+                if (dist < idealDist - 2) {
+                    // Too close — add outward push
+                    moveX += radialX * 0.6
+                    moveZ += radialZ * 0.6
+                } else if (dist > maxDist) {
+                    // Too far — pull back toward player
+                    moveX -= radialX * 0.8
+                    moveZ -= radialZ * 0.8
+                }
+            }
+
+            const len = Math.sqrt(moveX * moveX + moveZ * moveZ) || 1
+            this.velocity.set((moveX / len) * this.stats.moveSpeed, 0, (moveZ / len) * this.stats.moveSpeed)
+        }
         // Ranged AI
-        if (this.stats.isRanged && spawnProjectile) {
+        else if (this.stats.isRanged && spawnProjectile) {
             const dist = this.position.distanceTo(player.position)
             this.flickerTimer += deltaTime
             if (dist < 8.0) {
@@ -592,9 +731,11 @@ export class Enemy {
             }
         }
 
-        // Update googly eyes
+        // Update googly eyes — account for boss mesh scale
         if (this.googlyEyes && this.isActive) {
-            this.googlyEyes.update(this.position, this.velocity, this.radius * 2)
+            const meshScale = this.mesh ? this.mesh.scale.y : 1
+            const localHalfHeight = (this.radius > 0.4) ? (0.4 + this.radius) : this.radius
+            this.googlyEyes.update(this.position, this.velocity, this.radius + localHalfHeight * meshScale)
         }
     }
 

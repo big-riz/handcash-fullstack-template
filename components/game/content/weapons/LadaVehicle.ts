@@ -9,16 +9,19 @@ import { Player } from '../../entities/Player'
 import { EntityManager } from '../../entities/EntityManager'
 import { VFXManager } from '../../systems/VFXManager'
 import { AudioManager } from '../../core/AudioManager'
+import { loadWeaponModel, disposeWeaponModel, WEAPON_GLB_URLS } from '../../core/WeaponModelLoader'
 
 export class LadaVehicle {
     public level = 1
-    private mesh: THREE.Mesh | null = null
+    private model: THREE.Object3D | null = null
     private isActive = false
     public duration = 5
     private timer = 0
     private cooldown = 20
     private cooldownTimer = 0
     private lastRamTime = 0
+    public variantId: string = 'lada'
+    private glbLoaded = false
 
     // Stats
     public damage = 50
@@ -33,25 +36,29 @@ export class LadaVehicle {
         private audioManager: AudioManager | null = null
     ) { }
 
+    private preloaded = false
+    private ensurePreload() {
+        if (this.preloaded) return
+        this.preloaded = true
+        const url = WEAPON_GLB_URLS[this.variantId]
+        if (url) loadWeaponModel(url).catch(() => {})
+    }
+
     update(deltaTime: number) {
+        this.ensurePreload()
         if (this.isActive) {
             this.timer += deltaTime
-            if (this.mesh) {
-                // Move forward in player's last direction or just ahead
-                // For simplicity, it follows player with a small offset and crushes nearby
-                this.mesh.position.copy(this.player.position)
-                this.mesh.position.y = 0.5
+            if (this.model) {
+                this.model.position.copy(this.player.position)
+                this.model.position.y = 0.5
 
-                // Rotation based on movement
                 if (this.player.velocity.length() > 0.1) {
-                    this.mesh.rotation.y = Math.atan2(this.player.velocity.x, this.player.velocity.z)
+                    this.model.rotation.y = Math.atan2(this.player.velocity.x, this.player.velocity.z)
                 }
 
-                // Crush enemies
                 for (const enemy of this.entityManager.enemies) {
-                    if (enemy.isActive && enemy.position.distanceTo(this.mesh.position) < 2.5) {
+                    if (enemy.isActive && enemy.position.distanceTo(this.model.position) < 2.5) {
                         enemy.takeDamage(this.damage, this.vfx)
-                        // Play ram sound with throttle to avoid audio spam
                         if (this.timer - this.lastRamTime > 0.3) {
                             this.audioManager?.playVehicleRam();
                             this.lastRamTime = this.timer;
@@ -81,29 +88,52 @@ export class LadaVehicle {
 
         this.audioManager?.playVehicleActivate();
 
-        // Create car mesh (box)
-        const geo = new THREE.BoxGeometry(1.5, 0.8, 2.5)
-        const mat = new THREE.MeshStandardMaterial({
-            color: 0xcccccc,
-            metalness: 0.8,
-            roughness: 0.2
-        })
-        this.mesh = new THREE.Mesh(geo, mat)
-        this.scene.add(this.mesh)
+        const url = WEAPON_GLB_URLS[this.variantId]
+        if (url && !this.glbLoaded) {
+            loadWeaponModel(url).then((m) => {
+                if (!this.isActive) { disposeWeaponModel(m); return }
+                this.glbLoaded = true
+                this.model = m
+                // Normalize to ~2.5 units long
+                const box = new THREE.Box3().setFromObject(m)
+                const size = box.getSize(new THREE.Vector3())
+                const maxDim = Math.max(size.x, size.y, size.z)
+                const s = 2.5 / (maxDim || 1)
+                m.scale.setScalar(s)
+                this.scene.add(m)
+            }).catch(() => {
+                this.createFallbackMesh()
+            })
+        } else if (this.glbLoaded && this.model) {
+            this.model.visible = true
+            this.scene.add(this.model)
+        } else {
+            this.createFallbackMesh()
+        }
 
         if (this.vfx) {
             this.vfx.createEmoji(this.player.position.x, this.player.position.z, '🚗', 1.0)
         }
     }
 
+    private createFallbackMesh() {
+        const geo = new THREE.BoxGeometry(1.5, 0.8, 2.5)
+        const mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 })
+        this.model = new THREE.Mesh(geo, mat)
+        this.scene.add(this.model)
+    }
+
     private deactivate() {
         this.isActive = false
         this.cooldownTimer = 0
-        if (this.mesh) {
-            this.scene.remove(this.mesh)
-            this.mesh.geometry.dispose()
-            if (this.mesh.material instanceof THREE.Material) this.mesh.material.dispose()
-            this.mesh = null
+        if (this.model) {
+            this.scene.remove(this.model)
+            if (!this.glbLoaded) {
+                disposeWeaponModel(this.model)
+                this.model = null
+            } else {
+                this.model.visible = false
+            }
         }
     }
 
@@ -119,6 +149,13 @@ export class LadaVehicle {
     }
 
     cleanup() {
-        this.deactivate()
+        this.isActive = false
+        this.cooldownTimer = 0
+        if (this.model) {
+            this.scene.remove(this.model)
+            disposeWeaponModel(this.model)
+            this.model = null
+            this.glbLoaded = false
+        }
     }
 }

@@ -621,3 +621,313 @@ export function generateMeshObject(type: string, seed: number = 0): THREE.Object
 
     return group
 }
+
+/**
+ * Formation definitions — composite objects built from multiple mesh types.
+ * Each formation is a function that returns a THREE.Group with deterministic placement.
+ */
+
+export interface FormationPiece {
+    type: string
+    offsetX: number
+    offsetZ: number
+    scale: number
+    rotationY: number
+}
+
+export interface FormationResult {
+    group: THREE.Group
+    pieces: FormationPiece[] // local-space offsets for per-piece collision
+}
+
+export type FormationFactory = (rng: SeededRandom, seed: number) => FormationResult
+
+function buildFormation(pieces: FormationPiece[], rng: SeededRandom, seed: number): FormationResult {
+    const group = new THREE.Group()
+    for (let i = 0; i < pieces.length; i++) {
+        const p = pieces[i]
+        const obj = generateMeshObject(p.type, seed * 1000 + i)
+        obj.position.set(p.offsetX, 0, p.offsetZ)
+        obj.scale.multiplyScalar(p.scale)
+        obj.rotation.y = p.rotationY
+        group.add(obj)
+    }
+    return { group, pieces }
+}
+
+const FORMATION_FACTORIES: Record<string, FormationFactory> = {
+    // Dense tree cluster — a copse of trees with undergrowth
+    tree_copse: (rng, seed) => {
+        const pieces: FormationPiece[] = []
+        const count = 4 + Math.floor(rng.next() * 3)
+        for (let i = 0; i < count; i++) {
+            const angle = rng.next() * Math.PI * 2
+            const dist = 0.5 + rng.next() * 2.5
+            pieces.push({
+                type: rng.next() > 0.3 ? 'tree' : 'tree_dead',
+                offsetX: Math.cos(angle) * dist,
+                offsetZ: Math.sin(angle) * dist,
+                scale: 0.6 + rng.next() * 1.4,
+                rotationY: rng.next() * Math.PI * 2,
+            })
+        }
+        // Fill gaps with shrubs
+        for (let i = 0; i < 3; i++) {
+            const angle = rng.next() * Math.PI * 2
+            const dist = rng.next() * 2.0
+            pieces.push({
+                type: 'shrub',
+                offsetX: Math.cos(angle) * dist,
+                offsetZ: Math.sin(angle) * dist,
+                scale: 0.5 + rng.next() * 0.8,
+                rotationY: rng.next() * Math.PI * 2,
+            })
+        }
+        return buildFormation(pieces, rng, seed)
+    },
+
+    // Stone circle — ring of rocks with a pillar or statue center
+    stone_circle: (rng, seed) => {
+        const pieces: FormationPiece[] = []
+        const count = 5 + Math.floor(rng.next() * 4)
+        const radius = 2.5 + rng.next() * 1.5
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2 + (rng.next() - 0.5) * 0.3
+            pieces.push({
+                type: rng.next() > 0.7 ? 'pillar_broken' : 'rock',
+                offsetX: Math.cos(angle) * radius,
+                offsetZ: Math.sin(angle) * radius,
+                scale: 0.8 + rng.next() * 1.2,
+                rotationY: angle + Math.PI,
+            })
+        }
+        // Center piece
+        pieces.push({
+            type: rng.next() > 0.5 ? 'pillar' : 'statue',
+            offsetX: (rng.next() - 0.5) * 0.4,
+            offsetZ: (rng.next() - 0.5) * 0.4,
+            scale: 1.0 + rng.next() * 0.8,
+            rotationY: rng.next() * Math.PI * 2,
+        })
+        return buildFormation(pieces, rng, seed)
+    },
+
+    // Ruined wall segment — crumbling wall with rubble
+    ruined_wall: (rng, seed) => {
+        const pieces: FormationPiece[] = []
+        const segments = 2 + Math.floor(rng.next() * 3)
+        const wallType = rng.next() > 0.5 ? 'wall_stone' : 'wall_brick'
+        for (let i = 0; i < segments; i++) {
+            pieces.push({
+                type: wallType,
+                offsetX: 0,
+                offsetZ: -2 + i * 2.2,
+                scale: 0.8 + rng.next() * 0.6,
+                rotationY: (rng.next() - 0.5) * 0.15,
+            })
+        }
+        // Scatter rubble around
+        for (let i = 0; i < 4; i++) {
+            pieces.push({
+                type: rng.next() > 0.5 ? 'ruins_brick' : 'rock',
+                offsetX: (rng.next() - 0.5) * 3.0,
+                offsetZ: (rng.next() - 0.5) * (segments * 2),
+                scale: 0.4 + rng.next() * 0.6,
+                rotationY: rng.next() * Math.PI * 2,
+            })
+        }
+        return buildFormation(pieces, rng, seed)
+    },
+
+    // Crystal cluster — big crystal surrounded by smaller ones
+    crystal_cluster: (rng, seed) => {
+        const pieces: FormationPiece[] = []
+        // Central large crystal
+        pieces.push({
+            type: 'crystal',
+            offsetX: 0,
+            offsetZ: 0,
+            scale: 1.5 + rng.next() * 1.5,
+            rotationY: rng.next() * Math.PI * 2,
+        })
+        // Surrounding crystals
+        const count = 4 + Math.floor(rng.next() * 4)
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2 + (rng.next() - 0.5) * 0.5
+            const dist = 1.0 + rng.next() * 1.5
+            pieces.push({
+                type: 'crystal',
+                offsetX: Math.cos(angle) * dist,
+                offsetZ: Math.sin(angle) * dist,
+                scale: 0.3 + rng.next() * 0.7,
+                rotationY: rng.next() * Math.PI * 2,
+            })
+        }
+        // A few rocks at the base
+        for (let i = 0; i < 2; i++) {
+            const angle = rng.next() * Math.PI * 2
+            pieces.push({
+                type: 'rock',
+                offsetX: Math.cos(angle) * (1.5 + rng.next()),
+                offsetZ: Math.sin(angle) * (1.5 + rng.next()),
+                scale: 0.4 + rng.next() * 0.5,
+                rotationY: rng.next() * Math.PI * 2,
+            })
+        }
+        return buildFormation(pieces, rng, seed)
+    },
+
+    // Graveyard cluster — pillars/statues with scattered ruins
+    graveyard: (rng, seed) => {
+        const pieces: FormationPiece[] = []
+        const rows = 2 + Math.floor(rng.next() * 2)
+        const cols = 2 + Math.floor(rng.next() * 2)
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const types = ['pillar_broken', 'pillar', 'statue', 'rock']
+                pieces.push({
+                    type: types[Math.floor(rng.next() * types.length)],
+                    offsetX: (r - (rows - 1) / 2) * (1.8 + rng.next() * 0.5),
+                    offsetZ: (c - (cols - 1) / 2) * (1.8 + rng.next() * 0.5),
+                    scale: 0.6 + rng.next() * 0.8,
+                    rotationY: rng.next() * Math.PI * 2,
+                })
+            }
+        }
+        // Scattered rubble
+        for (let i = 0; i < 3; i++) {
+            pieces.push({
+                type: 'ruins_brick',
+                offsetX: (rng.next() - 0.5) * 4,
+                offsetZ: (rng.next() - 0.5) * 4,
+                scale: 0.5 + rng.next() * 0.5,
+                rotationY: rng.next() * Math.PI * 2,
+            })
+        }
+        return buildFormation(pieces, rng, seed)
+    },
+
+    // Temple ruins — rectangular pillar grid with crumbled walls, rubble, and a central statue
+    temple_ruins: (rng, seed) => {
+        const pieces: FormationPiece[] = []
+        // Determine temple size
+        const rows = 2 + Math.floor(rng.next() * 2) // 2-3 rows
+        const cols = 3 + Math.floor(rng.next() * 3) // 3-5 cols
+        const spacingX = 2.5 + rng.next() * 0.5
+        const spacingZ = 2.5 + rng.next() * 0.5
+        const halfW = ((cols - 1) * spacingZ) / 2
+        const halfD = ((rows - 1) * spacingX) / 2
+
+        // Pillar grid — some intact, some broken
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                // Skip interior pillars (only perimeter)
+                if (r > 0 && r < rows - 1 && c > 0 && c < cols - 1) continue
+                const intact = rng.next() > 0.4
+                pieces.push({
+                    type: intact ? 'pillar' : 'pillar_broken',
+                    offsetX: r * spacingX - halfD,
+                    offsetZ: c * spacingZ - halfW,
+                    scale: 0.9 + rng.next() * 0.5,
+                    rotationY: (rng.next() - 0.5) * 0.2,
+                })
+            }
+        }
+
+        // Partial walls between some pillars
+        const wallCount = 1 + Math.floor(rng.next() * 3)
+        for (let i = 0; i < wallCount; i++) {
+            const side = Math.floor(rng.next() * 4) // 0=front, 1=back, 2=left, 3=right
+            let wx: number, wz: number, ry: number
+            if (side < 2) {
+                // Front or back wall
+                wx = side === 0 ? -halfD : halfD
+                wz = (rng.next() - 0.5) * halfW
+                ry = 0
+            } else {
+                // Left or right wall
+                wx = (rng.next() - 0.5) * halfD
+                wz = side === 2 ? -halfW : halfW
+                ry = Math.PI / 2
+            }
+            pieces.push({
+                type: rng.next() > 0.5 ? 'wall_stone' : 'wall_brick',
+                offsetX: wx,
+                offsetZ: wz,
+                scale: 0.7 + rng.next() * 0.5,
+                rotationY: ry + (rng.next() - 0.5) * 0.15,
+            })
+        }
+
+        // Central altar / statue
+        pieces.push({
+            type: rng.next() > 0.4 ? 'statue' : 'pillar',
+            offsetX: (rng.next() - 0.5) * 0.6,
+            offsetZ: (rng.next() - 0.5) * 0.6,
+            scale: 1.2 + rng.next() * 0.6,
+            rotationY: rng.next() * Math.PI * 2,
+        })
+
+        // Scattered rubble inside and around
+        const rubbleCount = 4 + Math.floor(rng.next() * 4)
+        for (let i = 0; i < rubbleCount; i++) {
+            pieces.push({
+                type: rng.next() > 0.5 ? 'ruins_brick' : 'rock',
+                offsetX: (rng.next() - 0.5) * (halfD * 2 + 2),
+                offsetZ: (rng.next() - 0.5) * (halfW * 2 + 2),
+                scale: 0.3 + rng.next() * 0.6,
+                rotationY: rng.next() * Math.PI * 2,
+            })
+        }
+
+        // Optional steps / platform base (flat rock at ground level)
+        if (rng.next() > 0.4) {
+            pieces.push({
+                type: 'rock',
+                offsetX: -halfD - 1.5,
+                offsetZ: 0,
+                scale: 0.4 + rng.next() * 0.3,
+                rotationY: 0,
+            })
+        }
+
+        return buildFormation(pieces, rng, seed)
+    },
+
+    // Rocky outcrop — large boulder surrounded by smaller rocks
+    rocky_outcrop: (rng, seed) => {
+        const pieces: FormationPiece[] = []
+        // Big central rock
+        pieces.push({
+            type: 'rock',
+            offsetX: 0,
+            offsetZ: 0,
+            scale: 2.0 + rng.next() * 2.0,
+            rotationY: rng.next() * Math.PI * 2,
+        })
+        // Surrounding smaller rocks
+        const count = 4 + Math.floor(rng.next() * 5)
+        for (let i = 0; i < count; i++) {
+            const angle = rng.next() * Math.PI * 2
+            const dist = 1.5 + rng.next() * 2.0
+            pieces.push({
+                type: 'rock',
+                offsetX: Math.cos(angle) * dist,
+                offsetZ: Math.sin(angle) * dist,
+                scale: 0.3 + rng.next() * 1.0,
+                rotationY: rng.next() * Math.PI * 2,
+            })
+        }
+        return buildFormation(pieces, rng, seed)
+    },
+}
+
+/**
+ * Generate a formation by name. Returns null if formation type not found.
+ */
+export function generateFormation(formationType: string, seed: number): FormationResult | null {
+    const factory = FORMATION_FACTORIES[formationType]
+    if (!factory) return null
+    const rng = new SeededRandom(`formation_${formationType}_${seed}`)
+    return factory(rng, seed)
+}

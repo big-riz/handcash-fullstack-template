@@ -23,7 +23,6 @@ export interface AuditEvent {
   sessionId?: string
   userId?: string
   ipAddress?: string | null
-  userAgent?: string | null
   details?: Record<string, any>
   success: boolean
 }
@@ -83,15 +82,5 @@ export function logAuditEvent(event: Omit<AuditEvent, "timestamp">): void {
     details: redactedDetails,
   }
 
-  // Console logging for development/debugging
-  console.log(
-    `[AUDIT] ${fullEvent.type} | ${fullEvent.success ? "SUCCESS" : "FAILURE"} | Session: ${fullEvent.sessionId || "N/A"}`,
-    fullEvent,
-  )
-
-  // Write to persistent storage (async, doesn't block)
-  // Errors are handled internally in writeAuditEvent
-  writeAuditEvent(fullEvent).catch((error) => {
-    console.error("[AuditLogger] Failed to persist audit event:", error)
-  })
+  writeAuditEvent(fullEvent).catch(() => {})
 }

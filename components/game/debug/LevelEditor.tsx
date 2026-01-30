@@ -7,7 +7,8 @@ import {
     Copy, RefreshCw, X, Check, FileJson
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { WORLDS, WorldData } from "@/components/game/data/worlds"
+import { WORLDS, WorldData, GroundTexturePreset, GroundTextureConfig } from "@/components/game/data/worlds"
+import { GROUND_TEXTURE_PRESETS } from "@/components/game/utils/groundTextureGenerator"
 import { darkForestTimeline } from "@/components/game/data/dark_forest_timeline"
 import { frozenWasteTimeline } from "@/components/game/data/frozen_waste_timeline"
 import { MESH_TYPES, MESH_CATEGORIES } from "@/components/game/data/meshes"
@@ -2208,6 +2209,9 @@ function SettingsTab({ level, onUpdate }: { level: CustomLevelData, onUpdate: (l
                 </div>
             </div>
 
+            {/* Ground Texture Settings */}
+            <GroundTextureSettings level={level} onUpdate={onUpdate} />
+
             {/* Border Settings */}
             <div className="space-y-3">
                 <div className="text-xs text-white/40 uppercase tracking-wider font-bold">World Border</div>
@@ -2281,6 +2285,167 @@ function SettingsTab({ level, onUpdate }: { level: CustomLevelData, onUpdate: (l
                     />
                 </div>
             </div>
+        </div>
+    )
+}
+
+// Ground Texture Settings Component
+function GroundTextureSettings({ level, onUpdate }: { level: CustomLevelData, onUpdate: (level: CustomLevelData) => void }) {
+    const [showAdvanced, setShowAdvanced] = useState(false)
+    const gt = level.theme.groundTexture
+    const preset = gt?.preset || 'none'
+
+    const setGT = (patch: Partial<GroundTextureConfig>) => {
+        onUpdate({
+            ...level,
+            theme: {
+                ...level.theme,
+                groundTexture: { ...gt!, ...patch }
+            }
+        })
+    }
+
+    const handlePresetChange = (newPreset: GroundTexturePreset) => {
+        if (newPreset === 'none') {
+            onUpdate({
+                ...level,
+                theme: { ...level.theme, groundTexture: undefined }
+            })
+            return
+        }
+        const defaults = GROUND_TEXTURE_PRESETS[newPreset]
+        onUpdate({
+            ...level,
+            theme: {
+                ...level.theme,
+                groundTexture: { preset: newPreset, ...defaults }
+            }
+        })
+    }
+
+    const hexStr = (v: number | undefined) => `#${(v ?? 0).toString(16).padStart(6, '0')}`
+
+    return (
+        <div className="space-y-3">
+            <div className="text-xs text-white/40 uppercase tracking-wider font-bold">Ground Texture</div>
+
+            <div>
+                <label className="text-xs text-white/60 mb-1 block">Preset</label>
+                <select
+                    value={preset}
+                    onChange={(e) => handlePresetChange(e.target.value as GroundTexturePreset)}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                >
+                    <option value="none">None (flat color)</option>
+                    <option value="mossy_patches">Mossy Patches</option>
+                    <option value="snow_ice">Snow & Ice</option>
+                    <option value="stone_cracks">Stone Cracks</option>
+                    <option value="dirt_mud">Dirt & Mud</option>
+                    <option value="grass_field">Grass Field</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+
+            {gt && preset !== 'none' && (
+                <>
+                    <div>
+                        <label className="text-xs text-white/60 mb-1 block">Secondary Color</label>
+                        <input
+                            type="color"
+                            value={hexStr(gt.secondaryColor)}
+                            onChange={(e) => setGT({ secondaryColor: parseInt(e.target.value.substring(1), 16) })}
+                            className="w-full h-10 bg-white/10 border border-white/20 rounded-lg cursor-pointer"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs text-white/60 mb-1 block">Noise Scale ({gt.noiseScale.toFixed(1)})</label>
+                        <input
+                            type="range" min="0.5" max="8.0" step="0.1"
+                            value={gt.noiseScale}
+                            onChange={(e) => setGT({ noiseScale: parseFloat(e.target.value) })}
+                            className="w-full"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs text-white/60 mb-1 block">Intensity ({gt.intensity.toFixed(2)})</label>
+                        <input
+                            type="range" min="0" max="1" step="0.01"
+                            value={gt.intensity}
+                            onChange={(e) => setGT({ intensity: parseFloat(e.target.value) })}
+                            className="w-full"
+                        />
+                    </div>
+
+                    <button
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        className="text-xs text-white/40 hover:text-white/60 flex items-center gap-1"
+                    >
+                        {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        Advanced
+                    </button>
+
+                    {showAdvanced && (
+                        <div className="space-y-3 pl-2 border-l border-white/10">
+                            <div>
+                                <label className="text-xs text-white/60 mb-1 block">Octaves ({gt.octaves ?? 3})</label>
+                                <input
+                                    type="range" min="1" max="8" step="1"
+                                    value={gt.octaves ?? 3}
+                                    onChange={(e) => setGT({ octaves: parseInt(e.target.value) })}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-white/60 mb-1 block">Lacunarity ({(gt.lacunarity ?? 2.0).toFixed(1)})</label>
+                                <input
+                                    type="range" min="1.0" max="4.0" step="0.1"
+                                    value={gt.lacunarity ?? 2.0}
+                                    onChange={(e) => setGT({ lacunarity: parseFloat(e.target.value) })}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-white/60 mb-1 block">Persistence ({(gt.persistence ?? 0.5).toFixed(2)})</label>
+                                <input
+                                    type="range" min="0.1" max="0.9" step="0.05"
+                                    value={gt.persistence ?? 0.5}
+                                    onChange={(e) => setGT({ persistence: parseFloat(e.target.value) })}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-white/60 mb-1 block">Detail Color</label>
+                                <input
+                                    type="color"
+                                    value={hexStr(gt.detailColor)}
+                                    onChange={(e) => setGT({ detailColor: parseInt(e.target.value.substring(1), 16) })}
+                                    className="w-full h-10 bg-white/10 border border-white/20 rounded-lg cursor-pointer"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-white/60 mb-1 block">Detail Scale ({(gt.detailScale ?? 4.0).toFixed(1)})</label>
+                                <input
+                                    type="range" min="1.0" max="12.0" step="0.5"
+                                    value={gt.detailScale ?? 4.0}
+                                    onChange={(e) => setGT({ detailScale: parseFloat(e.target.value) })}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-white/60 mb-1 block">Detail Intensity ({(gt.detailIntensity ?? 0.1).toFixed(2)})</label>
+                                <input
+                                    type="range" min="0" max="0.5" step="0.01"
+                                    value={gt.detailIntensity ?? 0.1}
+                                    onChange={(e) => setGT({ detailIntensity: parseFloat(e.target.value) })}
+                                    className="w-full"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     )
 }

@@ -9,13 +9,14 @@ import { Player } from '../../entities/Player'
 import { EntityManager } from '../../entities/EntityManager'
 import { VFXManager } from '../../systems/VFXManager'
 import { AudioManager } from '../../core/AudioManager'
+import { loadWeaponModel, disposeWeaponModel, WEAPON_GLB_URLS } from '../../core/WeaponModelLoader'
 
 export type CompanionType = 'nuclear_pigeon' | 'vampire_rat' | 'pig_luggage'
 
 export class NuclearPigeon {
     public level = 1
     public companionType: CompanionType = 'nuclear_pigeon'
-    private mesh: THREE.Mesh | null = null
+    private model: THREE.Object3D | null = null
     private angle = 0
     public orbitRadius = 2.5
     public orbitSpeed = 3
@@ -39,29 +40,53 @@ export class NuclearPigeon {
         private rng: any, // SeededRandom
         private audioManager: AudioManager | null = null
     ) {
-        this.createMesh()
+        this.createFallbackMesh()
     }
 
-    private createMesh() {
-        // Small green bird/sphere
+    private glbLoaded = false
+
+    private createFallbackMesh() {
         const geo = new THREE.SphereGeometry(0.2, 8, 8)
         const mat = new THREE.MeshStandardMaterial({
             color: 0x00ff00,
             emissive: 0x00ff00,
             emissiveIntensity: 0.5
         })
-        this.mesh = new THREE.Mesh(geo, mat)
-        this.scene.add(this.mesh)
+        this.model = new THREE.Mesh(geo, mat)
+        this.scene.add(this.model)
+    }
+
+    private loadGLB() {
+        if (this.glbLoaded) return
+        this.glbLoaded = true
+        const url = WEAPON_GLB_URLS[this.companionType]
+        if (!url) return
+        loadWeaponModel(url).then((glb) => {
+            const box = new THREE.Box3().setFromObject(glb)
+            const size = box.getSize(new THREE.Vector3())
+            const maxDim = Math.max(size.x, size.y, size.z)
+            const s = 0.6 / (maxDim || 1)
+            glb.scale.setScalar(s)
+            if (this.model) {
+                glb.position.copy(this.model.position)
+                this.scene.remove(this.model)
+                disposeWeaponModel(this.model)
+            }
+            this.model = glb
+            this.scene.add(glb)
+        }).catch(() => { /* keep fallback */ })
     }
 
     update(deltaTime: number) {
-        if (!this.mesh) return
+        this.loadGLB()
+        if (!this.model) return
 
         // Orbit logic
         this.angle += this.orbitSpeed * deltaTime
         const x = this.player.position.x + Math.cos(this.angle) * this.orbitRadius
         const z = this.player.position.z + Math.sin(this.angle) * this.orbitRadius
-        this.mesh.position.set(x, 1.5, z)
+        this.model.position.set(x, 1.5, z)
+        this.model.rotation.y += deltaTime * 2
 
         // Fire logic
         this.fireTimer += deltaTime
@@ -84,38 +109,35 @@ export class NuclearPigeon {
     }
 
     private fire() {
-        if (!this.mesh) return
+        if (!this.model) return
 
         this.audioManager?.playCompanionAttack();
 
-        // Targeted fire
+        const pos = this.model.position
         const enemies = this.entityManager.enemies
-            .filter(e => e.isActive && e.position.distanceTo(this.mesh!.position) < this.range)
-            .sort((a, b) => a.position.distanceTo(this.mesh!.position) - b.position.distanceTo(this.mesh!.position))
+            .filter(e => e.isActive && e.position.distanceTo(pos) < this.range)
+            .sort((a, b) => a.position.distanceTo(pos) - b.position.distanceTo(pos))
 
         if (enemies.length === 0) return
 
         const target = enemies[0]
-        const dir = target.position.clone().sub(this.mesh.position).normalize()
+        const dir = target.position.clone().sub(pos).normalize()
 
-        // Crit check
         const isCrit = this.rng.next() < this.player.stats.critRate
         const finalDamage = isCrit
             ? this.damage * this.player.stats.damageMultiplier * this.player.stats.critDamage
             : this.damage * this.player.stats.damageMultiplier
 
         this.entityManager.spawnProjectile(
-            this.mesh.position.x,
-            this.mesh.position.z,
-            dir.x * 20,
-            dir.z * 20,
+            pos.x, pos.z,
+            dir.x * 20, dir.z * 20,
             finalDamage,
             false, false, false,
             '🐦'
         )
 
         if (this.vfx) {
-            this.vfx.createEmoji(this.mesh.position.x, this.mesh.position.z, isCrit ? '☢️' : '🐦', 0.4)
+            this.vfx.createEmoji(pos.x, pos.z, isCrit ? '☢️' : '🐦', 0.4)
         }
     }
 
@@ -168,10 +190,10 @@ export class NuclearPigeon {
     }
 
     cleanup() {
-        if (this.mesh) {
-            this.scene.remove(this.mesh)
-            this.mesh.geometry.dispose()
-            if (this.mesh.material instanceof THREE.Material) this.mesh.material.dispose()
+        if (this.model) {
+            this.scene.remove(this.model)
+            disposeWeaponModel(this.model)
+            this.model = null
         }
     }
 }

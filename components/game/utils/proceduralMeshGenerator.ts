@@ -7,13 +7,22 @@
 
 import * as THREE from 'three'
 import { SeededRandom } from '@/lib/SeededRandom'
-import { generateMeshObject } from '@/components/game/utils/meshUtils'
+import { generateMeshObject, generateFormation } from '@/components/game/utils/meshUtils'
 import { PROCEDURAL_MESH_CONFIGS, WorldMeshConfig, MeshSpawnRule } from '@/components/game/data/proceduralMeshConfigs'
 
 export interface ObstacleData {
   x: number
   z: number
   radius: number
+}
+
+// Base collision radii per mesh type (used for per-piece formation collisions)
+const MESH_COLLISION_RADII: Record<string, number> = {
+  tree: 1.2, rock: 0.9, tree_dead: 1.0, shrub: 0.6, pillar: 0.9,
+  pillar_broken: 0.9, crystal: 0.8, wall_stone: 0.8, wall_brick: 0.8,
+  statue: 1.0, ruins_brick: 0.6, crate: 0.7, barrel: 0.6, well: 1.2,
+  fence: 0.4, fence_wood: 0.4, fence_iron: 0.4, hedge_row: 0.6, log_fence: 0.4,
+  wall: 0.8,
 }
 
 /**
@@ -90,24 +99,49 @@ export function generateProceduralMeshes(
       continue
     }
 
-    // Place mesh
+    // Place mesh or formation
     const meshSeed = attempts // Deterministic seed per attempt
-    const meshObj = generateMeshObject(rule.type, meshSeed)
-    meshObj.position.set(x, 0, z)
-    meshObj.scale.set(scale, scale, scale)
-    meshObj.rotation.y = rng.next() * Math.PI * 2
 
-    // Apply random rotation for variety
-    if (rule.type !== 'crystal' && rule.type !== 'pillar' && rule.type !== 'pillar_broken') {
-      meshObj.rotation.x = (rng.next() - 0.5) * 0.2
-      meshObj.rotation.z = (rng.next() - 0.5) * 0.2
-    }
+    if (rule.isFormation) {
+      const result = generateFormation(rule.type, meshSeed)
+      if (!result) continue
+      const { group, pieces } = result
+      const rotY = rng.next() * Math.PI * 2
+      group.position.set(x, 0, z)
+      group.scale.set(scale, scale, scale)
+      group.rotation.y = rotY
+      envGroup.add(group)
 
-    envGroup.add(meshObj)
+      // Register per-piece collisions in world space
+      const cosR = Math.cos(rotY)
+      const sinR = Math.sin(rotY)
+      for (const p of pieces) {
+        const baseRadius = MESH_COLLISION_RADII[p.type]
+        if (baseRadius == null) continue // no collision for this mesh type
+        const localX = p.offsetX * scale
+        const localZ = p.offsetZ * scale
+        const worldX = x + localX * cosR - localZ * sinR
+        const worldZ = z + localX * sinR + localZ * cosR
+        obstacles.push({ x: worldX, z: worldZ, radius: baseRadius * p.scale * scale })
+      }
+    } else {
+      const meshObj = generateMeshObject(rule.type, meshSeed)
+      meshObj.position.set(x, 0, z)
+      meshObj.scale.set(scale, scale, scale)
+      meshObj.rotation.y = rng.next() * Math.PI * 2
 
-    // Track collision if enabled
-    if (rule.hasCollision) {
-      obstacles.push({ x, z, radius: meshRadius })
+      // Apply random rotation for variety
+      if (rule.type !== 'crystal' && rule.type !== 'pillar' && rule.type !== 'pillar_broken') {
+        meshObj.rotation.x = (rng.next() - 0.5) * 0.2
+        meshObj.rotation.z = (rng.next() - 0.5) * 0.2
+      }
+
+      envGroup.add(meshObj)
+
+      // Track collision
+      if (rule.hasCollision) {
+        obstacles.push({ x, z, radius: meshRadius })
+      }
     }
 
     // Track placement count

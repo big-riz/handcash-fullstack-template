@@ -183,11 +183,6 @@ function ReplayCard({ replay, formatTime, formatDate }: {
                     )}
                 </div>
 
-                {/* Right Section - Seed */}
-                <div className="text-right">
-                    <p className="text-xs text-white/40 uppercase tracking-widest mb-1">Seed</p>
-                    <p className="text-sm font-mono text-white/60">{replay.seed.slice(0, 8)}...</p>
-                </div>
             </div>
         </Card>
     )

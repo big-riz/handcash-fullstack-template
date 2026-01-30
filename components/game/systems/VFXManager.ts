@@ -350,7 +350,7 @@ export class VFXManager {
             const context = canvas.getContext('2d')
             if (!context) return
 
-            context.font = '48px Arial'
+            context.font = '48px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif'
             context.textAlign = 'center'
             context.textBaseline = 'middle'
             context.fillText(emoji, 32, 32)

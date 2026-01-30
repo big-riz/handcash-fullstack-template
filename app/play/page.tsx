@@ -14,6 +14,8 @@ export default function PlayPage() {
 
     useEffect(() => {
         const checkAccess = async () => {
+            if (isLoading) return // Wait for auth to resolve first
+
             if (!user) {
                 setIsAuthorized(false)
                 setAuthReason("You must be authenticated to play")
@@ -53,7 +55,7 @@ export default function PlayPage() {
         }
 
         checkAccess()
-    }, [user])
+    }, [user, isLoading])
 
     const handleRetry = () => {
         setIsAuthorized(null)

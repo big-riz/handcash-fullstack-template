@@ -1,5 +1,9 @@
 import { useRef, useEffect, useState, MutableRefObject } from "react"
 import * as THREE from "three"
+
+// Enable Three.js built-in file cache — prevents duplicate network fetches
+// when multiple loaders request the same URL (e.g. CharacterModelManager + InstancedSkinnedMesh)
+THREE.Cache.enabled = true
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { ProfiledGameLoop } from "../core/ProfiledGameLoop"
 import { PerformanceProfiler, PerformanceMetrics, GameStatsHistory } from "../core/PerformanceProfiler"
@@ -11,13 +15,13 @@ import { SpawnSystem } from "../systems/SpawnSystem"
 import { AbilitySystem } from "../systems/AbilitySystem"
 import { VFXManager } from "../systems/VFXManager"
 import { SeededRandom } from "@/lib/SeededRandom"
-import { ReplayRecorder, ReplayPlayer, ReplayData, ReplayEventType } from "@/lib/ReplaySystem"
 import { EventSystem } from "../systems/EventSystem"
 import { AudioManager } from "../core/AudioManager"
 import { SpriteSystem } from "../core/SpriteSystem"
 import { BenchmarkMode } from "../debug/BenchmarkMode"
 import { AirdropSystem, AirdropData } from "../systems/AirdropSystem"
 import { EnemyCombinationSystem } from "../systems/EnemyCombinationSystem"
+import { WorldEnvironmentSystem } from "../systems/WorldEnvironmentSystem"
 import { CharacterModelManager } from "../core/CharacterModelManager"
 import { InstancedSkinnedMesh } from "../core/InstancedSkinnedMesh"
 import { InstancedLevelRenderer } from "../systems/InstancedLevelRenderer"
@@ -31,6 +35,7 @@ import { generateScatterObject } from "@/components/game/utils/scatterUtils"
 import { generateMeshObject } from "@/components/game/utils/meshUtils"
 import { MESH_TYPES } from "@/components/game/data/meshes"
 import { generateProceduralMeshes } from "@/components/game/utils/proceduralMeshGenerator"
+import { generateGroundTexture } from "@/components/game/utils/groundTextureGenerator"
 import { PROCEDURAL_MESH_CONFIGS } from "@/components/game/data/proceduralMeshConfigs"
 import activeData from '@/components/game/data/actives'
 import passiveData from '@/components/game/data/passives'
@@ -105,14 +110,13 @@ interface UseGameEngineProps {
     setUnlockedCharacters: (updater: (prev: Set<string>) => Set<string>) => void
     setNewHeroUnlocked: (hero: string | null) => void
     itemTemplates: ItemTemplate[]
-    submitReplayToDB: () => void
+    submitScoreToDB: () => void
     banishedItems: Set<string>
     setBanishedItems: (set: Set<string>) => void
-    replayPaused: boolean
-    replaySpeed: number
     gameSpeed: number
     isBotActive: boolean
     setWaveNotification: (message: string | null) => void
+    setKilledBy: (source: { type: string; isBoss: boolean; isElite: boolean } | null) => void
     // Performance Profiler
     setProfilerMetrics: (metrics: PerformanceMetrics | null) => void
     setProfilerWarnings: (warnings: string[]) => void
@@ -121,7 +125,6 @@ interface UseGameEngineProps {
     // External Refs
     playerRef: MutableRefObject<Player | null>
     abilitySystemRef: MutableRefObject<AbilitySystem | null>
-    replayRef: MutableRefObject<ReplayRecorder | null>
     audioManagerRef: MutableRefObject<AudioManager | null>
 }
 
@@ -150,21 +153,19 @@ export function useGameEngine({
     setUnlockedCharacters,
     setNewHeroUnlocked,
     itemTemplates,
-    submitReplayToDB,
+    submitScoreToDB,
     banishedItems,
     setBanishedItems,
-    replayPaused,
-    replaySpeed,
     gameSpeed,
     isBotActive,
     setWaveNotification,
+    setKilledBy,
     setProfilerMetrics,
     setProfilerWarnings,
     setFPSHistory,
     setGameStatsHistory,
     playerRef,
     abilitySystemRef,
-    replayRef,
     audioManagerRef
 }: UseGameEngineProps) {
 
@@ -185,18 +186,15 @@ export function useGameEngine({
     const spriteSystemRef = useRef<SpriteSystem | null>(null)
     const airdropSystemRef = useRef<AirdropSystem | null>(null)
     const enemyCombinationSystemRef = useRef<EnemyCombinationSystem | null>(null)
+    const worldEnvironmentRef = useRef<WorldEnvironmentSystem | null>(null)
     const characterModelManagerRef = useRef<CharacterModelManager | null>(null)
     const instancedSkinnedMeshRef = useRef<InstancedSkinnedMesh | null>(null)
     const rngRef = useRef<SeededRandom | null>(null)
-    // replayRef passed from prop
-    const replayPlayerRef = useRef<ReplayPlayer | null>(null)
-    const pendingReplaySeed = useRef<string | null>(null) // Stores seed for replay that needs to be initialized
     const isInitializingRef = useRef(false) // Tracks async initializeGame() in progress
     const allowPostVictoryRef = useRef(false) // Legacy - allows continuing after final victory
     const shownVictoryMilestonesRef = useRef<Set<number>>(new Set()) // Tracks which victory levels (10, 20, 30) have been shown
     const pendingLevelUpAfterVictoryRef = useRef(false) // Tracks if level-up should show after victory screen
     const pendingAirdropLevelUpRef = useRef(false) // Tracks if airdrop triggered level-up
-    const replayFrameRef = useRef<number>(0)
     const gameTimeRef = useRef<number>(0)
     const obstaclesRef = useRef<{ x: number, z: number, radius: number }[]>([])
     const levelUpChoices = useRef<any[]>([])
@@ -212,12 +210,6 @@ export function useGameEngine({
 
     const isBotActiveRef = useRef(isBotActive)
     useEffect(() => { isBotActiveRef.current = isBotActive }, [isBotActive])
-
-    const replayPausedRef = useRef(replayPaused)
-    useEffect(() => { replayPausedRef.current = replayPaused }, [replayPaused])
-
-    const replaySpeedRef = useRef(replaySpeed)
-    useEffect(() => { replaySpeedRef.current = replaySpeed }, [replaySpeed])
 
     const gameSpeedRef = useRef(gameSpeed)
     useEffect(() => { gameSpeedRef.current = gameSpeed }, [gameSpeed])
@@ -411,17 +403,13 @@ export function useGameEngine({
     }
 
     const submitScore = (level: number) => {
-        console.log("[Replay] submitScore called", { level, worldId: selectedWorldId })
-        submitReplayToDB()
+        console.log("[Score] submitScore called", { level, worldId: selectedWorldId })
+        submitScoreToDB()
     }
 
-    const handleUpgrade = (type: string, fromReplay = false) => {
+    const handleUpgrade = (type: string) => {
         const as = abilitySystemRef.current
         if (!as) return
-
-        if ((gameStateRef.current === "playing" || gameStateRef.current === "levelUp") && replayRef.current && !fromReplay) {
-            replayRef.current.recordLevelUp(type)
-        }
 
         if (type.startsWith('evolve_')) {
             const evoId = type.replace('evolve_', '')
@@ -434,15 +422,10 @@ export function useGameEngine({
             as.addAbility(type as any)
         }
         audioManagerRef.current?.playUIClick();
-
-        if (fromReplay) {
-            setGameState("replaying")
-        } else {
-            setGameState("playing")
-        }
+        setGameState("playing")
     }
 
-    const resetGame = (forReplay: boolean = false, overrideSeed?: string, overrideCharId?: string, overrideWorldId?: string) => {
+    const resetGame = (_forReplay: boolean = false, overrideSeed?: string, overrideCharId?: string, overrideWorldId?: string) => {
         const p = playerRef.current
         const scene = sceneRef.current
         const em = entityManagerRef.current
@@ -531,11 +514,12 @@ export function useGameEngine({
                 allowedUpgrades: [...currentWorldTemplate.allowedUpgrades]
             }
 
-            if (!currentWorld.allowedUpgrades.includes(startingWeapon)) {
-                currentWorld.allowedUpgrades.push(startingWeapon)
+            for (const item of [...startingActives, ...startingPassives]) {
+                if (!currentWorld.allowedUpgrades.includes(item)) {
+                    currentWorld.allowedUpgrades.push(item)
+                }
             }
 
-            replayRef.current = forReplay ? null : new ReplayRecorder(newSeed, (user?.publicProfile.handle || ''), selectedCharacterId, selectedWorldId)
             spawnSystemRef.current = new SpawnSystem(em, p, gameRNG)
             spawnSystemRef.current.setWorld(currentWorld)
             spawnSystemRef.current.setWaveMessageCallback((message: string) => {
@@ -550,7 +534,7 @@ export function useGameEngine({
                     setTimeout(() => setWaveNotification(null), 4000)
                 }
             })
-            eventSystemRef.current = new EventSystem({ spawnSystem: spawnSystemRef.current, entityManager: em, vfxManager: vm, player: p })
+            eventSystemRef.current = new EventSystem({ spawnSystem: spawnSystemRef.current, entityManager: em, vfxManager: vm, player: p }, gameRNG)
 
             // Reinitialize airdrop system with new RNG
             if (airdropSystemRef.current && scene) {
@@ -564,37 +548,15 @@ export function useGameEngine({
             if (enemyCombinationSystemRef.current) {
                 enemyCombinationSystemRef.current = new EnemyCombinationSystem(em, vm)
             }
+
+            // Reinitialize world environment system
+            if (worldEnvironmentRef.current) {
+                worldEnvironmentRef.current.cleanup()
+                worldEnvironmentRef.current = new WorldEnvironmentSystem(p, em, vm, gameRNG)
+                worldEnvironmentRef.current.setWorld(overrideWorldId || selectedWorldId)
+            }
         }
         cameraTargetRef.current.set(0, 0, 0)
-    }
-
-    const startReplay = (score: any) => {
-        if (score.seed && score.events) {
-            // 1. Store the replay seed for initialization after systems are rebuilt
-            pendingReplaySeed.current = score.seed
-
-            // 2. Set the state to trigger the world/character rebuild via the main useEffect.
-            if (score.characterId) setSelectedCharacterId(score.characterId)
-            if (score.worldId) setSelectedWorldId(score.worldId)
-
-            // 3. Prepare the replay player data.
-            const replayData: ReplayData = {
-                seed: score.seed,
-                startTime: Date.now(),
-                gameVersion: '0.1.0-alpha',
-                events: score.events,
-                finalLevel: score.level,
-                finalTime: score.time,
-                playerName: score.name,
-                characterId: score.characterId,
-                worldId: score.worldId
-            }
-            replayPlayerRef.current = new ReplayPlayer(replayData)
-            replayFrameRef.current = 0
-
-            // 4. Set the game state to begin playback on the next render.
-            setGameState("replaying")
-        }
     }
 
     // Main Effect
@@ -637,7 +599,29 @@ export function useGameEngine({
         const groundGeo = new THREE.PlaneGeometry(3000, 3000)
         const envGroup = new THREE.Group()
         scene.add(envGroup)
-        const groundMat = new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0.1, color: groundColor })
+
+        // Build ground texture map if configured
+        const gtConfig = WorldPreset.theme?.groundTexture
+        let groundTex: THREE.CanvasTexture | null = null
+        if (gtConfig && gtConfig.preset !== 'none') {
+            try {
+                const noiseCanvas = generateGroundTexture(groundColor, gtConfig, 1024, selectedWorldId.length * 31 + 42)
+                groundTex = new THREE.CanvasTexture(noiseCanvas)
+                groundTex.wrapS = THREE.RepeatWrapping
+                groundTex.wrapT = THREE.RepeatWrapping
+                groundTex.repeat.set(80, 80)
+                groundTex.colorSpace = THREE.SRGBColorSpace
+            } catch (e) {
+                console.error('[GameEngine] Ground texture generation failed:', e)
+            }
+        }
+
+        const groundMat = new THREE.MeshStandardMaterial({
+            roughness: 0.8,
+            metalness: 0.1,
+            color: groundTex ? 0xffffff : groundColor,
+            map: groundTex
+        })
         const ground = new THREE.Mesh(groundGeo, groundMat)
         ground.rotation.x = -Math.PI / 2
         ground.position.y = -0.01
@@ -652,19 +636,32 @@ export function useGameEngine({
         } else {
             // Check for custom level data
             const customWorld = getWorldData(selectedWorldId) as CustomLevelData
-            
+
             // 1. Render Painted Areas (Ground detail)
             if (customWorld.paintedAreas && customWorld.paintedAreas.length > 0) {
-                // Create a single canvas for the entire painted texture
-                const canvas = document.createElement('canvas')
-                canvas.width = 2048
-                canvas.height = 2048
+                // Create base canvas — use noise texture if configured, otherwise flat fill
+                const customGtConfig = customWorld.theme?.groundTexture
+                let canvas: HTMLCanvasElement
+                if (customGtConfig && customGtConfig.preset !== 'none') {
+                    canvas = generateGroundTexture(
+                        customWorld.theme.groundColor || 0x3d453d,
+                        customGtConfig,
+                        2048,
+                        customWorld.id.length * 31 + 42
+                    )
+                } else {
+                    canvas = document.createElement('canvas')
+                    canvas.width = 2048
+                    canvas.height = 2048
+                    const baseCtx = canvas.getContext('2d')
+                    if (baseCtx) {
+                        baseCtx.fillStyle = `#${(customWorld.theme.groundColor || 0x3d453d).toString(16).padStart(6, '0')}`
+                        baseCtx.fillRect(0, 0, canvas.width, canvas.height)
+                    }
+                }
                 const ctx = canvas.getContext('2d')
-                
+
                 if (ctx) {
-                    // Base layer: Ground Color
-                    ctx.fillStyle = `#${(customWorld.theme.groundColor || 0x3d453d).toString(16).padStart(6, '0')}`
-                    ctx.fillRect(0, 0, canvas.width, canvas.height)
                     
                     // Paint layer for compositing
                     const paintCanvas = document.createElement('canvas')
@@ -921,9 +918,6 @@ export function useGameEngine({
         }
         obstaclesRef.current = currentObstacles
 
-        const grid = new THREE.GridHelper(2000, 100, 0x555555, 0x444444)
-        grid.position.y = -0.005
-        scene.add(grid)
         scene.add(new THREE.AmbientLight(0xffffff, 1.2))
 
         const moonLight = new THREE.DirectionalLight(0xddeeff, 2.5)
@@ -996,8 +990,6 @@ export function useGameEngine({
             const rng = new SeededRandom(Date.now().toString())
             rngRef.current = rng
             entityManager.setRNG(rng)
-            const replay = new ReplayRecorder(rng.next().toString(), user?.publicProfile.handle || '', selectedCharacterId, selectedWorldId)
-            replayRef.current = replay
 
             const spawnSystem = new SpawnSystem(entityManager, player, rng)
             spawnSystemRef.current = spawnSystem
@@ -1024,7 +1016,7 @@ export function useGameEngine({
             const bot = new BotController(scene, player, entityManager)
             botControllerRef.current = bot
 
-            const eventSystem = new EventSystem({ spawnSystem, entityManager, vfxManager: vfx, player })
+            const eventSystem = new EventSystem({ spawnSystem, entityManager, vfxManager: vfx, player }, rng)
             eventSystemRef.current = eventSystem
 
             // Airdrop system
@@ -1039,15 +1031,12 @@ export function useGameEngine({
             const enemyCombinationSystem = new EnemyCombinationSystem(entityManager, vfx)
             enemyCombinationSystemRef.current = enemyCombinationSystem
 
-            isInitializingRef.current = false
+            // World environment system
+            const worldEnv = new WorldEnvironmentSystem(player, entityManager, vfx, rng)
+            worldEnv.setWorld(selectedWorldId)
+            worldEnvironmentRef.current = worldEnv
 
-            // If a replay was requested while we were initializing, apply it now
-            if (pendingReplaySeed.current && gameStateRef.current === "replaying") {
-                const seed = pendingReplaySeed.current
-                pendingReplaySeed.current = null
-                resetGame(true, seed)
-                gameLoopRef.current?.start()
-            }
+            isInitializingRef.current = false
         }
 
         // Call async initialization
@@ -1072,11 +1061,10 @@ export function useGameEngine({
             const vm = vfxManagerRef.current
 
             if (!p || !im || !em || !ss || !as || !vm) return
-            if (gameStateRef.current !== "playing" && gameStateRef.current !== "replaying") return
-            if (gameStateRef.current === "replaying" && replayPausedRef.current) return
+            if (gameStateRef.current !== "playing") return
 
             // Handle zoom input (only during active gameplay)
-            if (gameStateRef.current === "playing" && im) {
+            if (im) {
                 const zoomDelta = im.getZoomInput()
                 if (zoomDelta !== 0) {
                     // Adjust camera zoom (negative delta = zoom in, positive = zoom out)
@@ -1089,27 +1077,13 @@ export function useGameEngine({
             const activeEnemies = isBotActiveRef.current ? em.enemies.filter(e => e.isActive) : []
             const activeGems = isBotActiveRef.current ? em.gems.filter(g => g.isActive) : []
 
-            const iterations = gameStateRef.current === "replaying" 
-                ? replaySpeedRef.current 
-                : (isBotActiveRef.current ? gameSpeedRef.current : 1)
+            const iterations = isBotActiveRef.current ? gameSpeedRef.current : 1
 
             for (let iter = 0; iter < iterations; iter++) {
-                if (gameStateRef.current !== "playing" && gameStateRef.current !== "replaying") break;
+                if (gameStateRef.current !== "playing") break;
 
                 let movement = { x: 0, z: 0 };
-                let replayEvents: any[] = [];
-                if (gameStateRef.current === "replaying" && replayPlayerRef.current) {
-                    replayEvents = replayPlayerRef.current.getEventsForFrame(replayFrameRef.current);
-                    for (const event of replayEvents) {
-                        const type = event[0];
-                        if (type === ReplayEventType.LEVEL_UP) {
-                            handleUpgrade(event[2], true);
-                        } else if (type === ReplayEventType.DEATH) {
-                            setGameState("gameOver");
-                        }
-                    }
-                    movement = replayPlayerRef.current.currentInput;
-                } else if (isBotActiveRef.current && botControllerRef.current) {
+                if (isBotActiveRef.current && botControllerRef.current) {
                     movement = botControllerRef.current.getInput(gameTimeRef.current);
                 } else {
                     movement = im.getMovementInput();
@@ -1146,6 +1120,9 @@ export function useGameEngine({
                     enemyCombinationSystemRef.current.update(deltaTime)
                 }
 
+                // Update world environment effects
+                worldEnvironmentRef.current?.update(deltaTime)
+
                 eventSystemRef.current?.update(deltaTime)
 
                 // Update dynamic difficulty
@@ -1164,17 +1141,12 @@ export function useGameEngine({
                 // }
 
                 if (p.stats.currentHp <= 0) {
-                    if (replayRef.current) {
-                        replayRef.current.finish(p.stats.level, Math.floor(gameTimeRef.current))
-                    }
-
-                    // No seed rewards - meta progression removed
-
+                    setKilledBy(em.lastDamageSource)
                     setGameState("gameOver")
                     submitScore(p.stats.level)
                     break
                 }
-                else if (p.stats.level > prevLevel && gameStateRef.current !== "replaying") {
+                else if (p.stats.level > prevLevel) {
                     // Check if this level-up is also a victory milestone
                     const currentWorld = getWorldData(selectedWorldId)
                     const victoryMilestones = [10, 20, 30]
@@ -1291,11 +1263,6 @@ export function useGameEngine({
                             allowPostVictoryRef.current = true
                         }
 
-                        // Update replay stats at victory milestone (without adding DEATH event, to allow continuation)
-                        if (replayRef.current) {
-                            replayRef.current.updateFinalStats(p.stats.level, Math.floor(gameTimeRef.current))
-                        }
-
                         submitScore(p.stats.level)
                         break
                     }
@@ -1303,8 +1270,8 @@ export function useGameEngine({
                     // Check for airdrop-triggered level-up
                     if (pendingAirdropLevelUpRef.current) {
                         pendingAirdropLevelUpRef.current = false
-                        // Get all choices and show just 1 random one
-                        const allChoices = getLevelUpChoices().filter(c => !c.locked)
+                        // Get only passive choices for airdrops
+                        const allChoices = getLevelUpChoices().filter(c => !c.locked && c.type === 'passive')
                         if (allChoices.length > 0) {
                             if (!rngRef.current) throw new Error("RNG required for airdrop selection")
                             const randomIndex = Math.floor(rngRef.current.next() * allChoices.length)
@@ -1313,36 +1280,6 @@ export function useGameEngine({
                             break
                         }
                     }
-                }
-
-                if (gameStateRef.current === "playing" && replayRef.current) {
-                    replayRef.current.recordInput(movement.x, movement.z)
-                    // Record checkpoint every 60 frames (1 second) for replay verification
-                    const frameCount = replayRef.current['currentFrame']
-                    if (frameCount > 0 && frameCount % 60 === 0) {
-                        replayRef.current.recordCheckpoint(
-                            p.position.x,
-                            p.position.z,
-                            p.stats.level,
-                            em.totalKills
-                        )
-                    }
-                    replayRef.current.update()
-                }
-
-                if (gameStateRef.current === "replaying" && replayPlayerRef.current) {
-                    for (const event of replayEvents) {
-                        if (event[0] === ReplayEventType.CHECKPOINT) {
-                            replayPlayerRef.current.verifyCheckpoint(
-                                event,
-                                p.position.x,
-                                p.position.z,
-                                p.stats.level,
-                                em.totalKills
-                            );
-                        }
-                    }
-                    replayFrameRef.current++
                 }
 
                 gameTimeRef.current += deltaTime
@@ -1506,6 +1443,7 @@ benchmark.presets        - List available presets
             vfxManagerRef.current?.cleanup()
             airdropSystemRef.current?.cleanup()
             enemyCombinationSystemRef.current?.cleanup()
+            worldEnvironmentRef.current?.cleanup()
             playerRef.current?.dispose()
             characterModelManagerRef.current?.dispose()
             instancedSkinnedMeshRef.current?.dispose()
@@ -1528,14 +1466,7 @@ benchmark.presets        - List available presets
     }, [selectedWorldId, selectedCharacterId])
 
     useEffect(() => {
-        if (gameState === "playing" || gameState === "replaying") {
-            // If we have a pending replay and initializeGame() is NOT running, apply now.
-            // If initializeGame() IS running, it will handle the seed when it completes.
-            if (gameState === "replaying" && pendingReplaySeed.current && !isInitializingRef.current) {
-                const seed = pendingReplaySeed.current
-                pendingReplaySeed.current = null
-                resetGame(true, seed)
-            }
+        if (gameState === "playing") {
             gameLoopRef.current?.start()
         } else {
             gameLoopRef.current?.stop()
@@ -1569,8 +1500,6 @@ benchmark.presets        - List available presets
         vfxManagerRef,
         airdropSystemRef,
         rngRef,
-        replayRef,
-        replayPlayerRef,
         allowPostVictoryRef,
         pendingLevelUpAfterVictoryRef,
         levelUpChoices,
@@ -1578,7 +1507,6 @@ benchmark.presets        - List available presets
         getActiveAirdrops,
         toggleUncapped,
         resetGame,
-        startReplay,
         handleUpgrade
     }
 }

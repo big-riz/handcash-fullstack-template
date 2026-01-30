@@ -50,6 +50,18 @@ export class Player {
     curseMultiplier = 1.0
     curseTimer = 0
 
+    // External modifiers (set by EntityManager for wraith auras etc.)
+    externalDamageMultiplier = 1.0
+
+    // Pull effect (vodnik)
+    isPulled = false
+    pullTargetX = 0
+    pullTargetZ = 0
+    pullTimer = 0
+    private readonly pullDuration = 0.35
+    private pullStartX = 0
+    private pullStartZ = 0
+
     // Movement
     private acceleration = 80
     private deceleration = 60
@@ -139,6 +151,21 @@ export class Player {
         // Update position
         this.position.x += this.velocity.x * deltaTime
         this.position.z += this.velocity.z * deltaTime
+
+        // Animate pull effect (vodnik)
+        if (this.isPulled) {
+            this.pullTimer -= deltaTime
+            if (this.pullTimer <= 0) {
+                this.position.x = this.pullTargetX
+                this.position.z = this.pullTargetZ
+                this.isPulled = false
+            } else {
+                const t = 1 - (this.pullTimer / this.pullDuration)
+                const ease = t * t // ease-in for a "yanked" feel
+                this.position.x = this.pullStartX + (this.pullTargetX - this.pullStartX) * ease
+                this.position.z = this.pullStartZ + (this.pullTargetZ - this.pullStartZ) * ease
+            }
+        }
 
         // Update timers
         if (this.iframeTimer > 0) {
@@ -341,6 +368,15 @@ export class Player {
      * Handle taking damage
      * Returns the thorn damage to deal back to the attacker (0 if no damage taken)
      */
+    startPull(targetX: number, targetZ: number) {
+        this.isPulled = true
+        this.pullStartX = this.position.x
+        this.pullStartZ = this.position.z
+        this.pullTargetX = targetX
+        this.pullTargetZ = targetZ
+        this.pullTimer = this.pullDuration
+    }
+
     takeDamage(amount: number): number {
         if (this.iframeTimer > 0) return 0
 

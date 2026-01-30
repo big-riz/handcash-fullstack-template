@@ -4,14 +4,7 @@ import { generateAuthenticationKeyPair } from "@/lib/auth-utils"
 import { createCSRFToken } from "@/lib/csrf-utils"
 import { logAuditEvent, AuditEventType } from "@/lib/audit-logger"
 import { rateLimit, RateLimitPresets } from "@/lib/rate-limit"
-import { initializeAuditStorage } from "@/lib/audit-storage"
-
 export async function GET(request: NextRequest) {
-  // Initialize audit storage on first use
-  initializeAuditStorage().catch(() => {
-    // Ignore initialization errors
-  })
-
   // Apply rate limiting
   const rateLimitResponse = rateLimit(request, RateLimitPresets.auth)
   if (rateLimitResponse) {
@@ -53,13 +46,11 @@ export async function GET(request: NextRequest) {
 
     const forwardedFor = request.headers.get("x-forwarded-for")
     const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-    const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
     logAuditEvent({
       type: AuditEventType.LOGIN_INITIATED,
       success: true,
       ipAddress,
-      userAgent,
     })
 
     return response
@@ -68,13 +59,11 @@ export async function GET(request: NextRequest) {
 
     const forwardedFor = request.headers.get("x-forwarded-for")
     const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-    const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
     logAuditEvent({
       type: AuditEventType.LOGIN_INITIATED,
       success: false,
       ipAddress,
-      userAgent,
       details: { error: String(error) },
     })
 

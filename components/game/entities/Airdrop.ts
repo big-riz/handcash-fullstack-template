@@ -19,6 +19,7 @@ export class Airdrop {
 
     mesh: THREE.Group | null = null
     parachuteMesh: THREE.Mesh | null = null
+    private parachuteStrings: THREE.Line[] = []
 
     private landedTime: number = 0
     private maxGroundTime: number = 30.0 // Despawn after 30s on ground
@@ -46,6 +47,7 @@ export class Airdrop {
         if (this.parachuteMesh) {
             this.parachuteMesh.visible = true
         }
+        for (const s of this.parachuteStrings) s.visible = true
     }
 
     update(deltaTime: number): boolean {
@@ -64,6 +66,7 @@ export class Airdrop {
                 if (this.parachuteMesh) {
                     this.parachuteMesh.visible = false
                 }
+                for (const s of this.parachuteStrings) s.visible = false
                 return true // Landed
             }
         } else {
@@ -143,10 +146,10 @@ export class Airdrop {
         })
         this.parachuteMesh = new THREE.Mesh(parachuteGeo, parachuteMat)
         this.parachuteMesh.position.y = 4
-        this.parachuteMesh.rotation.x = Math.PI
         this.mesh.add(this.parachuteMesh)
 
         // Parachute strings
+        this.parachuteStrings = []
         const stringMat = new THREE.LineBasicMaterial({ color: 0x444444 })
         for (let i = 0; i < 8; i++) {
             const angle = (i / 8) * Math.PI * 2
@@ -156,6 +159,7 @@ export class Airdrop {
             ]
             const stringGeo = new THREE.BufferGeometry().setFromPoints(points)
             const string = new THREE.Line(stringGeo, stringMat)
+            this.parachuteStrings.push(string)
             this.mesh.add(string)
         }
 

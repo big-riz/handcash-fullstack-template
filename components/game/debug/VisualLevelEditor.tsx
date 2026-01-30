@@ -10,6 +10,7 @@ import { CustomLevelData, MeshPlacement, PaintedArea, TimelineEvent, CustomMeshD
 import { SeededRandom } from "@/lib/SeededRandom"
 import { generateMeshObject } from "@/components/game/utils/meshUtils"
 import { MESH_TYPES } from "@/components/game/data/meshes"
+import { generateGroundTexture } from "@/components/game/utils/groundTextureGenerator"
 
 
 // ... (interface definitions are the same)
@@ -419,17 +420,29 @@ export function VisualLevelEditor({
         paintObjectsRef.current.clear()
 
         // 1. Handle Texture Painting (Color Areas)
-        const canvas = document.createElement('canvas')
-        canvas.width = 2048
-        canvas.height = 2048
+        const gtConfig = levelData.theme?.groundTexture
+        let canvas: HTMLCanvasElement
+        if (gtConfig && gtConfig.preset !== 'none') {
+            canvas = generateGroundTexture(
+                levelData.theme.groundColor || 0x3d453d,
+                gtConfig,
+                2048,
+                levelData.id.length * 31 + 42
+            )
+        } else {
+            canvas = document.createElement('canvas')
+            canvas.width = 2048
+            canvas.height = 2048
+            const baseCtx = canvas.getContext('2d')
+            if (baseCtx) {
+                const groundColor = levelData.theme.groundColor || 0x3d453d
+                baseCtx.fillStyle = `#${groundColor.toString(16).padStart(6, '0')}`
+                baseCtx.fillRect(0, 0, 2048, 2048)
+            }
+        }
         const ctx = canvas.getContext('2d')
-        
-        if (ctx) {
-            // Fill background (Base Layer)
-            const groundColor = levelData.theme.groundColor || 0x3d453d
-            ctx.fillStyle = `#${groundColor.toString(16).padStart(6, '0')}`
-            ctx.fillRect(0, 0, 2048, 2048)
 
+        if (ctx) {
             // Create Paint Layer (for compositing erase properly)
             const paintCanvas = document.createElement('canvas')
             paintCanvas.width = 2048
@@ -559,7 +572,7 @@ export function VisualLevelEditor({
                 paintObjectsRef.current.set(area.id, group)
             }
         })
-    }, [levelData.paintedAreas, levelData.theme.groundColor])
+    }, [levelData.paintedAreas, levelData.theme.groundColor, levelData.theme.groundTexture])
 
     // Render finalized spline paths
     useEffect(() => {

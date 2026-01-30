@@ -205,7 +205,7 @@ export function HUD({
                 <div className={`absolute ${isMobile ? 'top-16' : 'top-32'} left-1/2 -translate-x-1/2 flex flex-col items-center ${isMobile ? 'gap-1' : 'gap-3'} pointer-events-auto max-w-[90vw] px-2`}>
                     {/* Active Synergies */}
                     {activeSynergies.length > 0 && (
-                        <div className={`flex flex-wrap justify-center ${isMobile ? 'gap-1 mb-1' : 'gap-2 mb-2'} relative`}>
+                        <div className={`flex flex-wrap justify-center ${isMobile ? 'gap-1 mb-1' : 'gap-2 mb-2'} relative z-10`}>
                             {activeSynergies.map(synergy => (
                                 <div
                                     key={synergy.name}
@@ -260,12 +260,6 @@ export function HUD({
                         <span className={`${isMobile ? 'text-xl' : 'text-4xl'} tabular-nums italic drop-shadow-md`}>
                             {Math.floor(gameTime / 60)}:{(gameTime % 60).toFixed(0).padStart(2, '0')}
                         </span>
-                        {gameState === "replaying" && replaySpeed > 1 && (
-                            <div className="flex flex-col -gap-1 items-start leading-none opacity-80">
-                                <span className="text-xs text-cyan-300 font-black uppercase tracking-tighter">SPEED</span>
-                                <span className="text-xl text-cyan-200 font-black">{replaySpeed}x</span>
-                            </div>
-                        )}
                         <div className="flex items-center gap-1 border-l border-white/20 pl-4 ml-2">
                             <Skull className="w-5 h-5 text-red-500" />
                             <span className="text-xl text-white drop-shadow-md">{kills}</span>

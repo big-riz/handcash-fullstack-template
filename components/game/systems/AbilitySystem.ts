@@ -230,8 +230,14 @@ export class AbilitySystem {
             ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
             ability.damage = 60 // Legendary: 60 dmg / 0.8s = 75 DPS
         }
-        else if (type === 'lada') ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
-        else if (type === 'propaganda_tower') ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+        else if (type === 'lada') {
+            ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.variantId = 'lada'
+        }
+        else if (type === 'propaganda_tower') {
+            ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.variantId = 'propaganda_tower'
+        }
 
         // ============================================
         // WEAPON DIFFERENTIATION - DPS BALANCED
@@ -337,12 +343,14 @@ export class AbilitySystem {
         // DADUSHKA CHAIR - Vehicle (minLevel 6, ~55 DPS)
         else if (type === 'dadushka_chair') {
             ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.variantId = 'dadushka_chair'
             ability.damage = 55
         }
 
         // TANK STROLLER - Vehicle (minLevel 6, ~55 DPS)
         else if (type === 'tank_stroller') {
             ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.variantId = 'tank_stroller'
             ability.damage = 55
         }
 
@@ -358,6 +366,7 @@ export class AbilitySystem {
         // KVASS REACTOR - Healing deployable (minLevel 7)
         else if (type === 'kvass_reactor') {
             ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability.variantId = 'kvass_reactor'
             ability.damage = 24 // 60 DPS equivalent
         }
 
@@ -371,6 +380,7 @@ export class AbilitySystem {
         // GOPNIK GONDOLA - Vehicle (minLevel 9, ~70 DPS)
         else if (type === 'gopnik_gondola') {
             ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability.variantId = 'gopnik_gondola'
             ability.damage = 70
         }
 
@@ -389,6 +399,7 @@ export class AbilitySystem {
         // HAUNTED LADA - Ghost vehicle (minLevel 12, ~85 DPS)
         else if (type === 'haunted_lada') {
             ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability.variantId = 'haunted_lada'
             ability.damage = 85
             ability.speed = 1.3
         }
@@ -396,6 +407,7 @@ export class AbilitySystem {
         // BIG BIZ LADA - Gold tank (minLevel 14, ~95 DPS)
         else if (type === 'big_biz_lada') {
             ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng)
+            ability.variantId = 'big_biz_lada'
             ability.damage = 95
         }
 
@@ -430,20 +442,24 @@ export class AbilitySystem {
             ability.color = 0x6633ff
         } else if (type === 'orbital_tank') {
             ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.variantId = 'orbital_tank'
             ability.level = 8
             ability.damage = 200
         } else if (type === 'death_pigeon') {
             ability = new NuclearPigeon(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.companionType = 'nuclear_pigeon'
             ability.level = 8
-            ability.damage = 150 // Legendary evolution: 150 / 0.8s = 187.5 DPS
+            ability.damage = 150
             ability.fireCooldown = 0.6
         } else if (type === 'immortal_lada') {
             ability = new LadaVehicle(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.variantId = 'immortal_lada'
             ability.level = 8
             ability.damage = 170
             ability.speed = 1.5
         } else if (type === 'propaganda_storm') {
             ability = new PropagandaTower(this.scene, this.player, this.entityManager, this.vfx, this.rng, this.audioManager)
+            ability.variantId = 'propaganda_storm'
             ability.level = 8
             ability.damage *= 4
         } else if (type === 'assassins_edge') {

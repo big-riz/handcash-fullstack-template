@@ -71,7 +71,7 @@ export class InstancedHealthBars {
             if (count >= this.maxInstances) break
 
             const barWidth = Math.max(0.4, e.radius * 1.5)
-            const barY = e.radius * 2 + 0.4
+            const barY = e.radius * 2.5 + 0.8
 
             // Background bar
             _pos.set(e.x, barY, e.z)

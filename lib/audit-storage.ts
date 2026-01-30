@@ -13,7 +13,7 @@ export async function writeAuditEvent(event: AuditEvent): Promise<void> {
       userId: event.userId,
       sessionId: event.sessionId,
       ipAddress: event.ipAddress,
-      userAgent: event.userAgent,
+      userAgent: undefined,
       resource: undefined, // Not in AuditEvent interface
       action: undefined, // Not in AuditEvent interface
       details: event.details,

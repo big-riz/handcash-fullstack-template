@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { itemTemplates, mintedItems } from "@/lib/schema"
-import { eq, sql } from "drizzle-orm"
+import { eq, sql, or, isNull } from "drizzle-orm"
 import { rateLimit, RateLimitPresets } from "@/lib/rate-limit"
+import { getCached, setCache } from "@/lib/cache"
 
 export async function GET(request: NextRequest) {
     const rateLimitResponse = rateLimit(request, RateLimitPresets.general)
@@ -10,9 +11,22 @@ export async function GET(request: NextRequest) {
         return rateLimitResponse
     }
 
+    const cached = getCached<any>("pool-stats")
+    if (cached) return NextResponse.json(cached)
+
     try {
-        // 1. Fetch all templates
-        const allTemplates = await db.select().from(itemTemplates)
+        // 1. Fetch non-archived templates (exclude heavy JSONB/text columns)
+        const allTemplates = await db.select({
+            id: itemTemplates.id,
+            name: itemTemplates.name,
+            rarity: itemTemplates.rarity,
+            color: itemTemplates.color,
+            pool: itemTemplates.pool,
+            supplyLimit: itemTemplates.supplyLimit,
+            imageUrl: itemTemplates.imageUrl,
+        }).from(itemTemplates).where(
+            or(eq(itemTemplates.isArchived, false), isNull(itemTemplates.isArchived))
+        )
 
         // 2. Fetch mint counts per template from local DB (excluding archived)
         const mintCounts = await db
@@ -26,14 +40,10 @@ export async function GET(request: NextRequest) {
 
         const mintCountMap = new Map(mintCounts.map((mc) => [mc.templateId, mc.count]))
 
-        // 3. Group by pool (exclude archived templates)
+        // 3. Group by pool
         const poolStats: Record<string, any> = {}
 
         allTemplates.forEach((template) => {
-            // Skip archived templates
-            if (template.isArchived) {
-                return
-            }
             const pool = template.pool || "default"
             if (!poolStats[pool]) {
                 poolStats[pool] = {
@@ -61,10 +71,12 @@ export async function GET(request: NextRequest) {
             })
         })
 
-        return NextResponse.json({
+        const response = {
             success: true,
             pools: Object.values(poolStats),
-        })
+        }
+        setCache("pool-stats", response, 60_000)
+        return NextResponse.json(response)
     } catch (error: unknown) {
         console.error("[PoolStats] Error:", error)
         return NextResponse.json(

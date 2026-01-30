@@ -100,6 +100,13 @@ const BASE_MODEL_RADIUS = 0.3
 export class EntityManager {
     player: Player
     enemies: Enemy[] = []
+
+    hasActiveBoss(): boolean {
+        for (const enemy of this.enemies) {
+            if (enemy.isActive && enemy.isBoss) return true
+        }
+        return false
+    }
     projectiles: Projectile[] = []
     meleeSwings: MeleeSwing[] = []
     gems: XPGem[] = []
@@ -109,6 +116,7 @@ export class EntityManager {
     public totalKills = 0
     public totalDamageDealt = 0
     public totalDamageTaken = 0
+    public lastDamageSource: { type: string; isBoss: boolean; isElite: boolean } | null = null
 
     private scene: THREE.Scene
     private vfx: VFXManager | null = null
@@ -494,8 +502,14 @@ export class EntityManager {
                     (type, x, z) => this.spawnEnemy(type, x, z),
                     (x, z, angle, dmg, radius) => this.spawnMeleeSwing(x, z, angle, dmg, radius),
                     (x, z, radius, duration) => this.spawnObstacle(x, z, radius, duration),
-                    this.rng || undefined
+                    this.rng || undefined,
+                    (x, z, type, radius, duration, damage) => this.spawnHazardZone(x, z, type as HazardType, radius, duration, damage)
                 )
+
+                // Vodnik pull telegraph: show warning emoji when wind-up starts
+                if (enemy.pullWarningActive && enemy.pullWarningTimer > 0.75 && this.vfx) {
+                    this.vfx.createEmoji(this.player.position.x, this.player.position.z, '🌊', 1.2)
+                }
 
                 // Insert into quadtree
                 this.enemyQuadtree.insert({ x: enemy.position.x, y: enemy.position.z, data: enemy })
@@ -613,7 +627,7 @@ export class EntityManager {
             }
         }
 
-        // Apply buff auras (only iterate shamans, not all enemies twice)
+        // Apply buff auras + heal auras (only iterate shamans, not all enemies twice)
         for (let i = 0; i < this.shamansCache.length; i++) {
             const shaman = this.shamansCache[i]
             const auraRadiusSq = shaman.buffAuraRadius * shaman.buffAuraRadius
@@ -627,7 +641,39 @@ export class EntityManager {
                     }
                 }
             }
+
+            // Heal aura: shamans periodically heal nearby enemies
+            if (shaman.providesHealAura) {
+                // Using the shaman's healAuraCooldown (piggyback on existing update cycle)
+                const healRadiusSq = shaman.healAuraRadius * shaman.healAuraRadius
+                for (let j = 0; j < this.enemies.length; j++) {
+                    const enemy = this.enemies[j]
+                    if (enemy.isActive && enemy !== shaman && enemy.stats.currentHp < enemy.stats.maxHp) {
+                        const dx = shaman.position.x - enemy.position.x
+                        const dz = shaman.position.z - enemy.position.z
+                        if (dx * dx + dz * dz < healRadiusSq) {
+                            // Heal 3% max HP per second
+                            enemy.stats.currentHp = Math.min(enemy.stats.maxHp, enemy.stats.currentHp + enemy.stats.maxHp * 0.03 * deltaTime)
+                        }
+                    }
+                }
+            }
         }
+
+        // Apply weaken auras (wraiths reduce player damage when nearby)
+        let weakenMultiplier = 1.0
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i]
+            if (enemy.isActive && enemy.providesWeakenAura) {
+                const dx = enemy.position.x - this.player.position.x
+                const dz = enemy.position.z - this.player.position.z
+                const distSq = dx * dx + dz * dz
+                if (distSq < enemy.weakenAuraRadius * enemy.weakenAuraRadius) {
+                    weakenMultiplier = Math.min(weakenMultiplier, enemy.weakenFactor)
+                }
+            }
+        }
+        this.player.externalDamageMultiplier = weakenMultiplier
 
         // Update instanced renderer
         this.instancedRenderer.updateInstances(this.instanceDataCache)
@@ -645,11 +691,12 @@ export class EntityManager {
                         if (distSq < radii * radii) {
                             this.player.takeDamage(projectile.damage);
                             this.totalDamageTaken += projectile.damage;
+                            this.lastDamageSource = { type: 'projectile', isBoss: false, isElite: false }
                             this.audioManager?.playPlayerHurt();
 
                             if (projectile.appliesSlow) {
                                 this.player.isSlowed = true
-                                this.player.slowFactor = 0.5
+                                this.player.slowFactor = 0.80
                                 this.player.slowTimer = projectile.slowDuration
                                 if (this.vfx) this.vfx.createEmoji(this.player.position.x, this.player.position.z, '❄️', 0.8);
                             } else if (projectile.appliesCurse) {
@@ -676,9 +723,10 @@ export class EntityManager {
                                 const radii = projectile.radius + enemy.radius;
 
                                 if (distSq < radii * radii) {
-                                    enemy.takeDamage(projectile.damage, this.vfx || undefined);
-                                    this.totalDamageDealt += projectile.damage;
-                                    this.player.onDealDamage(projectile.damage); // Lifesteal
+                                    const weakenedDamage = projectile.damage * this.player.externalDamageMultiplier;
+                                    enemy.takeDamage(weakenedDamage, this.vfx || undefined);
+                                    this.totalDamageDealt += weakenedDamage;
+                                    this.player.onDealDamage(weakenedDamage); // Lifesteal
                                     this.audioManager?.playEnemyHurt();
                                     if (this.vfx) this.vfx.createEmoji(enemy.position.x, enemy.position.z, projectile.hitEmoji, 0.8);
                                     projectile.despawn();
@@ -717,9 +765,10 @@ export class EntityManager {
                     for (const point of nearbyPoints) {
                         const enemy = point.data as Enemy;
                         if (enemy.isActive && swing.isEnemyInArc(enemy.position.x, enemy.position.z, enemy.radius, enemy.id)) {
-                             enemy.takeDamage(swing.damage, this.vfx || undefined);
-                             this.totalDamageDealt += swing.damage;
-                             this.player.onDealDamage(swing.damage);
+                             const weakenedDamage = swing.damage * this.player.externalDamageMultiplier;
+                             enemy.takeDamage(weakenedDamage, this.vfx || undefined);
+                             this.totalDamageDealt += weakenedDamage;
+                             this.player.onDealDamage(weakenedDamage);
                              this.audioManager?.playEnemyHurt();
                         }
                     }
@@ -764,6 +813,7 @@ export class EntityManager {
                     if (hazard.type === 'poison' && hazard.shouldApplyDamage()) {
                         this.player.takeDamage(hazard.damage)
                         this.totalDamageTaken += hazard.damage
+                        this.lastDamageSource = { type: 'poison', isBoss: false, isElite: false }
                         this.audioManager?.playPlayerHurt()
                     } else if (hazard.type === 'slow') {
                         this.player.isSlowed = true
@@ -872,6 +922,7 @@ export class EntityManager {
         if (thornDamage > 0) {
             // Player took damage
             this.totalDamageTaken += damage;
+            this.lastDamageSource = { type: enemy.type, isBoss: enemy.isBoss, isElite: enemy.isElite }
             this.audioManager?.playPlayerHurt();
 
             // Apply thorn damage back to enemy
@@ -1004,5 +1055,6 @@ export class EntityManager {
         this.totalKills = 0
         this.totalDamageDealt = 0
         this.totalDamageTaken = 0
+        this.lastDamageSource = null
     }
 }

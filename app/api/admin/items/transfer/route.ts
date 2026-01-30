@@ -46,14 +46,12 @@ export async function POST(request: NextRequest) {
 
     const forwardedFor = request.headers.get("x-forwarded-for")
     const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-    const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
     logAuditEvent({
-      type: AuditEventType.PAYMENT_SUCCESS, // Reusing audit type, could add ITEM_TRANSFER
+      type: AuditEventType.PAYMENT_SUCCESS,
       success: true,
       sessionId: session?.sessionId || ipAddress || "unknown",
       ipAddress,
-      userAgent,
       details: { itemOrigin, destination, transactionId: data?.transactionId },
     })
 
@@ -63,14 +61,12 @@ export async function POST(request: NextRequest) {
 
     const forwardedFor = request.headers.get("x-forwarded-for")
     const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-    const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
     logAuditEvent({
       type: AuditEventType.PAYMENT_FAILED,
       success: false,
       sessionId: session?.sessionId || ipAddress || "unknown",
       ipAddress,
-      userAgent,
       details: { error: String(error) },
     })
 

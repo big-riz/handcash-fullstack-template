@@ -3,8 +3,12 @@ import { mintedItems, payments } from "@/lib/schema"
 import { NextResponse } from "next/server"
 import { sql, and, not, ilike, eq } from "drizzle-orm"
 import { handcashService } from "@/lib/handcash-service"
+import { getCached, setCache } from "@/lib/cache"
 
 export async function GET() {
+    const cached = getCached<any>("stats")
+    if (cached) return NextResponse.json(cached)
+
     try {
         // 1. Total minted items count (Excluding mock and archived items)
         const totalItemsResult = await db.select({ count: sql<number>`count(*)` })
@@ -25,22 +29,18 @@ export async function GET() {
             console.warn("[Stats API] External rate fetch failed, using fallback");
         }
 
-        const bsvPayments = await db.select({ total: sql<string>`sum(amount)` })
+        const paymentTotals = await db.select({
+            currency: payments.currency,
+            total: sql<string>`sum(amount)`,
+        })
             .from(payments)
-            .where(and(
-                eq(payments.currency, 'BSV'),
-                not(ilike(payments.id, 'mock-%'))
-            ));
+            .where(not(ilike(payments.id, 'mock-%')))
+            .groupBy(payments.currency);
 
-        const usdPayments = await db.select({ total: sql<string>`sum(amount)` })
-            .from(payments)
-            .where(and(
-                eq(payments.currency, 'USD'),
-                not(ilike(payments.id, 'mock-%'))
-            ));
-
-        const totalBsvUsd = parseFloat(bsvPayments[0].total || "0") * bsvRate;
-        const totalUsdDirect = parseFloat(usdPayments[0].total || "0");
+        const bsvTotal = parseFloat(paymentTotals.find(p => p.currency === 'BSV')?.total || "0");
+        const usdTotal = parseFloat(paymentTotals.find(p => p.currency === 'USD')?.total || "0");
+        const totalBsvUsd = bsvTotal * bsvRate;
+        const totalUsdDirect = usdTotal;
         const totalMoneySpent = totalBsvUsd + totalUsdDirect;
 
         // 3. Unique minters count (Excluding mock and archived items)
@@ -68,14 +68,16 @@ export async function GET() {
             .orderBy(sql`count(*) desc`)
             .limit(6);
 
-        return NextResponse.json({
+        const response = {
             stats: {
                 totalItems,
                 totalMoneySpent,
                 uniqueMinters,
                 topItems: itemsPerTemplate
             }
-        });
+        }
+        setCache("stats", response, 300_000)
+        return NextResponse.json(response);
     } catch (error: any) {
         console.error("[Stats API] Error fetching stats:", error);
         return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });

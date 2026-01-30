@@ -11,7 +11,6 @@ interface LeaderboardProps {
     setLeaderboardWorldId: (id: string) => void
     setGameState: (state: any) => void
     characterData: CharacterInfo[]
-    startReplay: (score: any) => void
 }
 
 export function Leaderboard({
@@ -20,7 +19,6 @@ export function Leaderboard({
     setLeaderboardWorldId,
     setGameState,
     characterData,
-    startReplay
 }: LeaderboardProps) {
     return (
         <div className="absolute inset-0 bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center p-6 md:p-12 z-50 animate-in fade-in duration-300">
@@ -74,7 +72,6 @@ export function Leaderboard({
                                                 <th className="py-3 px-4">Character</th>
                                                 <th className="py-3 px-4">Level</th>
                                                 <th className="py-3 px-4">Final Time</th>
-                                                <th className="py-3 px-4 text-right">Replay</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -115,19 +112,6 @@ export function Leaderboard({
                                                         </td>
                                                         <td className="py-4 px-4 font-black text-primary">LVL {s.level}</td>
                                                         <td className="py-4 px-4 font-mono text-white/70">{timeLabel}</td>
-                                                        <td className="py-4 px-4 text-right">
-                                                            {s.seed && s.events ? (
-                                                                <Button
-                                                                    onClick={() => startReplay(s)}
-                                                                    size="sm"
-                                                                    className="h-10 px-4 bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-black text-xs font-black uppercase rounded-[2rem] border border-cyan-500/30 transition-all shadow-[0_0_20px_rgba(34,211,238,0.2)]"
-                                                                >
-                                                                    Review
-                                                                </Button>
-                                                            ) : (
-                                                                <span className="text-xs text-white/30 uppercase">N/A</span>
-                                                            )}
-                                                        </td>
                                                     </tr>
                                                 )
                                             })}

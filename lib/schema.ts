@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, decimal, boolean, jsonb, serial, integer } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, decimal, boolean, jsonb, serial, integer, index } from "drizzle-orm/pg-core"
 
 /**
  * Core Tables (replacing existing file-based storage)
@@ -88,7 +88,11 @@ export const mintedItems = pgTable("minted_items", {
     mintedAt: timestamp("minted_at").defaultNow(),
     isArchived: boolean("is_archived").default(false),
     metadata: jsonb("metadata"),
-})
+}, (table) => [
+    index("minted_items_user_idx").on(table.mintedToUserId),
+    index("minted_items_collection_idx").on(table.collectionId),
+    index("minted_items_template_idx").on(table.templateId),
+])
 
 export const sessions = pgTable("sessions", {
     id: text("id").primaryKey(), // Session ID
@@ -185,15 +189,19 @@ export const replays = pgTable("replays", {
     playerName: text("player_name").notNull(),
     handle: text("handle"),
     avatarUrl: text("avatar_url"),
-    seed: text("seed").notNull(),
-    events: jsonb("events").notNull(),
+    seed: text("seed"),
+    events: jsonb("events"),
     finalLevel: integer("final_level").notNull(),
     finalTime: integer("final_time").notNull(),
     gameVersion: text("game_version").notNull(),
     characterId: text("character_id"),
     worldId: text("world_id"),
     createdAt: timestamp("created_at").defaultNow(),
-})
+}, (table) => [
+    index("replays_world_level_time_idx").on(table.worldId, table.finalLevel, table.finalTime),
+    index("replays_handle_created_idx").on(table.handle, table.createdAt),
+    index("replays_user_world_idx").on(table.userId, table.worldId),
+])
 
 export const replaysRelations = relations(replays, ({ one }) => ({
     user: one(users, {

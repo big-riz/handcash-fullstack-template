@@ -29,13 +29,11 @@ export async function GET(request: NextRequest) {
 
       const forwardedFor = request.headers.get("x-forwarded-for")
       const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-      const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
       logAuditEvent({
         type: AuditEventType.CSRF_VIOLATION,
         success: false,
         ipAddress,
-        userAgent,
         details: {
           receivedState: stateParam,
           hasStoredToken: !!storedCSRFToken,
@@ -51,13 +49,11 @@ export async function GET(request: NextRequest) {
 
       const forwardedFor = request.headers.get("x-forwarded-for")
       const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-      const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
       logAuditEvent({
         type: AuditEventType.LOGIN_FAILED,
         success: false,
         ipAddress,
-        userAgent,
         details: { reason: "Missing private key" },
       })
 
@@ -76,13 +72,11 @@ export async function GET(request: NextRequest) {
     if (!isValid) {
       const forwardedFor = request.headers.get("x-forwarded-for")
       const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-      const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
       logAuditEvent({
         type: AuditEventType.LOGIN_FAILED,
         success: false,
         ipAddress,
-        userAgent,
         details: { reason: "Invalid auth token" },
       })
 
@@ -174,7 +168,6 @@ export async function GET(request: NextRequest) {
       sessionId: session.sessionId,
       userId: userProfile?.id,
       ipAddress,
-      userAgent,
     })
 
     return response
@@ -183,13 +176,11 @@ export async function GET(request: NextRequest) {
 
     const forwardedFor = request.headers.get("x-forwarded-for")
     const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-    const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
     logAuditEvent({
       type: AuditEventType.LOGIN_FAILED,
       success: false,
       ipAddress,
-      userAgent,
       details: { error: String(error) },
     })
 

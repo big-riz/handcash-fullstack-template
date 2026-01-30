@@ -15,7 +15,6 @@ import { HUD } from "./screens/HUD"
 import { LevelUp } from "./screens/LevelUp"
 import { GameOver } from "./screens/GameOver"
 import { Victory } from "./screens/Victory"
-import { ReplayControls } from "./screens/ReplayControls"
 import { CommentsSection } from "./screens/CommentsSection"
 import { PauseMenu } from "./screens/PauseMenu"
 import { Achievements } from "./screens/Achievements"
@@ -27,7 +26,6 @@ import { InputManager } from "./core/Input"
 import { BotController } from "./core/BotController" // New Import
 import { Player } from "./entities/Player"
 import { AbilitySystem } from "./systems/AbilitySystem"
-import { ReplayRecorder } from "../../lib/ReplaySystem"
 import { AudioManager } from "./core/AudioManager"
 import { LevelEditor, CustomLevelData } from "./debug/LevelEditor"
 import { loadCustomLevels, getCustomLevel } from "@/lib/custom-levels-storage"
@@ -37,7 +35,7 @@ import { AirdropIndicator } from "./ui/AirdropIndicator"
 
 export function SlavicSurvivors() {
     const containerRef = useRef<HTMLDivElement>(null)
-    const [gameState, setGameState] = useState<"menu" | "characterSelect" | "playing" | "paused" | "gameOver" | "levelUp" | "airdropLevelUp" | "replaying" | "leaderboard" | "gameVictory" | "myHistory" | "achievements">("menu")
+    const [gameState, setGameState] = useState<"menu" | "characterSelect" | "playing" | "paused" | "gameOver" | "levelUp" | "airdropLevelUp" | "leaderboard" | "gameVictory" | "myHistory" | "achievements">("menu")
     const [customLevels, setCustomLevels] = useState<CustomLevelData[]>([])
     
     // Stats
@@ -48,7 +46,7 @@ export function SlavicSurvivors() {
     const [playerXpTarget, setPlayerXpTarget] = useState<number>(10)
     const [totalRuns, setTotalRuns] = useState<number>(0)
     const [kills, setKills] = useState<number>(0)
-    const [scores, setScores] = useState<{ id?: number, name: string, handle?: string, avatarUrl?: string, level: number, time: number, seed?: string, events?: any[], characterId?: string, worldId?: string }[]>([])
+    const [scores, setScores] = useState<{ id?: number, name: string, handle?: string, avatarUrl?: string, level: number, time: number, characterId?: string, worldId?: string }[]>([])
     const [userHistory, setUserHistory] = useState<any[]>([])
     const [gameComments, setGameComments] = useState<GameComment[]>([])
     const [replyingTo, setReplyingTo] = useState<{ id: number, handle: string } | null>(null)
@@ -58,6 +56,7 @@ export function SlavicSurvivors() {
     const [damageDealt, setDamageDealt] = useState<number>(0)
     const [damageTaken, setDamageTaken] = useState<number>(0)
     const [difficultyMultiplier, setDifficultyMultiplier] = useState<number>(1.0)
+    const [killedBy, setKilledBy] = useState<{ type: string; isBoss: boolean; isElite: boolean } | null>(null)
     const [isNewHighScore, setIsNewHighScore] = useState(false)
     const [showStats, setShowStats] = useState(false)
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
@@ -67,8 +66,6 @@ export function SlavicSurvivors() {
     const [selectedCharacterId, setSelectedCharacterId] = useState<string>('gopnik')
     const [selectedWorldId, setSelectedWorldId] = useState<string>('dark_forest')
     const [leaderboardWorldId, setLeaderboardWorldId] = useState<string>('dark_forest')
-    const [replayPaused, setReplayPaused] = useState(false)
-    const [replaySpeed, setReplaySpeed] = useState(1)
     const [isMobile, setIsMobile] = useState(false)
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [banishedItems, setBanishedItems] = useState<Set<string>>(new Set())
@@ -102,7 +99,6 @@ export function SlavicSurvivors() {
 
     // Meta progression removed
 
-    const replayPausedRef = useRef(false)
     const [itemTemplates, setItemTemplates] = useState<ItemTemplate[]>([])
     const [isLoaded, setIsLoaded] = useState(false)
     const [choicesRefreshKey, setChoicesRefreshKey] = useState(0)
@@ -121,7 +117,6 @@ export function SlavicSurvivors() {
     const botControllerRef = useRef<BotController | null>(null)
     const playerRef = useRef<Player | null>(null)
     const abilitySystemRef = useRef<AbilitySystem | null>(null)
-    const replayRef = useRef<ReplayRecorder | null>(null)
 
     useEffect(() => {
         audioManagerRef.current = AudioManager.getInstance();
@@ -289,7 +284,7 @@ export function SlavicSurvivors() {
                 if (Array.isArray(data)) {
                     allScores.push(...data.map((r: any) => ({
                         id: r.id, name: r.playerName, handle: r.handle, avatarUrl: r.avatarUrl,
-                        level: r.finalLevel, time: r.finalTime, seed: r.seed, events: r.events,
+                        level: r.finalLevel, time: r.finalTime,
                         worldId: r.worldId, characterId: r.characterId, createdAt: r.createdAt
                     })))
                 }
@@ -308,7 +303,7 @@ export function SlavicSurvivors() {
             if (Array.isArray(data)) {
                 setUserHistory(data.map((r: any) => ({
                     id: r.id, name: r.playerName, handle: r.handle, avatarUrl: r.avatarUrl,
-                    level: r.finalLevel, time: r.finalTime, seed: r.seed, events: r.events,
+                    level: r.finalLevel, time: r.finalTime,
                     worldId: r.worldId, characterId: r.characterId, createdAt: r.createdAt
                 })))
             }
@@ -361,19 +356,9 @@ export function SlavicSurvivors() {
         } catch (err) { console.error("Failed to post comment:", err) } finally { setIsPostingComment(false) }
     }
 
-    const submitReplayToDB = () => {
+    const submitScoreToDB = () => {
         const currentUser = userRef.current
-        console.log("[Replay] submitReplayToDB called", { hasReplayRef: !!replayRef.current, hasUser: !!currentUser })
-        if (!replayRef.current) {
-            console.log("[Replay] Skipping - no replay recorder")
-            return
-        }
-        if (!currentUser) {
-            console.log("[Replay] Skipping score submission - user not authenticated")
-            return
-        }
-        const replayData = replayRef.current.getReplayData()
-        console.log("[Replay] Submitting replay:", { level: replayData.finalLevel, time: replayData.finalTime, worldId: replayData.worldId })
+        if (!currentUser) return
         fetch('/api/replays', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -381,33 +366,26 @@ export function SlavicSurvivors() {
                 playerName: currentUser.publicProfile.handle,
                 handle: currentUser.publicProfile.handle,
                 avatarUrl: currentUser.publicProfile.avatarUrl || null,
-                seed: replayData.seed,
-                events: replayData.events,
-                finalLevel: replayData.finalLevel,
-                finalTime: replayData.finalTime,
-                gameVersion: replayData.gameVersion,
-                characterId: replayData.characterId || selectedCharacterId,
-                worldId: replayData.worldId || selectedWorldId,
-                userId: currentUser.publicProfile.id || null
+                finalLevel: playerLevel,
+                finalTime: Math.floor(gameTime),
+                gameVersion: '0.1.0-alpha',
+                characterId: selectedCharacterId,
+                worldId: selectedWorldId,
             })
         })
         .then(res => res.json())
         .then(data => {
-            console.log("[Replay] Score submission result:", data)
-            // Check if this was a new high score (new entry or updated existing)
             if (data.success && (data.updated === true || !data.updated)) {
-                // updated === true means beat previous score, no updated field means new entry
                 setIsNewHighScore(data.updated !== false)
             }
             fetchUserHistory()
             fetchGlobalScores()
         })
-        .catch(err => console.error("[Replay] Failed to save replay to DB:", err))
+        .catch(err => console.error("[Score] Failed to save score:", err))
     }
 
     const {
         resetGame,
-        startReplay,
         handleUpgrade,
         getLevelUpChoices,
         getActiveAirdrops,
@@ -442,18 +420,16 @@ export function SlavicSurvivors() {
         setUnlockedCharacters,
         setNewHeroUnlocked,
         itemTemplates,
-        submitReplayToDB,
+        submitScoreToDB,
         banishedItems,
         setBanishedItems,
-        replayPaused,
-        replaySpeed,
         gameSpeed,
         isBotActive,
         playerRef,
         abilitySystemRef,
-        replayRef,
         audioManagerRef,
         setWaveNotification,
+        setKilledBy,
         setProfilerMetrics,
         setProfilerWarnings,
         setFPSHistory,
@@ -675,7 +651,7 @@ export function SlavicSurvivors() {
                     playerXpTarget={playerXpTarget}
                     gameTime={gameTime}
                     kills={kills}
-                    replaySpeed={replaySpeed}
+                    replaySpeed={0}
                     upgrades={abilitySystemRef.current?.getUpgrades() ?? []}
                     showStats={showStats}
                     setShowStats={setShowStats}
@@ -812,7 +788,6 @@ export function SlavicSurvivors() {
                         setLeaderboardWorldId={setLeaderboardWorldId}
                         setGameState={setGameState}
                         characterData={characterData}
-                        startReplay={startReplay}
                     />
                 )}
 
@@ -821,7 +796,6 @@ export function SlavicSurvivors() {
                         userHistory={userHistory}
                         setGameState={setGameState}
                         characterData={characterData}
-                        startReplay={startReplay}
                     />
                 )}
 
@@ -846,7 +820,7 @@ export function SlavicSurvivors() {
                             if (playerRef.current && playerRef.current.stats.rerolls > 0) {
                                 playerRef.current.stats.rerolls--;
                                 levelUpChoices.current = getLevelUpChoices();
-                                handleUpgrade('REROLL_INTERNAL', false);
+                                handleUpgrade('REROLL_INTERNAL');
                                 setGameState("playing");
                                 setTimeout(() => setGameState("levelUp"), 10);
                             }
@@ -894,6 +868,7 @@ export function SlavicSurvivors() {
                         kills={kills}
                         damageDealt={damageDealt}
                         damageTaken={damageTaken}
+                        killedBy={killedBy}
                     />
                 )}
 
@@ -919,17 +894,6 @@ export function SlavicSurvivors() {
                         kills={kills}
                         damageDealt={damageDealt}
                         damageTaken={damageTaken}
-                    />
-                )}
-
-                {gameState === "replaying" && (
-                    <ReplayControls
-                        replayPaused={replayPaused}
-                        setReplayPaused={setReplayPaused}
-                        replaySpeed={replaySpeed}
-                        setReplaySpeed={setReplaySpeed}
-                        onExit={() => { resetGame(); setGameState("leaderboard"); }}
-                        gameTime={gameTime}
                     />
                 )}
 

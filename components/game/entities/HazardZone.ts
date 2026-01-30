@@ -17,7 +17,7 @@ export class HazardZone {
     lifeTime = 5.0 // Seconds before despawning
     currentLife = 0
     type: HazardType = 'poison'
-    slowFactor = 0.5 // Multiplier for slow zones (0.5 = 50% speed)
+    slowFactor = 0.80 // Multiplier for slow zones (0.80 = 20% slow)
     damageInterval = 0.5 // How often to apply damage (seconds)
     private damageTimer = 0
 

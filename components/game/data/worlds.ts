@@ -1,3 +1,18 @@
+export type GroundTexturePreset = 'none' | 'mossy_patches' | 'snow_ice' | 'stone_cracks' | 'dirt_mud' | 'grass_field' | 'custom'
+
+export interface GroundTextureConfig {
+    preset: GroundTexturePreset
+    noiseScale: number          // frequency, 0.5–8.0
+    secondaryColor: number      // hex blended with groundColor
+    intensity: number           // blend strength 0–1
+    octaves?: number            // default 3
+    lacunarity?: number         // default 2.0
+    persistence?: number        // default 0.5
+    detailColor?: number        // optional fine detail color
+    detailScale?: number        // detail noise frequency
+    detailIntensity?: number    // detail blend strength
+}
+
 export interface WorldData {
     id: string
     name: string
@@ -12,6 +27,7 @@ export interface WorldData {
     theme: {
         skyColor: number
         groundColor: number
+        groundTexture?: GroundTextureConfig
     }
     disableBackgroundSpawning?: boolean // If true, only timeline events spawn enemies
 }
@@ -40,13 +56,26 @@ export const WORLDS: WorldData[] = [
         availableEnemies: [
             'drifter', 'screecher', 'bruiser', 'domovoi', 'werewolf', 'forest_wraith', 'guardian_golem',
             'sapling', 'tox_shroom', 'stone_golem', 'spirit_wolf', 'leshy_shaman',
-            'ancient_treant', 'wasp_swarm', 'golem_destroyer', 'shadow_stalker', 'chernobog'
+            'ancient_treant', 'wasp_swarm', 'golem_destroyer', 'shadow_stalker', 'chernobog',
+            'vodnik', 'leshy'
         ],
         difficultyMultiplier: 1.0,
         lootThemeName: 'ANCIENT RELICS',
         theme: {
             skyColor: 0x1a1e1a,
-            groundColor: 0x3d453d
+            groundColor: 0x3d453d,
+            groundTexture: {
+                preset: 'mossy_patches',
+                noiseScale: 3.0,
+                secondaryColor: 0x0a1a08,
+                intensity: 0.85,
+                octaves: 4,
+                lacunarity: 2.0,
+                persistence: 0.5,
+                detailColor: 0x6a5030,
+                detailScale: 6.0,
+                detailIntensity: 0.3
+            }
         }
     },
     {
@@ -81,7 +110,19 @@ export const WORLDS: WorldData[] = [
         lootThemeName: 'SOVIET SURPLUS',
         theme: {
             skyColor: 0x88aabb,
-            groundColor: 0xddeeff
+            groundColor: 0xddeeff,
+            groundTexture: {
+                preset: 'snow_ice',
+                noiseScale: 2.5,
+                secondaryColor: 0x556688,
+                intensity: 0.8,
+                octaves: 3,
+                lacunarity: 2.0,
+                persistence: 0.45,
+                detailColor: 0x99bbdd,
+                detailScale: 5.0,
+                detailIntensity: 0.25
+            }
         }
     },
     {
@@ -112,7 +153,19 @@ export const WORLDS: WorldData[] = [
         lootThemeName: 'CRYPT TREASURES',
         theme: {
             skyColor: 0x0a0a15,
-            groundColor: 0x2a2a35
+            groundColor: 0x2a2a35,
+            groundTexture: {
+                preset: 'stone_cracks',
+                noiseScale: 4.0,
+                secondaryColor: 0x050510,
+                intensity: 0.9,
+                octaves: 5,
+                lacunarity: 2.2,
+                persistence: 0.55,
+                detailColor: 0x555568,
+                detailScale: 8.0,
+                detailIntensity: 0.25
+            }
         }
     }
 ]

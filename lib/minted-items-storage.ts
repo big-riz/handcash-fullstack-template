@@ -1,6 +1,21 @@
 import { db } from "./db"
-import { mintedItems } from "./schema"
+import { mintedItems, itemTemplates } from "./schema"
 import { eq, desc, and } from "drizzle-orm"
+
+const mintedItemColumns = {
+    id: mintedItems.id,
+    origin: mintedItems.origin,
+    collectionId: mintedItems.collectionId,
+    templateId: mintedItems.templateId,
+    mintedToUserId: mintedItems.mintedToUserId,
+    mintedToHandle: mintedItems.mintedToHandle,
+    itemName: mintedItems.itemName,
+    rarity: mintedItems.rarity,
+    imageUrl: mintedItems.imageUrl,
+    paymentId: mintedItems.paymentId,
+    mintedAt: mintedItems.mintedAt,
+    isArchived: mintedItems.isArchived,
+}
 
 export interface MintedItemData {
     id: string
@@ -51,7 +66,7 @@ export async function recordMintedItem(itemData: MintedItemData): Promise<void> 
 export async function getMintedItemsByUserId(userId: string, includeArchived = false): Promise<MintedItemData[]> {
     try {
         const results = await db
-            .select()
+            .select(mintedItemColumns)
             .from(mintedItems)
             .where(
                 and(
@@ -60,6 +75,7 @@ export async function getMintedItemsByUserId(userId: string, includeArchived = f
                 )
             )
             .orderBy(desc(mintedItems.mintedAt))
+            .limit(200)
 
         return results.map((item) => ({
             id: item.id,
@@ -71,10 +87,8 @@ export async function getMintedItemsByUserId(userId: string, includeArchived = f
             itemName: item.itemName,
             rarity: item.rarity || undefined,
             imageUrl: item.imageUrl || undefined,
-            multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
             isArchived: item.isArchived || false,
-            metadata: item.metadata as Record<string, any> | undefined,
         }))
     } catch (error) {
         console.error("[MintedItemsStorage] Error getting minted items by user ID:", error)
@@ -88,7 +102,7 @@ export async function getMintedItemsByUserId(userId: string, includeArchived = f
 export async function getMintedItemsByCollectionId(collectionId: string, includeArchived = false): Promise<MintedItemData[]> {
     try {
         const results = await db
-            .select()
+            .select(mintedItemColumns)
             .from(mintedItems)
             .where(
                 and(
@@ -97,6 +111,7 @@ export async function getMintedItemsByCollectionId(collectionId: string, include
                 )
             )
             .orderBy(desc(mintedItems.mintedAt))
+            .limit(500)
 
         return results.map((item) => ({
             id: item.id,
@@ -108,10 +123,8 @@ export async function getMintedItemsByCollectionId(collectionId: string, include
             itemName: item.itemName,
             rarity: item.rarity || undefined,
             imageUrl: item.imageUrl || undefined,
-            multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
             isArchived: item.isArchived || false,
-            metadata: item.metadata as Record<string, any> | undefined,
         }))
     } catch (error) {
         console.error("[MintedItemsStorage] Error getting minted items by collection ID:", error)
@@ -155,15 +168,17 @@ export async function getMintedItemByOrigin(origin: string): Promise<MintedItemD
 }
 
 /**
- * Get all minted items
+ * Get all minted items (paginated)
  */
-export async function getAllMintedItems(includeArchived = false): Promise<MintedItemData[]> {
+export async function getAllMintedItems(includeArchived = false, limit = 100, offset = 0): Promise<MintedItemData[]> {
     try {
         const results = await db
             .select()
             .from(mintedItems)
             .where(includeArchived ? undefined : eq(mintedItems.isArchived, false))
             .orderBy(desc(mintedItems.mintedAt))
+            .limit(limit)
+            .offset(offset)
 
         return results.map((item) => ({
             id: item.id,
@@ -192,25 +207,23 @@ export async function getAllMintedItems(includeArchived = false): Promise<Minted
  */
 export async function getMintedItemsWithTemplate(userId?: string, includeArchived = false) {
     try {
-        const { itemTemplates } = await import("./schema")
-
-        const query = db
-            .select({
-                mintedItem: mintedItems,
-                template: itemTemplates,
-            })
-            .from(mintedItems)
-            .leftJoin(itemTemplates, eq(mintedItems.templateId, itemTemplates.id))
-            .where(includeArchived ? undefined : eq(mintedItems.isArchived, false))
-            .orderBy(desc(mintedItems.mintedAt))
+        const selectColumns = {
+            mintedItem: mintedItemColumns,
+            template: {
+                id: itemTemplates.id,
+                name: itemTemplates.name,
+                imageUrl: itemTemplates.imageUrl,
+                rarity: itemTemplates.rarity,
+                color: itemTemplates.color,
+                pool: itemTemplates.pool,
+                supplyLimit: itemTemplates.supplyLimit,
+                collectionId: itemTemplates.collectionId,
+            },
+        }
 
         if (userId) {
-            // Re-apply where if userId is provided
             const results = await db
-                .select({
-                    mintedItem: mintedItems,
-                    template: itemTemplates,
-                })
+                .select(selectColumns)
                 .from(mintedItems)
                 .leftJoin(itemTemplates, eq(mintedItems.templateId, itemTemplates.id))
                 .where(
@@ -220,10 +233,17 @@ export async function getMintedItemsWithTemplate(userId?: string, includeArchive
                     )
                 )
                 .orderBy(desc(mintedItems.mintedAt))
+                .limit(500)
             return results
         }
 
-        return await query
+        return await db
+            .select(selectColumns)
+            .from(mintedItems)
+            .leftJoin(itemTemplates, eq(mintedItems.templateId, itemTemplates.id))
+            .where(includeArchived ? undefined : eq(mintedItems.isArchived, false))
+            .orderBy(desc(mintedItems.mintedAt))
+            .limit(500)
     } catch (error) {
         console.error("[MintedItemsStorage] Error getting minted items with template:", error)
         return []
@@ -268,7 +288,7 @@ export async function getTemplateUsageStats() {
 export async function getMintedItemsByTemplateId(templateId: string, includeArchived = false) {
     try {
         const results = await db
-            .select()
+            .select(mintedItemColumns)
             .from(mintedItems)
             .where(
                 and(
@@ -277,6 +297,7 @@ export async function getMintedItemsByTemplateId(templateId: string, includeArch
                 )
             )
             .orderBy(desc(mintedItems.mintedAt))
+            .limit(500)
 
         return results.map((item) => ({
             id: item.id,
@@ -288,10 +309,8 @@ export async function getMintedItemsByTemplateId(templateId: string, includeArch
             itemName: item.itemName,
             rarity: item.rarity || undefined,
             imageUrl: item.imageUrl || undefined,
-            multimediaUrl: item.multimediaUrl || undefined,
             paymentId: item.paymentId || undefined,
             isArchived: item.isArchived || false,
-            metadata: item.metadata as Record<string, any> | undefined,
         }))
     } catch (error) {
         console.error("[MintedItemsStorage] Error getting minted items by template:", error)

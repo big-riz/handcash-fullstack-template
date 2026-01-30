@@ -22,14 +22,12 @@ export async function POST(request: NextRequest) {
 
   const forwardedFor = request.headers.get("x-forwarded-for")
   const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-  const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
   logAuditEvent({
     type: AuditEventType.LOGOUT,
     success: true,
     sessionId,
     ipAddress,
-    userAgent,
   })
 
   const response = NextResponse.json({ success: true })

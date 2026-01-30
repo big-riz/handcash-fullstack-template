@@ -53,11 +53,13 @@ export const darkForestTimeline: TimelineEvent[] = [
     { time: 100, enemyType: 'drifter', count: 35 },
     { time: 105, enemyType: 'domovoi', count: 40 },
     { time: 112.5, enemyType: 'screecher', count: 15 },
+    { time: 115, enemyType: 'vodnik', count: 4 },
     { time: 120, enemyType: 'stone_golem', count: 3 },
     { time: 127.5, enemyType: 'tox_shroom', count: 12 },
     { time: 135, enemyType: 'sapling', count: 30 },
     { time: 142.5, enemyType: 'drifter', count: 40 },
     { time: 150, enemyType: 'werewolf', count: 1, isElite: true },
+    { time: 155, enemyType: 'vodnik', count: 6 },
     { time: 160, enemyType: 'bruiser', count: 7 },
     { time: 170, enemyType: 'screecher', count: 20 },
     { time: 180, enemyType: 'domovoi', count: 50 },
@@ -65,6 +67,7 @@ export const darkForestTimeline: TimelineEvent[] = [
     { time: 200, enemyType: 'tox_shroom', count: 15 },
     { time: 210, enemyType: 'drifter', count: 50 },
     { time: 225, enemyType: 'spirit_wolf', count: 8 },
+    { time: 235, enemyType: 'vodnik', count: 8 },
     { time: 240, enemyType: 'leshy_shaman', count: 3 },
 
     // --- Phase 3: The First Major Horde (4:00 - 6:00) ---
@@ -82,6 +85,7 @@ export const darkForestTimeline: TimelineEvent[] = [
     { time: 360, enemyType: 'spirit_wolf', count: 15 },
 
     // --- Phase 4: Arcane Threats Intensify (6:00 - 9:00) ---
+    { time: 365, enemyType: 'vodnik', count: 10 },
     { time: 370, enemyType: 'leshy_shaman', count: 5 },
     { time: 380, enemyType: 'forest_wraith', count: 3, isElite: true },
     { time: 390, enemyType: 'bruiser', count: 12 },
@@ -99,7 +103,8 @@ export const darkForestTimeline: TimelineEvent[] = [
 
     // --- Phase 5: The Unrelenting Swarm (9:00 - 12:30) ---
     { time: 550, enemyType: 'domovoi', count: 80 },
-    { time: 560, enemyType: 'golem_destroyer', count: 1, isBoss: true },
+    { time: 555, enemyType: 'vodnik', count: 12 },
+    { time: 560, enemyType: 'leshy', count: 1, isBoss: true },
     { time: 570, enemyType: 'bruiser', count: 15 },
     { time: 585, enemyType: 'tox_shroom', count: 25 },
     { time: 600, enemyType: 'leshy_shaman', count: 8 },
@@ -107,6 +112,7 @@ export const darkForestTimeline: TimelineEvent[] = [
     { time: 630, enemyType: 'screecher', count: 40 },
     { time: 645, enemyType: 'wasp_swarm', count: 8 },
     { time: 660, enemyType: 'stone_golem', count: 10 },
+    { time: 670, enemyType: 'vodnik', count: 15 },
     { time: 675, enemyType: 'shadow_stalker', count: 6 },
     { time: 690, enemyType: 'drifter', count: 80 },
     { time: 705, enemyType: 'domovoi', count: 100 },

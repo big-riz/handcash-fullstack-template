@@ -9,13 +9,15 @@ import { Player } from '../../entities/Player'
 import { EntityManager } from '../../entities/EntityManager'
 import { VFXManager } from '../../systems/VFXManager'
 import { AudioManager } from '../../core/AudioManager'
+import { loadWeaponModel, disposeWeaponModel, WEAPON_GLB_URLS } from '../../core/WeaponModelLoader'
 
 export class PropagandaTower {
     public level = 1
     private cooldown = 5.0
     private timer = 0
-    private activeTowers: THREE.Group[] = []
+    private activeTowers: THREE.Object3D[] = []
     private slowEffectQueue: { enemy: any; timer: number; amount: number }[] = []
+    public variantId: string = 'propaganda_tower'
 
     // Stats
     public damage = 15
@@ -32,7 +34,16 @@ export class PropagandaTower {
         private audioManager: AudioManager | null = null
     ) { }
 
+    private preloaded = false
+    private ensurePreload() {
+        if (this.preloaded) return
+        this.preloaded = true
+        const url = WEAPON_GLB_URLS[this.variantId]
+        if (url) loadWeaponModel(url).catch(() => {})
+    }
+
     update(deltaTime: number) {
+        this.ensurePreload()
         this.timer += deltaTime
         if (this.timer >= (this.cooldown * this.player.stats.cooldownMultiplier)) {
             this.deploy()
@@ -78,33 +89,52 @@ export class PropagandaTower {
     }
 
     private deploy() {
-        // Create a tower model (simple cylinder + pyramid)
-        const group = new THREE.Group()
+        const px = this.player.position.x
+        const pz = this.player.position.z
 
+        const url = WEAPON_GLB_URLS[this.variantId]
+        if (url) {
+            loadWeaponModel(url).then((model) => {
+                const box = new THREE.Box3().setFromObject(model)
+                const size = box.getSize(new THREE.Vector3())
+                const maxDim = Math.max(size.x, size.y, size.z)
+                const s = 2.0 / (maxDim || 1)
+                model.scale.setScalar(s)
+                model.position.set(px, 0, pz)
+                model.userData = { age: 0, pulseTimer: 0 }
+                this.scene.add(model)
+                this.activeTowers.push(model)
+            }).catch(() => {
+                this.deployFallback(px, pz)
+            })
+        } else {
+            this.deployFallback(px, pz)
+        }
+
+        if (this.vfx) {
+            this.vfx.createEmoji(px, pz, '🚩', 1.0)
+        }
+    }
+
+    private deployFallback(px: number, pz: number) {
+        const group = new THREE.Group()
         const baseGeo = new THREE.CylinderGeometry(0.3, 0.5, 1.5, 8)
         const baseMat = new THREE.MeshStandardMaterial({ color: 0x444444 })
         const base = new THREE.Mesh(baseGeo, baseMat)
         base.position.y = 0.75
         group.add(base)
-
         const topGeo = new THREE.ConeGeometry(0.4, 0.8, 4)
         const topMat = new THREE.MeshStandardMaterial({ color: 0xcc0000, emissive: 0x330000 })
         const top = new THREE.Mesh(topGeo, topMat)
         top.position.y = 1.6
         group.add(top)
-
-        group.position.set(this.player.position.x, 0, this.player.position.z)
+        group.position.set(px, 0, pz)
         group.userData = { age: 0, pulseTimer: 0 }
-
         this.scene.add(group)
         this.activeTowers.push(group)
-
-        if (this.vfx) {
-            this.vfx.createEmoji(group.position.x, group.position.z, '🚩', 1.0)
-        }
     }
 
-    private pulse(tower: THREE.Group) {
+    private pulse(tower: THREE.Object3D) {
         const effectiveRange = this.range * this.player.stats.areaMultiplier
         const effectiveDamage = this.damage * this.player.stats.damageMultiplier
 
@@ -151,6 +181,7 @@ export class PropagandaTower {
     cleanup() {
         for (const tower of this.activeTowers) {
             this.scene.remove(tower)
+            disposeWeaponModel(tower)
         }
         this.activeTowers = []
     }

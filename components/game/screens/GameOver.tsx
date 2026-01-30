@@ -11,6 +11,13 @@ interface GameOverProps {
     kills?: number
     damageDealt?: number
     damageTaken?: number
+    killedBy?: { type: string; isBoss: boolean; isElite: boolean } | null
+}
+
+function formatKillerName(source: { type: string; isBoss: boolean; isElite: boolean }): string {
+    const prefix = source.isBoss ? '' : source.isElite ? 'Elite ' : ''
+    const name = source.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    return `${prefix}${name}`
 }
 
 export function GameOver({
@@ -22,13 +29,23 @@ export function GameOver({
     onMainMenu,
     kills = 0,
     damageDealt = 0,
-    damageTaken = 0
+    damageTaken = 0,
+    killedBy
 }: GameOverProps) {
     const dps = gameTime > 0 ? (damageDealt / gameTime).toFixed(0) : '0'
     return (
         <div className={`absolute inset-0 bg-red-950/90 backdrop-blur-xl flex flex-col items-center justify-center ${isMobile ? 'p-4 safe-area-inset-top safe-area-inset-bottom overflow-y-auto' : 'p-8'} z-50 animate-in fade-in zoom-in duration-500`}>
             <div className={`bg-black/60 border-4 border-red-500/30 ${isMobile ? 'p-5' : 'p-12 md:p-16'} ${isMobile ? 'rounded-[2.5rem]' : 'rounded-[4rem]'} flex flex-col items-center shadow-2xl ring-2 ring-red-500/10 max-w-4xl w-full`}>
                 <h2 className={`${isMobile ? 'text-5xl' : 'text-6xl md:text-[8rem]'} font-black italic uppercase tracking-tighter text-white ${isMobile ? 'mb-3' : 'mb-4'} drop-shadow-[0_0_60px_rgba(220,38,38,1)] text-center leading-none`}>FALLEN</h2>
+
+                {killedBy && (
+                    <div className={`flex items-center gap-2 ${isMobile ? 'mb-3' : 'mb-4'}`}>
+                        <Skull className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-red-400`} />
+                        <span className={`${isMobile ? 'text-sm' : 'text-lg'} font-bold uppercase tracking-wider text-red-300/90`}>
+                            Slain by {formatKillerName(killedBy)}
+                        </span>
+                    </div>
+                )}
 
                 {isNewHighScore && (
                     <div className="flex items-center gap-2 mb-4 animate-bounce">

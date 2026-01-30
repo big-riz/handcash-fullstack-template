@@ -116,7 +116,10 @@ export class SpawnSystem {
     update(deltaTime: number) {
         if (!this.currentWorld) return
 
-        this.elapsedSeconds += deltaTime
+        // Freeze spawn clock while a boss is alive
+        if (!this.entityManager.hasActiveBoss()) {
+            this.elapsedSeconds += deltaTime
+        }
 
         // --- Voiceline playback (based on time defined in voiceline data) ---
         while (
@@ -125,7 +128,6 @@ export class SpawnSystem {
         ) {
             const voiceline = this.currentVoicelines[this.nextVoicelineIndex]
             if (this.onPlayVoiceline) {
-                // Text display is handled by the callback only if audio plays
                 this.onPlayVoiceline(voiceline.file, voiceline.text)
             }
             this.nextVoicelineIndex++
@@ -151,12 +153,12 @@ export class SpawnSystem {
         const timelineExhausted = this.timelineIndex >= this.currentTimeline.length
 
         // Calculate dynamic spawn interval (decreases over time, exponentially)
-        // After timeline ends, interval drops 2x faster
+        // After timeline ends, interval drops 4x faster
         let intervalScale = Math.max(0.16, Math.pow(0.85, minutesElapsed))
         let minInterval = this.minSpawnInterval
         if (timelineExhausted) {
-            intervalScale *= 0.5
-            minInterval = 0.8
+            intervalScale *= 0.25
+            minInterval = 0.4
         }
         const currentInterval = Math.max(minInterval, this.baseSpawnInterval * intervalScale)
 

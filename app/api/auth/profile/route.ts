@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { handcashService } from "@/lib/handcash-service"
 import { requireAuth } from "@/lib/auth-middleware"
-import { logAuditEvent, AuditEventType } from "@/lib/audit-logger"
 import { rateLimit, RateLimitPresets } from "@/lib/rate-limit"
 
 export async function GET(request: NextRequest) {
@@ -31,35 +30,9 @@ export async function GET(request: NextRequest) {
       path: "/",
     })
 
-    const forwardedFor = request.headers.get("x-forwarded-for")
-    const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-    const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
-
-    logAuditEvent({
-      type: AuditEventType.PROFILE_ACCESS,
-      success: true,
-      sessionId: session.sessionId,
-      userId: profile.publicProfile.handle,
-      ipAddress,
-      userAgent,
-    })
-
     return response
   } catch (error) {
     console.error("[v0] Profile route error:", error)
-
-    const forwardedFor = request.headers.get("x-forwarded-for")
-    const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-    const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
-
-    logAuditEvent({
-      type: AuditEventType.PROFILE_ACCESS,
-      success: false,
-      sessionId: session.sessionId,
-      ipAddress,
-      userAgent,
-      details: { error: String(error) },
-    })
 
     return NextResponse.json(
       {

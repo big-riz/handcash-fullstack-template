@@ -48,8 +48,11 @@ export function useMintProgress(templateId?: string) {
 
         progressListeners.add(listener)
 
-        // Poll for updates every 5 seconds
-        const interval = setInterval(fetchProgress, 5000)
+        // Poll for updates every 60 seconds, skip when tab is hidden
+        const interval = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return
+            fetchProgress()
+        }, 60000)
 
         return () => {
             progressListeners.delete(listener)
@@ -91,7 +94,10 @@ export function usePoolProgress(poolName: string) {
 
     useEffect(() => {
         fetchPoolProgress()
-        const interval = setInterval(fetchPoolProgress, 5000)
+        const interval = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return
+            fetchPoolProgress()
+        }, 60000)
         return () => clearInterval(interval)
     }, [poolName, totalMinted])
 

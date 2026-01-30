@@ -8,14 +8,12 @@ interface HistoryProps {
     userHistory: any[]
     setGameState: (state: any) => void
     characterData: CharacterInfo[]
-    startReplay: (score: any) => void
 }
 
 export function History({
     userHistory,
     setGameState,
     characterData,
-    startReplay
 }: HistoryProps) {
     return (
         <div className="absolute inset-0 bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center p-6 md:p-12 z-50 animate-in fade-in duration-300">
@@ -52,15 +50,6 @@ export function History({
                                             <span className="text-cyan-400 font-black italic text-xl md:text-2xl drop-shadow-md tracking-tighter">LVL {s.level}</span>
                                             <span className="text-xs md:text-sm uppercase opacity-40 font-mono tracking-widest mt-1 italic">{Math.floor(s.time / 60)}:{(s.time % 60).toFixed(0).padStart(2, '0')}</span>
                                         </div>
-                                        {s.seed && s.events && (
-                                            <Button
-                                                onClick={() => startReplay(s)}
-                                                size="lg"
-                                                className="h-14 md:h-16 px-6 md:px-8 bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-black text-xs md:text-sm font-black uppercase rounded-[2rem] border-2 border-cyan-500/30 transition-all shadow-[0_0_25px_rgba(34,211,238,0.3)] hover:scale-105 active:scale-95"
-                                            >
-                                                Watch Replay
-                                            </Button>
-                                        )}
                                     </div>
                                 </div>
                             )

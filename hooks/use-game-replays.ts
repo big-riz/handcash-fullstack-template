@@ -6,8 +6,6 @@ export interface GameReplay {
   playerName: string
   handle?: string
   avatarUrl?: string
-  seed: string
-  events: any[]
   finalLevel: number
   finalTime: number
   gameVersion: string

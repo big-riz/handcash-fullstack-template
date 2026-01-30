@@ -44,13 +44,10 @@ export async function requireAuth(request: NextRequest): Promise<
     if (!privateKey) {
       const forwardedFor = request.headers.get("x-forwarded-for")
       const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-      const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
-
       logAuditEvent({
         type: AuditEventType.PROFILE_ACCESS,
         success: false,
         ipAddress,
-        userAgent,
         details: { reason: "No auth token provided" },
       })
       return {
@@ -69,14 +66,12 @@ export async function requireAuth(request: NextRequest): Promise<
         if (isSessionExpired(session)) {
           const forwardedFor = request.headers.get("x-forwarded-for")
           const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-          const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
           logAuditEvent({
             type: AuditEventType.SESSION_EXPIRED,
             success: false,
             sessionId: session.sessionId,
             ipAddress,
-            userAgent,
           })
 
           const response = NextResponse.json({ error: "Session expired" }, { status: 401 })
@@ -97,10 +92,8 @@ export async function requireAuth(request: NextRequest): Promise<
             success: false,
             sessionId: session.sessionId,
             ipAddress: currentIp,
-            userAgent: currentUserAgent,
             details: {
               expectedIp: session.ipAddress,
-              expectedUserAgent: session.userAgent,
             },
           })
 
@@ -123,14 +116,12 @@ export async function requireAuth(request: NextRequest): Promise<
     if (!isValid) {
       const forwardedFor = request.headers.get("x-forwarded-for")
       const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : null
-      const userAgent = request.headers.get("user-agent") || request.headers.get("x-forwarded-user-agent")
 
       logAuditEvent({
         type: AuditEventType.PROFILE_ACCESS,
         success: false,
         sessionId: session?.sessionId,
         ipAddress,
-        userAgent,
         details: { reason: "Invalid auth token" },
       })
 

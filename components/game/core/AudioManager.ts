@@ -534,47 +534,72 @@ export class AudioManager {
         ],
     };
 
-    // Track damage voiceline so it can be interrupted
+    // Track active voice sources to prevent overlapping
+    private currentVoiceSource: AudioBufferSourceNode | null = null;
     private currentDamageSource: AudioBufferSourceNode | null = null;
     private lastDamageVoiceTime = 0;
     private damageVoiceCooldown = 3000; // Min 3 seconds between damage voicelines
+    private pendingFlavorTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    private async playVoiceLine(filename: string) {
-        if (!this.audioContext || !this.sfxGain) return;
-
-        if (!this.voiceGain) {
+    private ensureVoiceGain() {
+        if (!this.voiceGain && this.audioContext && this.masterGain) {
             this.voiceGain = this.audioContext.createGain();
-            this.voiceGain.connect(this.masterGain!);
+            this.voiceGain.connect(this.masterGain);
             this.voiceGain.gain.value = this.voiceVolume;
         }
+    }
+
+    private stopCurrentVoice() {
+        if (this.currentVoiceSource) {
+            try { this.currentVoiceSource.stop(); } catch (_) {}
+            this.currentVoiceSource = null;
+        }
+        if (this.pendingFlavorTimeout) {
+            clearTimeout(this.pendingFlavorTimeout);
+            this.pendingFlavorTimeout = null;
+        }
+    }
+
+    private async playVoiceLine(filename: string): Promise<number> {
+        if (!this.audioContext || !this.sfxGain) return 0;
+        this.ensureVoiceGain();
+        if (!this.voiceGain) return 0;
 
         const buffer = await this.loadSound(`voicelines/${filename}`);
-        if (!buffer) return;
+        if (!buffer) return 0;
+
+        this.stopCurrentVoice();
 
         const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
         source.connect(this.voiceGain);
+        source.onended = () => {
+            if (this.currentVoiceSource === source) {
+                this.currentVoiceSource = null;
+            }
+        };
+        this.currentVoiceSource = source;
         source.start(0);
+        return buffer.duration * 1000;
     }
 
-    private playFlavorLine(category: string, delayMs: number = 1500) {
-        // 50% chance to skip flavor
+    private playFlavorLine(category: string, afterMs: number = 0) {
         if (Math.random() < 0.5) return;
 
         const lines = this.flavorLines[category];
         if (!lines || lines.length === 0) return;
 
         const randomLine = lines[Math.floor(Math.random() * lines.length)];
-        setTimeout(() => this.playVoiceLine(randomLine), delayMs);
+        const delay = afterMs + 200; // small gap after main line ends
+        this.pendingFlavorTimeout = setTimeout(() => {
+            this.pendingFlavorTimeout = null;
+            this.playVoiceLine(randomLine);
+        }, delay);
     }
 
     private stopDamageVoiceline() {
         if (this.currentDamageSource) {
-            try {
-                this.currentDamageSource.stop();
-            } catch (e) {
-                // Already stopped
-            }
+            try { this.currentDamageSource.stop(); } catch (_) {}
             this.currentDamageSource = null;
         }
     }
@@ -582,29 +607,25 @@ export class AudioManager {
     private stopAllInterruptibleVoicelines() {
         this.stopTimelineVoiceline();
         this.stopDamageVoiceline();
+        this.stopCurrentVoice();
     }
 
     public async playVoicePlayerHurt() {
-        // Cooldown to prevent spam
         const now = Date.now();
         if (now - this.lastDamageVoiceTime < this.damageVoiceCooldown) return;
         this.lastDamageVoiceTime = now;
 
         if (!this.audioContext || !this.sfxGain) return;
-
-        if (!this.voiceGain) {
-            this.voiceGain = this.audioContext.createGain();
-            this.voiceGain.connect(this.masterGain!);
-            this.voiceGain.gain.value = this.voiceVolume;
-        }
+        this.ensureVoiceGain();
+        if (!this.voiceGain) return;
 
         const lines = this.flavorLines['damage'];
         const randomLine = lines[Math.floor(Math.random() * lines.length)];
         const buffer = await this.loadSound(`voicelines/${randomLine}`);
         if (!buffer) return;
 
-        // Stop previous damage voiceline if playing
         this.stopDamageVoiceline();
+        this.stopCurrentVoice();
 
         const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
@@ -618,34 +639,34 @@ export class AudioManager {
         source.start(0);
     }
 
-    public playVoiceChooseUpgrade() {
+    public async playVoiceChooseUpgrade() {
         this.stopAllInterruptibleVoicelines();
-        this.playVoiceLine('func-choose-upgrade.mp3');
-        this.playFlavorLine('upgrade');
+        const durationMs = await this.playVoiceLine('func-choose-upgrade.mp3');
+        this.playFlavorLine('upgrade', durationMs);
     }
 
-    public playVoiceWeaponEvolved() {
+    public async playVoiceWeaponEvolved() {
         this.stopAllInterruptibleVoicelines();
-        this.playVoiceLine('func-weapon-evolved.mp3');
-        this.playFlavorLine('evolved');
+        const durationMs = await this.playVoiceLine('func-weapon-evolved.mp3');
+        this.playFlavorLine('evolved', durationMs);
     }
 
-    public playVoiceBossApproaching() {
+    public async playVoiceBossApproaching() {
         this.stopAllInterruptibleVoicelines();
-        this.playVoiceLine('func-boss-incoming.mp3');
-        this.playFlavorLine('boss');
+        const durationMs = await this.playVoiceLine('func-boss-incoming.mp3');
+        this.playFlavorLine('boss', durationMs);
     }
 
-    public playVoiceYouDied() {
+    public async playVoiceYouDied() {
         this.stopAllInterruptibleVoicelines();
-        this.playVoiceLine('func-game-over.mp3');
-        this.playFlavorLine('death');
+        const durationMs = await this.playVoiceLine('func-game-over.mp3');
+        this.playFlavorLine('death', durationMs);
     }
 
-    public playVoiceVictory() {
+    public async playVoiceVictory() {
         this.stopAllInterruptibleVoicelines();
-        this.playVoiceLine('func-victory.mp3');
-        this.playFlavorLine('victory');
+        const durationMs = await this.playVoiceLine('func-victory.mp3');
+        this.playFlavorLine('victory', durationMs);
     }
 
     public setVoiceVolume(volume: number) {
@@ -665,12 +686,8 @@ export class AudioManager {
 
     public async playTimelineVoiceline(filename: string): Promise<boolean> {
         if (!this.audioContext || !this.sfxGain) return false;
-
-        if (!this.voiceGain) {
-            this.voiceGain = this.audioContext.createGain();
-            this.voiceGain.connect(this.masterGain!);
-            this.voiceGain.gain.value = this.voiceVolume;
-        }
+        this.ensureVoiceGain();
+        if (!this.voiceGain) return false;
 
         const fullPath = `voicelines/timeline/${filename}`;
         const buffer = await this.loadSound(fullPath);
@@ -679,7 +696,9 @@ export class AudioManager {
             return false;
         }
 
-        // Stop any currently playing timeline voiceline
+        // Stop any currently playing voice to prevent overlap
+        this.stopCurrentVoice();
+        this.stopDamageVoiceline();
         this.stopTimelineVoiceline();
 
         const source = this.audioContext.createBufferSource();
