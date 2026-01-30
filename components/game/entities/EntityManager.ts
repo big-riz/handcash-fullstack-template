@@ -19,9 +19,70 @@ export interface Obstacle {
     x: number
     z: number
     radius: number
+    // Box collision (oriented bounding box) — if present, overrides circle
+    halfW?: number   // half-extent along local X
+    halfD?: number   // half-extent along local Z
+    cosR?: number    // cos(rotation)
+    sinR?: number    // sin(rotation)
     isTemporary?: boolean
     timer?: number
     mesh?: THREE.Mesh
+}
+
+/**
+ * Circle-vs-OBB overlap test + push vector.
+ * Returns null if no collision, or {px, pz} push displacement.
+ */
+export function circleVsOBB(
+    cx: number, cz: number, cr: number,
+    ox: number, oz: number, halfW: number, halfD: number,
+    cosR: number, sinR: number
+): { px: number, pz: number } | null {
+    // Transform circle center into obstacle local space
+    const dx = cx - ox
+    const dz = cz - oz
+    const localX = dx * cosR - dz * sinR
+    const localZ = dx * sinR + dz * cosR
+
+    // Closest point on box to circle center (clamped)
+    const clampX = Math.max(-halfW, Math.min(halfW, localX))
+    const clampZ = Math.max(-halfD, Math.min(halfD, localZ))
+
+    const diffX = localX - clampX
+    const diffZ = localZ - clampZ
+    const distSq = diffX * diffX + diffZ * diffZ
+
+    if (distSq >= cr * cr) return null
+
+    const dist = Math.sqrt(distSq)
+    if (dist < 0.0001) {
+        // Circle center is inside the box — push along shortest axis
+        const overlapX = halfW - Math.abs(localX) + cr
+        const overlapZ = halfD - Math.abs(localZ) + cr
+        let lnx: number, lnz: number, overlap: number
+        if (overlapX < overlapZ) {
+            lnx = localX >= 0 ? 1 : -1
+            lnz = 0
+            overlap = overlapX
+        } else {
+            lnx = 0
+            lnz = localZ >= 0 ? 1 : -1
+            overlap = overlapZ
+        }
+        // Rotate push back to world space
+        const wx = lnx * cosR - lnz * sinR
+        const wz = lnx * sinR + lnz * cosR
+        return { px: wx * overlap, pz: wz * overlap }
+    }
+
+    const overlap = cr - dist
+    // Direction from closest point to circle center (local space)
+    const lnx = diffX / dist
+    const lnz = diffZ / dist
+    // Rotate back to world space
+    const wx = lnx * cosR + lnz * sinR
+    const wz = -lnx * sinR + lnz * cosR
+    return { px: wx * overlap, pz: wz * overlap }
 }
 
 // Color lookup for every enemy type
@@ -526,16 +587,28 @@ export class EntityManager {
                 if (!enemy.canPhaseThrough) {
                     for (let j = 0; j < this.obstacles.length; j++) {
                         const obs = this.obstacles[j]
-                        const odx = enemy.position.x - obs.x
-                        const odz = enemy.position.z - obs.z
-                        const distSq = odx * odx + odz * odz
-                        const radii = enemy.radius + obs.radius
-                        if (distSq < radii * radii) {
-                            const d = Math.sqrt(distSq)
-                            if (d > 0) {
-                                const overlap = radii - d
-                                enemy.position.x += (odx / d) * overlap
-                                enemy.position.z += (odz / d) * overlap
+                        if (obs.halfW != null && obs.halfD != null) {
+                            const push = circleVsOBB(
+                                enemy.position.x, enemy.position.z, enemy.radius,
+                                obs.x, obs.z, obs.halfW, obs.halfD,
+                                obs.cosR ?? 1, obs.sinR ?? 0
+                            )
+                            if (push) {
+                                enemy.position.x += push.px
+                                enemy.position.z += push.pz
+                            }
+                        } else {
+                            const odx = enemy.position.x - obs.x
+                            const odz = enemy.position.z - obs.z
+                            const distSq = odx * odx + odz * odz
+                            const radii = enemy.radius + obs.radius
+                            if (distSq < radii * radii) {
+                                const d = Math.sqrt(distSq)
+                                if (d > 0) {
+                                    const overlap = radii - d
+                                    enemy.position.x += (odx / d) * overlap
+                                    enemy.position.z += (odz / d) * overlap
+                                }
                             }
                         }
                     }
@@ -739,13 +812,25 @@ export class EntityManager {
                     // Obstacle collision for all projectiles
                     if (projectile.isActive) {
                         for (const obs of this.obstacles) {
-                            const odx = projectile.position.x - obs.x;
-                            const odz = projectile.position.z - obs.z;
-                            const distSq = odx * odx + odz * odz;
-                            const radii = projectile.radius + obs.radius;
-                            if (distSq < radii * radii) {
-                                projectile.despawn();
-                                break;
+                            if (obs.halfW != null && obs.halfD != null) {
+                                const push = circleVsOBB(
+                                    projectile.position.x, projectile.position.z, projectile.radius,
+                                    obs.x, obs.z, obs.halfW, obs.halfD,
+                                    obs.cosR ?? 1, obs.sinR ?? 0
+                                )
+                                if (push) {
+                                    projectile.despawn();
+                                    break;
+                                }
+                            } else {
+                                const odx = projectile.position.x - obs.x;
+                                const odz = projectile.position.z - obs.z;
+                                const distSq = odx * odx + odz * odz;
+                                const radii = projectile.radius + obs.radius;
+                                if (distSq < radii * radii) {
+                                    projectile.despawn();
+                                    break;
+                                }
                             }
                         }
                     }
@@ -870,6 +955,7 @@ export class EntityManager {
                         currentHp: enemy.stats.currentHp,
                         maxHp: enemy.stats.maxHp,
                         isActive: true,
+                        isBoss: enemy.isBoss,
                     })
                 }
             }
@@ -951,21 +1037,38 @@ export class EntityManager {
 
     private handlePlayerObstacleCollision() {
         for (const obs of this.obstacles) {
-            const dx = this.player.position.x - obs.x
-            const dz = this.player.position.z - obs.z
-            const distSq = dx * dx + dz * dz
-            const radii = this.player.radius + obs.radius
-
-            if (distSq < radii * radii) {
-                const dist = Math.sqrt(distSq)
-                if (dist > 0) {
-                    const overlap = radii - dist
-                    const nx = dx / dist
-                    const nz = dz / dist
-                    this.player.position.x += nx * overlap
-                    this.player.position.z += nz * overlap
+            if (obs.halfW != null && obs.halfD != null) {
+                // OBB collision
+                const push = circleVsOBB(
+                    this.player.position.x, this.player.position.z, this.player.radius,
+                    obs.x, obs.z, obs.halfW, obs.halfD,
+                    obs.cosR ?? 1, obs.sinR ?? 0
+                )
+                if (push) {
+                    this.player.position.x += push.px
+                    this.player.position.z += push.pz
                     if (this.player.mesh) {
                         this.player.mesh.position.set(this.player.position.x, 0.5 + this.player.radius, this.player.position.z)
+                    }
+                }
+            } else {
+                // Circle collision
+                const dx = this.player.position.x - obs.x
+                const dz = this.player.position.z - obs.z
+                const distSq = dx * dx + dz * dz
+                const radii = this.player.radius + obs.radius
+
+                if (distSq < radii * radii) {
+                    const dist = Math.sqrt(distSq)
+                    if (dist > 0) {
+                        const overlap = radii - dist
+                        const nx = dx / dist
+                        const nz = dz / dist
+                        this.player.position.x += nx * overlap
+                        this.player.position.z += nz * overlap
+                        if (this.player.mesh) {
+                            this.player.mesh.position.set(this.player.position.x, 0.5 + this.player.radius, this.player.position.z)
+                        }
                     }
                 }
             }

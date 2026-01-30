@@ -241,7 +241,8 @@ export class GooglyEyes {
     update(
         position: THREE.Vector3,
         velocity: THREE.Vector3,
-        yOffset: number = 1.0
+        yOffset: number = 1.0,
+        playerPosition?: THREE.Vector3
     ) {
         const eyeSeparation = this.eyeRadius * 1.5
 
@@ -251,27 +252,34 @@ export class GooglyEyes {
         this.leftEye.position.set(position.x - eyeSeparation, eyeY, position.z)
         this.rightEye.position.set(position.x + eyeSeparation, eyeY, position.z)
 
-        // Make pupils follow movement direction
-        const speed = velocity.length()
+        // Make pupils look toward the player
         const maxPupilOffset = this.eyeRadius * 0.5
 
-        if (speed > 0.1) {
-            // Normalize velocity and scale to pupil offset
-            const offsetX = (velocity.x / speed) * maxPupilOffset
-            const offsetY = (velocity.z / speed) * maxPupilOffset // z becomes y for screen space
+        if (playerPosition) {
+            const dx = playerPosition.x - position.x
+            const dz = playerPosition.z - position.z
+            const dist = Math.sqrt(dx * dx + dz * dz)
 
-            this.leftPupil.position.set(
-                this.leftEye.position.x + offsetX,
-                eyeY,
-                this.leftEye.position.z + offsetY
-            )
-            this.rightPupil.position.set(
-                this.rightEye.position.x + offsetX,
-                eyeY,
-                this.rightEye.position.z + offsetY
-            )
+            if (dist > 0.1) {
+                const offsetX = (dx / dist) * maxPupilOffset
+                const offsetZ = (dz / dist) * maxPupilOffset
+
+                this.leftPupil.position.set(
+                    this.leftEye.position.x + offsetX,
+                    eyeY,
+                    this.leftEye.position.z + offsetZ
+                )
+                this.rightPupil.position.set(
+                    this.rightEye.position.x + offsetX,
+                    eyeY,
+                    this.rightEye.position.z + offsetZ
+                )
+            } else {
+                this.leftPupil.position.copy(this.leftEye.position)
+                this.rightPupil.position.copy(this.rightEye.position)
+            }
         } else {
-            // Center pupils when not moving
+            // Fallback: center pupils
             this.leftPupil.position.copy(this.leftEye.position)
             this.rightPupil.position.copy(this.rightEye.position)
         }

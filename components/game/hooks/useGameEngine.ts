@@ -196,7 +196,7 @@ export function useGameEngine({
     const pendingLevelUpAfterVictoryRef = useRef(false) // Tracks if level-up should show after victory screen
     const pendingAirdropLevelUpRef = useRef(false) // Tracks if airdrop triggered level-up
     const gameTimeRef = useRef<number>(0)
-    const obstaclesRef = useRef<{ x: number, z: number, radius: number }[]>([])
+    const obstaclesRef = useRef<{ x: number, z: number, radius: number, halfW?: number, halfD?: number, cosR?: number, sinR?: number }[]>([])
     const levelUpChoices = useRef<any[]>([])
     const missingItemsRef = useRef<Set<string>>(new Set())
     const gltfLoaderRef = useRef<GLTFLoader | null>(null)
@@ -231,7 +231,8 @@ export function useGameEngine({
         const currentWorld = getWorldData(selectedWorldId)
         const allowed = [...(currentWorld.allowedUpgrades || ['all'])]
         const levelGateBonus = selectedWorldId === 'frozen_waste' ? 3 : 0
-        const gatingLevel = p.stats.level + levelGateBonus
+        const luckBonus = Math.floor((p.stats.luck - 1.0) / 0.2)
+        const gatingLevel = p.stats.level + levelGateBonus + luckBonus
 
         const character = characterData.find(c => c.id === selectedCharacterId) || characterData[0]
 

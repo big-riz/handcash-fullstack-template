@@ -61,6 +61,7 @@ export class InstancedHealthBars {
         x: number; z: number; radius: number
         currentHp: number; maxHp: number
         isActive: boolean
+        isBoss?: boolean
     }>) {
         let count = 0
 
@@ -70,12 +71,13 @@ export class InstancedHealthBars {
             if (hpPercent >= 1) continue
             if (count >= this.maxInstances) break
 
-            const barWidth = Math.max(0.4, e.radius * 1.5)
-            const barY = e.radius * 2.5 + 0.8
+            const bossScale = e.isBoss ? 3.0 : 1.0
+            const barWidth = Math.max(0.4, e.radius * 1.5) * bossScale
+            const barY = e.radius * 2.5 + 0.8 + (e.isBoss ? 2.0 : 0)
 
             // Background bar
             _pos.set(e.x, barY, e.z)
-            _scale.set(barWidth, 1, 1)
+            _scale.set(barWidth, 1, bossScale)
             _matrix.compose(_pos, _identityQuat, _scale)
             this.bgMesh.setMatrixAt(count, _matrix)
 
@@ -83,7 +85,7 @@ export class InstancedHealthBars {
             const fillWidth = barWidth * hpPercent
             const fillOffset = -(barWidth * (1 - hpPercent)) / 2
             _pos.set(e.x + fillOffset, barY, e.z)
-            _scale.set(fillWidth, 1, 1)
+            _scale.set(fillWidth, 1, bossScale)
             _matrix.compose(_pos, _identityQuat, _scale)
             this.fillMesh.setMatrixAt(count, _matrix)
 

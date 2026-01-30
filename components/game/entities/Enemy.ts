@@ -735,7 +735,7 @@ export class Enemy {
         if (this.googlyEyes && this.isActive) {
             const meshScale = this.mesh ? this.mesh.scale.y : 1
             const localHalfHeight = (this.radius > 0.4) ? (0.4 + this.radius) : this.radius
-            this.googlyEyes.update(this.position, this.velocity, this.radius + localHalfHeight * meshScale)
+            this.googlyEyes.update(this.position, this.velocity, this.radius + localHalfHeight * meshScale, player.position)
         }
     }
 
