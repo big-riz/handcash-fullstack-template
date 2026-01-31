@@ -100,7 +100,7 @@ interface UseGameEngineProps {
     setKills: (kills: number) => void
     setDamageDealt: (damage: number) => void
     setDamageTaken: (damage: number) => void
-    setActiveSynergies: (synergies: {name: string, description: string}[]) => void
+    setActiveSynergies: (synergies: { name: string, description: string }[]) => void
     setDifficultyMultiplier: (multiplier: number) => void
     setTotalRuns: (updater: (prev: number) => number) => void
     user: any
@@ -110,7 +110,7 @@ interface UseGameEngineProps {
     setUnlockedCharacters: (updater: (prev: Set<string>) => Set<string>) => void
     setNewHeroUnlocked: (hero: string | null) => void
     itemTemplates: ItemTemplate[]
-    submitScoreToDB: () => void
+    submitScoreToDB: (seed?: string) => void
     banishedItems: Set<string>
     setBanishedItems: (set: Set<string>) => void
     gameSpeed: number
@@ -190,6 +190,7 @@ export function useGameEngine({
     const characterModelManagerRef = useRef<CharacterModelManager | null>(null)
     const instancedSkinnedMeshRef = useRef<InstancedSkinnedMesh | null>(null)
     const rngRef = useRef<SeededRandom | null>(null)
+    const seedRef = useRef<string>("") // Add seedRef
     const isInitializingRef = useRef(false) // Tracks async initializeGame() in progress
     const allowPostVictoryRef = useRef(false) // Legacy - allows continuing after final victory
     const shownVictoryMilestonesRef = useRef<Set<number>>(new Set()) // Tracks which victory levels (10, 20, 30) have been shown
@@ -405,7 +406,7 @@ export function useGameEngine({
 
     const submitScore = (level: number) => {
         console.log("[Score] submitScore called", { level, worldId: selectedWorldId })
-        submitScoreToDB()
+        submitScoreToDB(seedRef.current)
     }
 
     const handleUpgrade = (type: string) => {
@@ -498,12 +499,14 @@ export function useGameEngine({
             enemyCombinationSystemRef.current?.cleanup()
 
             const newSeed = overrideSeed || Date.now().toString()
+            seedRef.current = newSeed // Store seed in ref
             const gameRNG = new SeededRandom(newSeed + "_game")
             const uiRNG = new SeededRandom(newSeed + "_ui")
             rngRef.current = uiRNG
             em.setRNG(gameRNG)
 
             const startingWeapon = character.startingWeapon as any
+
             const startingActives = [startingWeapon, ...(character.startingActives || [])] as any[]
             const startingPassives = (character.startingPassives || []) as any[]
 
@@ -663,7 +666,7 @@ export function useGameEngine({
                 const ctx = canvas.getContext('2d')
 
                 if (ctx) {
-                    
+
                     // Paint layer for compositing
                     const paintCanvas = document.createElement('canvas')
                     paintCanvas.width = canvas.width
@@ -677,7 +680,7 @@ export function useGameEngine({
                         customWorld.paintedAreas.forEach(area => {
                             if (area.type === 'color' && area.color) {
                                 pCtx.save()
-                                
+
                                 if (area.isEraser) {
                                     pCtx.globalCompositeOperation = 'destination-out'
                                     pCtx.fillStyle = 'rgba(0,0,0,1)'
@@ -715,7 +718,7 @@ export function useGameEngine({
                                     pCtx.closePath()
                                     pCtx.fill()
                                 }
-                                
+
                                 pCtx.restore()
                             }
                         })

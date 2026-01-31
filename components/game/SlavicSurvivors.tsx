@@ -37,7 +37,7 @@ export function SlavicSurvivors() {
     const containerRef = useRef<HTMLDivElement>(null)
     const [gameState, setGameState] = useState<"menu" | "characterSelect" | "playing" | "paused" | "gameOver" | "levelUp" | "airdropLevelUp" | "leaderboard" | "gameVictory" | "myHistory" | "achievements">("menu")
     const [customLevels, setCustomLevels] = useState<CustomLevelData[]>([])
-    
+
     // Stats
     const [playerHp, setPlayerHp] = useState<number>(100)
     const [playerMaxHp, setPlayerMaxHp] = useState<number>(100)
@@ -79,7 +79,7 @@ export function SlavicSurvivors() {
     const [isMuted, setIsMuted] = useState(false)
     const [musicVolume, setMusicVolume] = useState(1)
     const [sfxVolume, setSfxVolume] = useState(1)
-    const [activeSynergies, setActiveSynergies] = useState<{name: string, description: string}[]>([])
+    const [activeSynergies, setActiveSynergies] = useState<{ name: string, description: string }[]>([])
     const [levelEditorOpen, setLevelEditorOpen] = useState(false)
     const [waveNotification, setWaveNotification] = useState<string | null>(null)
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
@@ -356,7 +356,7 @@ export function SlavicSurvivors() {
         } catch (err) { console.error("Failed to post comment:", err) } finally { setIsPostingComment(false) }
     }
 
-    const submitScoreToDB = () => {
+    const submitScoreToDB = (seed?: string) => {
         const currentUser = userRef.current
         if (!currentUser) return
         fetch('/api/replays', {
@@ -371,17 +371,18 @@ export function SlavicSurvivors() {
                 gameVersion: '0.1.0-alpha',
                 characterId: selectedCharacterId,
                 worldId: selectedWorldId,
+                seed: seed,
             })
         })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success && (data.updated === true || !data.updated)) {
-                setIsNewHighScore(data.updated !== false)
-            }
-            fetchUserHistory()
-            fetchGlobalScores()
-        })
-        .catch(err => console.error("[Score] Failed to save score:", err))
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && (data.updated === true || !data.updated)) {
+                    setIsNewHighScore(data.updated !== false)
+                }
+                fetchUserHistory()
+                fetchGlobalScores()
+            })
+            .catch(err => console.error("[Score] Failed to save score:", err))
     }
 
     const {
@@ -618,7 +619,7 @@ export function SlavicSurvivors() {
             }
         }
         checkAccess()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userId])
 
     // Prevent accidental reload during gameplay
@@ -704,14 +705,14 @@ export function SlavicSurvivors() {
                                         </div>
                                     </div>
                                 )}
-                                
-                                <Button 
+
+                                <Button
                                     onClick={() => {
                                         setIsBotActive(!isBotActive);
                                         if (!isBotActive) setGameSpeed(1); // Reset speed on activate? Or keep previous? Let's default 1 for safety.
-                                    }} 
-                                    size="icon" 
-                                    variant="ghost" 
+                                    }}
+                                    size="icon"
+                                    variant="ghost"
                                     className={`h-12 w-12 rounded-xl backdrop-blur-md border-2 border-white/20 transition-all shadow-lg ${isBotActive ? 'bg-green-500/80 text-black animate-pulse' : 'bg-black/80 text-white hover:bg-white/10'}`}
                                     title="Toggle Bot Mode"
                                 >
@@ -720,9 +721,9 @@ export function SlavicSurvivors() {
                             </>
                         )}
                         {isMobile && (
-                        <Button onClick={toggleFullscreen} size="icon" variant="ghost" className="h-12 w-12 rounded-xl bg-black/80 backdrop-blur-md border-2 border-white/20 hover:bg-white/10 hover:border-white/40 transition-all shadow-lg">
-                            {isFullscreen ? <Minimize2 className="w-5 h-5 text-white" /> : <Maximize2 className="w-5 h-5 text-white" />}
-                        </Button>
+                            <Button onClick={toggleFullscreen} size="icon" variant="ghost" className="h-12 w-12 rounded-xl bg-black/80 backdrop-blur-md border-2 border-white/20 hover:bg-white/10 hover:border-white/40 transition-all shadow-lg">
+                                {isFullscreen ? <Minimize2 className="w-5 h-5 text-white" /> : <Maximize2 className="w-5 h-5 text-white" />}
+                            </Button>
                         )}
                     </div>
                 )}
@@ -838,7 +839,7 @@ export function SlavicSurvivors() {
                         onChoose={handleUpgrade}
                         onSkip={() => setGameState("playing")}
                         rerolls={0}
-                        onReroll={() => {}}
+                        onReroll={() => { }}
                         audioManager={audioManagerRef.current}
                         isAirdrop={true}
                     />

@@ -1,0 +1,5 @@
+# Slavic Survivors Development Log
+# Format: [YYYY-MM-DD] [TYPE] Description
+# Types: ADD (addition), FIX (bug fix), REM (removal), UPD (update)
+# ═══════════════════════════════════════════════════════════════════════════
+[2026-01-31] [FIX] Fixed missing seed propagation in replay system to prevent save errors

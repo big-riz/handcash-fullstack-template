@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json()
-        const { playerName, finalLevel, finalTime, gameVersion, handle, avatarUrl, characterId, worldId } = body
+        const { playerName, finalLevel, finalTime, gameVersion, handle, avatarUrl, characterId, worldId, seed } = body
 
         if (!playerName || finalLevel === undefined || finalTime === undefined || !gameVersion) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
                         handle: handle || null,
                         avatarUrl: avatarUrl || null,
                         characterId: characterId || null,
+                        seed: seed ? String(seed) : undefined,
                     })
                     .where(eq(replays.id, existing.id))
 
@@ -115,6 +116,7 @@ export async function POST(req: NextRequest) {
             avatarUrl: avatarUrl || null,
             characterId: characterId || null,
             worldId: normalizedWorldId,
+            seed: seed ? String(seed) : "0",
         }).returning()
 
         return NextResponse.json({ success: true, id: result[0].id })

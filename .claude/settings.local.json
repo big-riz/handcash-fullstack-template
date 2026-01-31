@@ -60,7 +60,9 @@
       "Bash(cmd /c \"dir /s /b /ad %APPDATA%\\\\*claude* 2>nul & dir /s /b /ad %LOCALAPPDATA%\\\\*claude* 2>nul\")",
       "Bash(cmd /c \"if exist %APPDATA%\\\\claude \\(echo EXISTS: %APPDATA%\\\\claude & dir /s /b %APPDATA%\\\\claude 2>nul\\) else \\(echo NOT FOUND: %APPDATA%\\\\claude\\) & if exist %LOCALAPPDATA%\\\\claude \\(echo EXISTS: %LOCALAPPDATA%\\\\claude & dir /s /b %LOCALAPPDATA%\\\\claude 2>nul\\) else \\(echo NOT FOUND: %LOCALAPPDATA%\\\\claude\\) & if exist %USERPROFILE%\\\\.claude \\(echo EXISTS: %USERPROFILE%\\\\.claude & dir /s /b %USERPROFILE%\\\\.claude 2>nul\\) else \\(echo NOT FOUND: %USERPROFILE%\\\\.claude\\)\")",
       "Bash(cmd /c \"dir /s /b %USERPROFILE%\\\\plugin.json 2>nul & dir /s /b %USERPROFILE%\\\\.claude-plugin 2>nul\")",
-      "Bash(cmd /c \"dir /s /b /ad %USERPROFILE%\\\\*ralph-wiggum* 2>nul & dir /s /b /ad %USERPROFILE%\\\\*ralph-loop* 2>nul & dir /s /b /ad %APPDATA%\\\\*ralph* 2>nul & dir /s /b /ad %LOCALAPPDATA%\\\\*ralph* 2>nul\")"
+      "Bash(cmd /c \"dir /s /b /ad %USERPROFILE%\\\\*ralph-wiggum* 2>nul & dir /s /b /ad %USERPROFILE%\\\\*ralph-loop* 2>nul & dir /s /b /ad %APPDATA%\\\\*ralph* 2>nul & dir /s /b /ad %LOCALAPPDATA%\\\\*ralph* 2>nul\")",
+      "Bash(cmd /c \"if exist %USERPROFILE%\\\\.claude \\(echo EXISTS & dir /s /b %USERPROFILE%\\\\.claude 2>nul\\) else \\(echo NOT FOUND\\)\")",
+      "Bash(del C:UsersMikerDocumentsGitHubsquatzonedeucehandcash-fullstack-templatetemp-ralph-loop.txt)"
     ]
   },
   "enableAllProjectMcpServers": true,
