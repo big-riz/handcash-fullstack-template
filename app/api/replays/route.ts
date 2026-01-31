@@ -117,6 +117,7 @@ export async function POST(req: NextRequest) {
             characterId: characterId || null,
             worldId: normalizedWorldId,
             seed: seed ? String(seed) : "0",
+            events: [],
         }).returning()
 
         return NextResponse.json({ success: true, id: result[0].id })
