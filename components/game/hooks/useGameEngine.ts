@@ -110,7 +110,7 @@ interface UseGameEngineProps {
     setUnlockedCharacters: (updater: (prev: Set<string>) => Set<string>) => void
     setNewHeroUnlocked: (hero: string | null) => void
     itemTemplates: ItemTemplate[]
-    submitScoreToDB: (seed?: string) => void
+    submitScoreToDB: (level?: number, time?: number, seed?: string) => void
     banishedItems: Set<string>
     setBanishedItems: (set: Set<string>) => void
     gameSpeed: number
@@ -406,7 +406,7 @@ export function useGameEngine({
 
     const submitScore = (level: number) => {
         console.log("[Score] submitScore called", { level, worldId: selectedWorldId })
-        submitScoreToDB(seedRef.current)
+        submitScoreToDB(level, Math.floor(gameTimeRef.current), seedRef.current)
     }
 
     const handleUpgrade = (type: string) => {

@@ -356,9 +356,13 @@ export function SlavicSurvivors() {
         } catch (err) { console.error("Failed to post comment:", err) } finally { setIsPostingComment(false) }
     }
 
-    const submitScoreToDB = (seed?: string) => {
+    const submitScoreToDB = (level?: number, time?: number, seed?: string) => {
         const currentUser = userRef.current
         if (!currentUser) return
+
+        const scoreLevel = level !== undefined ? level : playerLevel
+        const scoreTime = time !== undefined ? time : Math.floor(gameTime)
+
         fetch('/api/replays', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -366,8 +370,8 @@ export function SlavicSurvivors() {
                 playerName: currentUser.publicProfile.handle,
                 handle: currentUser.publicProfile.handle,
                 avatarUrl: currentUser.publicProfile.avatarUrl || null,
-                finalLevel: playerLevel,
-                finalTime: Math.floor(gameTime),
+                finalLevel: scoreLevel,
+                finalTime: scoreTime,
                 gameVersion: '0.1.0-alpha',
                 characterId: selectedCharacterId,
                 worldId: selectedWorldId,
