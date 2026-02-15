@@ -210,6 +210,40 @@ export function PaymentRequestManagement() {
     }
   }
 
+  const handleDecreaseSupply = async (id: string) => {
+    setIsUpdatingSupply(id)
+    try {
+      const response = await fetch(`/api/admin/payment-requests/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          decreaseRemainingUnits: 1,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to decrease supply")
+      }
+
+      setSuccess("Supply decreased by 1!")
+      setRecentRequests((prev) =>
+        prev.map((req) => {
+          if (req.id === id && req.remainingUnits !== undefined) {
+            return { ...req, remainingUnits: Math.max(0, req.remainingUnits - 1) }
+          }
+          return req
+        }),
+      )
+      setTimeout(() => setSuccess(null), 2000)
+    } catch (err: any) {
+      setError(err.message || "Failed to decrease supply")
+      setTimeout(() => setError(null), 3000)
+    } finally {
+      setIsUpdatingSupply(null)
+    }
+  }
+
   const handleCreatePaymentRequest = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsCreating(true)
@@ -843,35 +877,46 @@ export function PaymentRequestManagement() {
                       <div className="space-y-2">
                         <Label className="text-xs md:text-sm font-bold text-primary">Supply Management</Label>
                         <div className="flex items-center gap-2">
-                          <div className="relative flex-1">
-                            <Input
-                              type="number"
-                              key={`supply-${req.id}-${req.remainingUnits}`}
-                              defaultValue={req.remainingUnits}
-                              placeholder="Max supply (empty for unlimited)"
-                              className="h-9 pr-16 text-xs md:text-sm bg-background border-primary/20"
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  handleUpdateInlineSupply(req.id, (e.target as HTMLInputElement).value)
-                                }
-                              }}
-                              id={`supply-input-${req.id}`}
-                            />
+                          <div className="relative flex-1 flex gap-2">
+                            <div className="relative flex-1">
+                              <Input
+                                type="number"
+                                key={`supply-${req.id}-${req.remainingUnits}`}
+                                defaultValue={req.remainingUnits}
+                                placeholder="Max supply (empty for unlimited)"
+                                className="h-9 pr-16 text-xs md:text-sm bg-background border-primary/20"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleUpdateInlineSupply(req.id, (e.target as HTMLInputElement).value)
+                                  }
+                                }}
+                                id={`supply-input-${req.id}`}
+                              />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="absolute right-1 top-1 h-7 text-xs px-2 hover:bg-primary/20 hover:text-primary transition-colors"
+                                disabled={isUpdatingSupply === req.id}
+                                onClick={() => {
+                                  const input = document.getElementById(`supply-input-${req.id}`) as HTMLInputElement
+                                  handleUpdateInlineSupply(req.id, input.value)
+                                }}
+                              >
+                                {isUpdatingSupply === req.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  "Save"
+                                )}
+                              </Button>
+                            </div>
                             <Button
                               size="sm"
-                              variant="ghost"
-                              className="absolute right-1 top-1 h-7 text-xs px-2 hover:bg-primary/20 hover:text-primary transition-colors"
-                              disabled={isUpdatingSupply === req.id}
-                              onClick={() => {
-                                const input = document.getElementById(`supply-input-${req.id}`) as HTMLInputElement
-                                handleUpdateInlineSupply(req.id, input.value)
-                              }}
+                              variant="outline"
+                              className="h-9 px-3 text-xs bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20 transition-colors"
+                              disabled={isUpdatingSupply === req.id || req.remainingUnits === 0}
+                              onClick={() => handleDecreaseSupply(req.id)}
                             >
-                              {isUpdatingSupply === req.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                "Save"
-                              )}
+                              -1
                             </Button>
                           </div>
                           {req.paidCount !== undefined && (

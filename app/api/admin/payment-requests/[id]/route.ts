@@ -108,6 +108,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updateData.expirationType = "limit"
     }
 
+    if (body.decreaseRemainingUnits !== undefined) {
+      updateData.decreaseRemainingUnits = body.decreaseRemainingUnits
+    }
+
     const response = await fetch(`${HANDCASH_API_URL}/paymentRequests/${id}`, {
       method: "PUT",
       headers: {
