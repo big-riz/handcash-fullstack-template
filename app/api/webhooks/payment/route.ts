@@ -17,62 +17,41 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Log headers to help debug webhook issues
+    // 1. Get raw body first as it contains auth info in some HandCash versions
+    const rawBody = await request.text()
+    const body = JSON.parse(rawBody)
+    console.log("[Webhook] Payment webhook received:", JSON.stringify(body, null, 2))
+
+    // 2. Extract auth info from headers and body
     const appId = request.headers.get("app-id") || request.headers.get("x-app-id")
-    const appSecret = request.headers.get("app-secret") || request.headers.get("x-app-secret")
+    const appSecret = request.headers.get("app-secret") || request.headers.get("x-app-secret") || body.appSecret
     const signature = request.headers.get("handcash-signature") || request.headers.get("x-handcash-signature")
     const timestamp = request.headers.get("x-timestamp") || request.headers.get("timestamp")
 
-    console.log("[Webhook] Headers received:", {
-      "app-id": appId ? "present" : "missing",
-      "app-secret": appSecret ? "present" : "missing",
-      "handcash-signature": signature ? "present" : "missing",
-      "timestamp": timestamp ? "present" : "missing",
-      "user-agent": request.headers.get("user-agent")
+    console.log("[Webhook] Auth info received:", {
+      appId: appId ? "present" : "missing",
+      appSecret: appSecret ? "present" : "missing",
+      signature: signature ? "present" : "missing",
+      timestamp: timestamp ? "present" : "missing",
+      userAgent: request.headers.get("user-agent")
     })
 
     const expectedAppId = process.env.HANDCASH_APP_ID
     const expectedAppSecret = process.env.HANDCASH_APP_SECRET
 
-    // Basic verification - checking app-id if provided
+    // 3. Verify Identity
     if (expectedAppId && appId && appId !== expectedAppId) {
-      console.warn("[Webhook] Invalid app-id header:", appId)
+      console.warn("[Webhook] Invalid app-id:", appId)
       return NextResponse.json({ error: "Invalid app-id" }, { status: 401 })
     }
 
-    // HandCash v3 may not send app-secret in headers for security.
-    // It should send a signature instead. If we have a signature, we should ideally verify it.
-    // For now, if no app-secret and no signature is provided, we log it and proceed with caution
-    // OR if app-secret is provided, we verify it.
+    // Verify App Secret if provided (in header or body)
     if (appSecret && expectedAppSecret && appSecret !== expectedAppSecret) {
-      console.warn("[Webhook] Invalid app-secret header")
+      console.warn("[Webhook] Invalid app-secret")
       return NextResponse.json({ error: "Invalid app-secret" }, { status: 401 })
     }
 
-    // If neither app-secret nor signature is present, and we're in production, we should be strict
-    if (!appSecret && !signature && process.env.NODE_ENV === "production") {
-      console.warn("[Webhook] Missing authentication (no app-secret or signature)")
-      // We'll allow it for now to see what's being sent, but in a real production app you'd return 401
-    }
-
-    // Validate timestamp to prevent replay attacks (if provided)
-    if (timestamp) {
-      const requestTime = parseInt(timestamp, 10)
-      const currentTime = Date.now()
-      const timeDiff = Math.abs(currentTime - requestTime)
-      // Reject requests older than 10 minutes (600000ms)
-      if (timeDiff > 10 * 60 * 1000) {
-        console.warn("[Webhook] Request timestamp too old:", timeDiff)
-        return NextResponse.json({ error: "Request timestamp expired" }, { status: 401 })
-      }
-    }
-
-    // 1. Get raw body for signature verification
-    const rawBody = await request.text()
-    const body = JSON.parse(rawBody)
-    console.log("[Webhook] Payment webhook received:", JSON.stringify(body, null, 2))
-
-    // 2. Verify Signature if present
+    // Verify Signature if present
     if (signature && expectedAppSecret) {
       const crypto = await import("crypto")
       const hmac = crypto.createHmac("sha256", expectedAppSecret)
@@ -80,7 +59,6 @@ export async function POST(request: NextRequest) {
 
       if (computedSignature !== signature) {
         console.warn("[Webhook] Invalid signature. Computed:", computedSignature, "Received:", signature)
-        // In local dev, we might want to be lenient, but in prod we should reject
         if (process.env.NODE_ENV === "production" && !appSecret) {
           return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
         }
@@ -89,13 +67,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Extract payment information from webhook payload
-    // HandCash webhook structure may vary - adjust based on actual payload
+    // If no auth method found, log warning
+    if (!appSecret && !signature) {
+      console.warn("[Webhook] Missing authentication (no app-secret or signature)")
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
+    }
+
+    // Validate timestamp (if provided)
+    if (timestamp) {
+      const requestTime = parseInt(timestamp, 10)
+      const timeDiff = Math.abs(Date.now() - requestTime)
+      if (timeDiff > 10 * 60 * 1000) {
+        console.warn("[Webhook] Request timestamp too old:", timeDiff)
+        return NextResponse.json({ error: "Request timestamp expired" }, { status: 401 })
+      }
+    }
+
+    // 4. Extract payment information
     const paymentRequestId = body.paymentRequestId || body.payment_request_id || body.requestId || body.request_id || body.product?.id
     const transactionId = body.transactionId || body.transaction_id || body.txid || body.id || body.txId
     const amount = body.amount?.amount || body.sendAmount || body.amount || body.fiatAmount
     const currency = body.amount?.currencyCode || body.currencyCode || body.currency || body.fiatCurrency || "BSV"
-    const paidBy = body.paidBy || body.paid_by || body.handle || body.userHandle || body.user_handle || body.user?.handle || body.user?.paymail
+    const paidBy = body.paidBy || body.paid_by || body.handle || body.userHandle || body.user_handle || body.user?.handle || body.user?.paymail || body.userData?.id
     const status = body.status || "completed"
     const paidAt = body.paidAt || body.paid_at || body.timestamp || body.createdAt || new Date().toISOString()
 
