@@ -227,7 +227,18 @@ export async function POST(request: NextRequest) {
             console.log(`[Mint API] Real Mode: Minting ${randomItem.name} to ${userHandle} using collection ${collectionId}`)
 
             // 5. Process Payment (User -> Business)
-            const mintPriceBsv = 0.88;
+            let mintPriceBsv = 0.88;
+            try {
+                const rate = await handcashService.getExchangeRate("USD");
+                if (rate && rate > 0) {
+                    mintPriceBsv = parseFloat((0.01 / rate).toFixed(8));
+                    console.log(`[Mint API] Calculated 1-cent price: ${mintPriceBsv} BSV (Rate: ${rate})`);
+                }
+            } catch (rateError) {
+                console.warn("[Mint API] Failed to fetch rate, falling back to 0.0001 BSV:", rateError);
+                mintPriceBsv = 0.0001;
+            }
+
             const paymentSplits = buildMintSplits(mintPriceBsv, mintDestinations);
 
             console.log(`[Mint API] Processing payment of ${mintPriceBsv} BSV split across ${paymentSplits.length} destination(s)`)

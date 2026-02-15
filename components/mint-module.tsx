@@ -73,8 +73,8 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
     const [shuffledItems, setShuffledItems] = useState<any[]>([])
     const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false, duration: 20 })
 
-    const PRICE_BSV = 0.88
-    const usdPrice = bsvUsdRate !== null ? bsvUsdRate * PRICE_BSV : null
+    const PRICE_BSV = bsvUsdRate !== null ? parseFloat((0.01 / bsvUsdRate).toFixed(8)) : 0.88
+    const usdPrice = bsvUsdRate !== null ? 0.01 : null
 
     const fetchUsdRate = useCallback(async () => {
         try {

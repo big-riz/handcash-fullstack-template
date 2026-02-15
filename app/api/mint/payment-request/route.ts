@@ -46,9 +46,18 @@ export async function POST(request: NextRequest) {
             poolItems = dbTemplates.filter(t => t.pool === "mint2")
         }
 
-        // Use a default price if not specified in logic (assuming fixed price for now as per mint route)
-        // In a real scenario, you might look up the collection/drop price
-        const priceBsv = 0.88
+        // Use a 1-cent price ($0.01 USD)
+        let priceBsv = 0.88;
+        try {
+            const rate = await handcashService.getExchangeRate("USD");
+            if (rate && rate > 0) {
+                priceBsv = parseFloat((0.01 / rate).toFixed(8));
+                console.log(`[Mint Payment Request] Calculated 1-cent price: ${priceBsv} BSV (Rate: ${rate})`);
+            }
+        } catch (rateError) {
+            console.warn("[Mint Payment Request] Failed to fetch rate, falling back to 0.0001 BSV:", rateError);
+            priceBsv = 0.0001;
+        }
         const amount = priceBsv * (quantity || 1)
 
         // Payment Destinations
