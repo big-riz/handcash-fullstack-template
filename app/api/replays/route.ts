@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { replays } from "@/lib/schema"
 import { requireAuth } from "@/lib/auth-middleware"
-import { getSetting } from "@/lib/settings-storage"
+import { checkCollectionAccess } from "@/lib/access-check"
 import { handcashService } from "@/lib/handcash-service"
 import { desc, eq, and } from "drizzle-orm"
 import { getCached, setCache } from "@/lib/cache"
@@ -20,37 +20,28 @@ export async function POST(req: NextRequest) {
 
         const { privateKey } = authResult
 
-        // Check if user has required collection item (if configured)
-        const requiredCollectionId = await getSetting("access_collection_id")
-        if (requiredCollectionId) {
-            try {
-                const inventory = await handcashService.getInventory(privateKey)
-                const hasItem = inventory.some((item: any) =>
-                    item.collection?.id === requiredCollectionId
-                )
-
-                if (!hasItem) {
-                    return NextResponse.json(
-                        { error: "Missing required collection item to submit scores" },
-                        { status: 403 }
-                    )
-                }
-            } catch (error) {
-                console.error("Failed to check collection access:", error)
-                return NextResponse.json(
-                    { error: "Failed to verify collection access" },
-                    { status: 500 }
-                )
-            }
+        // Check if user has required collection item (broad access to any of our collections)
+        const accessResult = await checkCollectionAccess(privateKey)
+        if (!accessResult.authorized) {
+            return NextResponse.json(
+                { error: accessResult.reason || "Missing required collection item to submit scores" },
+                { status: 403 }
+            )
         }
+
 
         // Get user profile from HandCash - use same ID extraction as auth callback
         const profile = await handcashService.getUserProfile(privateKey)
-        const userId = profile?.userId || profile?.publicProfile?.userId || profile?.publicProfile?.handle
+        if (!profile || !profile.publicProfile) {
+            return NextResponse.json({ error: "Could not determine user identity" }, { status: 400 })
+        }
+
+        const userId = (profile as any).id || profile.publicProfile.id || profile.publicProfile.handle
 
         if (!userId) {
             return NextResponse.json({ error: "Could not determine user ID" }, { status: 400 })
         }
+
 
         const body = await req.json()
         const { playerName, finalLevel, finalTime, gameVersion, handle, avatarUrl, characterId, worldId, seed } = body

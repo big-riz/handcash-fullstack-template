@@ -4,7 +4,7 @@ import { comments } from "@/lib/schema"
 import { desc } from "drizzle-orm"
 import { handcashService } from "@/lib/handcash-service"
 import { requireAuth } from "@/lib/auth-middleware"
-import { getSetting } from "@/lib/settings-storage"
+import { checkCollectionAccess } from "@/lib/access-check"
 
 export async function GET() {
     try {
@@ -24,32 +24,22 @@ export async function POST(req: NextRequest) {
 
         const { privateKey } = authResult
 
-        // Check if user has required collection item (if configured)
-        const requiredCollectionId = await getSetting("access_collection_id")
-        if (requiredCollectionId) {
-            try {
-                const inventory = await handcashService.getInventory(privateKey)
-                const hasItem = inventory.some((item: any) =>
-                    item.collection?.id === requiredCollectionId
-                )
-
-                if (!hasItem) {
-                    return NextResponse.json(
-                        { error: "Missing required collection item to post comments" },
-                        { status: 403 }
-                    )
-                }
-            } catch (error) {
-                console.error("Failed to check collection access:", error)
-                return NextResponse.json(
-                    { error: "Failed to verify collection access" },
-                    { status: 500 }
-                )
-            }
+        // Check if user has required collection item (broad access to any of our collections)
+        const accessResult = await checkCollectionAccess(privateKey)
+        if (!accessResult.authorized) {
+            return NextResponse.json(
+                { error: accessResult.reason || "Missing required collection item to post comments" },
+                { status: 403 }
+            )
         }
 
+
         const profile = await handcashService.getUserProfile(privateKey)
-        const userId = profile.userId || profile.publicProfile.userId || profile.publicProfile.handle
+        if (!profile || !profile.publicProfile) {
+            return NextResponse.json({ error: "Could not determined identity" }, { status: 400 })
+        }
+
+        const userId = (profile as any).id || profile.publicProfile.id || profile.publicProfile.handle
 
         const { content, parentId } = await req.json()
         if (!content || content.trim().length === 0) {
@@ -63,6 +53,7 @@ export async function POST(req: NextRequest) {
             content: content.trim(),
             parentId: parentId || null,
         }).returning()
+
 
         return NextResponse.json(newComment[0])
     } catch (error: any) {

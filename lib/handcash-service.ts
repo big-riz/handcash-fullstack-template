@@ -35,7 +35,7 @@ export class HandCashService {
   // Profile operations
   async getUserProfile(privateKey: string) {
     const client = this.getSDKClient(privateKey)
-    const { data, error } = await Connect.getCurrentUserProfile({ client })
+    const { data, error } = await Connect.getCurrentUserProfile({ client: client as any })
 
     if (error) throw new Error(error.message || "Failed to get user profile")
     return data
@@ -79,7 +79,7 @@ export class HandCashService {
     const client = this.getSDKClient(privateKey)
 
     const { data, error } = await Connect.pay({
-      client,
+      client: client as any,
       body: {
         instrumentCurrencyCode: params.currency || "BSV",
         description: params.description || undefined,
@@ -100,13 +100,13 @@ export class HandCashService {
     const client = this.getSDKClient(privateKey)
 
     const { data: spendableBalances, error: spendableError } = await Connect.getSpendableBalances({
-      client,
+      client: client as any,
     })
 
     if (spendableError) throw new Error(spendableError.message || "Failed to get spendable balance")
 
     const { data: allBalances, error: allBalancesError } = await Connect.getBalances({
-      client,
+      client: client as any,
     })
 
     if (allBalancesError) {
@@ -126,7 +126,7 @@ export class HandCashService {
     })
 
     const { data, error } = await Connect.getExchangeRate({
-      client: sdk.client,
+      client: sdk.client as any,
       path: {
         currencyCode: currencyCode as any,
       },
@@ -150,7 +150,8 @@ export class HandCashService {
   async getInventory(privateKey: string, limit = 100) {
     const client = this.getSDKClient(privateKey)
     const { data, error } = await Connect.getItemsInventory({
-      client,
+      client: client as any,
+      body: { from: 0, to: limit },
     })
 
     if (error) throw new Error(error.message || "Failed to get inventory")
@@ -181,7 +182,7 @@ export class HandCashService {
 
     while (true) {
       const { data, error } = await Connect.getItemsInventory({
-        client,
+        client: client as any,
         body: {
           from,
           to: from + batchSize,
