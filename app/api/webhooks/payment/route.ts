@@ -172,86 +172,116 @@ export async function POST(request: NextRequest) {
         console.log(`[Webhook] Activating mint intent ${matchingIntent.id} immediately.`)
 
         try {
+          // 1. Determine Pool and Items
           const dbTemplates = await getTemplates() as any[]
-          const pool = matchingIntent.collectionId === "mint2" ? "mint2" : "mint2" // Default to mint2 for now
+          // Use the collectionId (which often stores the pool name) or default to mint2
+          const pool = matchingIntent.collectionId || "mint2"
 
           let poolItems = dbTemplates.filter(t => t.pool === pool)
-          if (poolItems.length === 0) poolItems = dbTemplates.filter(t => t.pool === "mint2")
+          if (poolItems.length === 0) {
+            console.log(`[Webhook] Pool '${pool}' not found, falling back to 'mint2'`)
+            poolItems = dbTemplates.filter(t => t.pool === "mint2")
+          }
 
           if (poolItems.length > 0) {
-            const randomIndex = Math.floor(Math.random() * poolItems.length)
-            const randomItem = poolItems[randomIndex]
-
-            // 2. Mint Item
-            const minter = getMinter()
+            // 2. Resolve Destination (The actual Payer)
             const businessAuthToken = process.env.BUSINESS_AUTH_TOKEN
 
-            // Resolve destination handle to user ID
-            let destinationUserId = matchingIntent.userId
-            if (matchingIntent.handle && matchingIntent.handle.includes("@") || matchingIntent.handle.length < 24) {
-              const handleMap = await resolveHandlesToUserIds([matchingIntent.handle], businessAuthToken!)
-              destinationUserId = handleMap[matchingIntent.handle.toLowerCase()] || destinationUserId
+            // Prioritize the actual payer info from HandCash
+            let destinationUserId = body.userData?.id
+            const payerHandle = body.userData?.handle || (typeof paidBy === 'string' ? paidBy : null)
+
+            if (!destinationUserId && payerHandle) {
+              console.log(`[Webhook] Resolving payer handle: ${payerHandle}`)
+              const handleMap = await resolveHandlesToUserIds([payerHandle], businessAuthToken!)
+              destinationUserId = handleMap[payerHandle.toLowerCase()]
+            }
+
+            // Fallback to intent userId if still unknown
+            if (!destinationUserId || destinationUserId === "unknown") {
+              console.log(`[Webhook] Could not resolve actual payer, falling back to intent creator: ${matchingIntent.userId}`)
+              destinationUserId = matchingIntent.userId
             }
 
             if (destinationUserId && destinationUserId !== "unknown") {
-              const mediaDetails: any = {
-                image: { url: (randomItem as any).imageUrl, contentType: "image/png" }
-              }
-              if ((randomItem as any).multimediaUrl) {
-                mediaDetails.multimedia = { url: (randomItem as any).multimediaUrl, contentType: "application/glb" }
+              const minter = getMinter()
+              const quantity = matchingIntent.quantity || 1
+              const itemsToCreate = []
+
+              // 3. Prepare Items (Randomly select for each quantity unit)
+              for (let i = 0; i < quantity; i++) {
+                const randomIndex = Math.floor(Math.random() * poolItems.length)
+                const randomItem = poolItems[randomIndex]
+
+                const mediaDetails: any = {
+                  image: { url: (randomItem as any).imageUrl, contentType: "image/png" }
+                }
+                if ((randomItem as any).multimediaUrl) {
+                  mediaDetails.multimedia = { url: (randomItem as any).multimediaUrl, contentType: "application/glb" }
+                }
+
+                itemsToCreate.push({
+                  user: destinationUserId,
+                  name: randomItem.name,
+                  rarity: (randomItem as any).rarity,
+                  mediaDetails,
+                  attributes: (randomItem as any).attributes || [],
+                  description: (randomItem as any).description || "",
+                  quantity: 1,
+                  actions: [],
+                  // Store local template ID for persistence later
+                  _localTemplateId: (randomItem as any).id
+                })
               }
 
-              const itemToMint: any = {
-                user: destinationUserId,
-                quantity: matchingIntent.quantity || 1,
-                name: randomItem.name,
-                rarity: (randomItem as any).rarity,
-                mediaDetails,
-                attributes: (randomItem as any).attributes || [],
-                description: (randomItem as any).description || ""
-              }
+              // 4. Execute Minting
+              const collectionIdForMint = matchingIntent.collectionId && /^[0-9a-fA-F]{24}$/.test(matchingIntent.collectionId)
+                ? matchingIntent.collectionId
+                : process.env.NEXT_PUBLIC_COLLECTION_ID
 
-              // Use templateId ONLY if it's a valid 24-char hex HandCash ID
-              if ((randomItem as any).id && /^[0-9a-fA-F]{24}$/.test((randomItem as any).id)) {
-                // Even if it is, the error suggests we might want to skip it for dynamic mints
-                // itemToMint.templateId = (randomItem as any).id
-              }
-
-              const collectionId = (randomItem as any).collectionId || process.env.NEXT_PUBLIC_COLLECTION_ID
-              if (collectionId) {
+              if (collectionIdForMint) {
                 const creationOrder = await minter.createItemsOrder({
-                  collectionId: collectionId,
-                  items: [itemToMint]
+                  collectionId: collectionIdForMint,
+                  items: itemsToCreate.map(({ _localTemplateId, ...item }) => item)
                 })
 
                 const items = await minter.getOrderItems(creationOrder.id)
-                if (items && items.length > 0) {
-                  const mintedItem = items[0]
 
-                  await db.insert(mintedItems).values({
-                    id: mintedItem.id,
-                    origin: mintedItem.origin,
-                    collectionId: collectionId,
-                    templateId: (randomItem as any).id, // Still save our local template ID for tracking
-                    mintedToUserId: destinationUserId,
-                    mintedToHandle: matchingIntent.handle,
-                    itemName: mintedItem.name,
-                    rarity: mintedItem.rarity,
-                    imageUrl: (randomItem as any).imageUrl,
-                    paymentId: payment.id,
-                    metadata: { source: "webhook_synthetic" }
-                  })
+                // 5. Persist Minted Items
+                if (items && items.length > 0) {
+                  for (let i = 0; i < items.length; i++) {
+                    const mintedItem = items[i]
+                    const localTemplateId = itemsToCreate[i]._localTemplateId
+
+                    await db.insert(mintedItems).values({
+                      id: mintedItem.id,
+                      origin: mintedItem.origin,
+                      collectionId: collectionIdForMint,
+                      templateId: localTemplateId,
+                      mintedToUserId: destinationUserId,
+                      mintedToHandle: payerHandle || matchingIntent.handle,
+                      itemName: mintedItem.name,
+                      rarity: mintedItem.rarity,
+                      imageUrl: itemsToCreate[i].mediaDetails.image.url,
+                      paymentId: payment.id,
+                      metadata: { source: "webhook_fulfillment", index: i }
+                    })
+                  }
 
                   await db.update(mintIntents)
                     .set({ status: "activated", updatedAt: new Date() })
                     .where(eq(mintIntents.id, matchingIntent.id))
 
-                  console.log(`[Webhook] Mint intent ${matchingIntent.id} activated and item minted: ${mintedItem.id}`)
+                  console.log(`[Webhook] Mint intent ${matchingIntent.id} fulfilled. ${items.length} items minted to ${destinationUserId}`)
                 }
+              } else {
+                console.error("[Webhook] No valid collection ID found for minting")
               }
             } else {
               console.warn(`[Webhook] Could not determine destination user ID for intent ${matchingIntent.id}`)
             }
+          } else {
+            console.error(`[Webhook] No items found in pool for intent ${matchingIntent.id}`)
           }
         } catch (err) {
           console.error(`[Webhook] Failed to fulfill mint intent ${matchingIntent.id}:`, err)
