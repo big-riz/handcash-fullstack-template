@@ -39,49 +39,44 @@ export async function POST(request: NextRequest) {
     const expectedAppId = process.env.HANDCASH_APP_ID
     const expectedAppSecret = process.env.HANDCASH_APP_SECRET
 
-    // 3. Verify Identity
+    // 3. Verify Identity (Warnings only, per request)
     if (expectedAppId && appId && appId !== expectedAppId) {
-      console.warn("[Webhook] Invalid app-id:", appId)
-      return NextResponse.json({ error: "Invalid app-id" }, { status: 401 })
+      console.warn("[Webhook] App ID mismatch (ignoring):", { received: appId, expected: expectedAppId })
     }
 
-    // Verify App Secret if provided (in header or body)
+    // Verify App Secret if provided
     if (appSecret && expectedAppSecret && appSecret !== expectedAppSecret) {
-      console.warn("[Webhook] Invalid app-secret")
-      return NextResponse.json({ error: "Invalid app-secret" }, { status: 401 })
+      console.warn("[Webhook] App Secret mismatch (ignoring)")
     }
 
     // Verify Signature if present
     if (signature && expectedAppSecret) {
-      const crypto = await import("crypto")
-      const hmac = crypto.createHmac("sha256", expectedAppSecret)
-      const computedSignature = hmac.update(rawBody).digest("hex")
+      try {
+        const crypto = await import("crypto")
+        const hmac = crypto.createHmac("sha256", expectedAppSecret)
+        const computedSignature = hmac.update(rawBody).digest("hex")
 
-      if (computedSignature !== signature) {
-        console.warn("[Webhook] Invalid signature. Computed:", computedSignature, "Received:", signature)
-        if (process.env.NODE_ENV === "production" && !appSecret) {
-          return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+        if (computedSignature !== signature) {
+          console.warn("[Webhook] Invalid signature (ignoring). Computed:", computedSignature, "Received:", signature)
+        } else {
+          console.log("[Webhook] Signature verified successfully")
         }
-      } else {
-        console.log("[Webhook] Signature verified successfully")
+      } catch (err) {
+        console.error("[Webhook] Signature verification error:", err)
       }
     }
 
-    // If no auth method found, log warning
+    // Inform about missing auth but proceed
     if (!appSecret && !signature) {
-      console.warn("[Webhook] Missing authentication (no app-secret or signature)")
-      if (process.env.NODE_ENV === "production") {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-      }
+      console.log("[Webhook] Proceeding without app-secret or signature authentication")
     }
 
     // Validate timestamp (if provided)
     if (timestamp) {
       const requestTime = parseInt(timestamp, 10)
       const timeDiff = Math.abs(Date.now() - requestTime)
-      if (timeDiff > 10 * 60 * 1000) {
-        console.warn("[Webhook] Request timestamp too old:", timeDiff)
-        return NextResponse.json({ error: "Request timestamp expired" }, { status: 401 })
+      if (timeDiff > 30 * 60 * 1000) { // Increased window to 30 mins
+        console.warn("[Webhook] Request timestamp old (ignoring):", timeDiff)
       }
     }
 
