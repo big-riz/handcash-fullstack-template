@@ -11,6 +11,7 @@ import { db } from "@/lib/db"
 import { mintedItems as mintedItemsTable, mintIntents } from "@/lib/schema"
 import { eq, sql } from "drizzle-orm"
 import { randomUUID } from "crypto"
+import { selectItemsFromPool } from "@/lib/minting-logic"
 
 type MintPaymentDestination = {
     destination: string
@@ -134,54 +135,9 @@ export async function POST(request: NextRequest) {
             poolItems = allTemplates;
         }
 
-        // Fetch current mint counts from DB to check supply limits (excluding archived)
-        const mintCounts = await db
-            .select({
-                templateId: mintedItemsTable.templateId,
-                count: sql<number>`count(*)`.mapWith(Number),
-            })
-            .from(mintedItemsTable)
-            .where(eq(mintedItemsTable.isArchived, false))
-            .groupBy(mintedItemsTable.templateId);
-
-        const mintCountMap = new Map(
-            mintCounts
-                .filter(mc => mc.templateId)
-                .map(mc => [mc.templateId as string, mc.count])
-        );
-
-        // Filter items that reached their supply limit
-        const availableItems = poolItems.filter(item => {
-            if (!item.id) return true; // Fallback items don't have IDs usually or aren't tracked firmly
-            const minted = mintCountMap.get(item.id) || 0;
-            return item.supplyLimit === 0 || minted < item.supplyLimit;
-        });
-
-        if (availableItems.length === 0) {
-            return NextResponse.json({ error: "Pool is sold out!" }, { status: 400 });
-        }
-
-        // Weighted random selection using remaining supply as weight
-        // For unlimited items (supplyLimit: 0), we assign a default weight (e.g. 100)
-        const getItemWeight = (item: any) => {
-            if (item.supplyLimit === 0) return 100;
-            const minted = item.id ? (mintCountMap.get(item.id) || 0) : 0;
-            return Math.max(1, item.supplyLimit - minted);
-        };
-
-        const totalWeight = availableItems.reduce((acc, item) => acc + getItemWeight(item), 0);
-        let randomNum = Math.random() * totalWeight;
-        let randomItem = availableItems[0];
-
-        for (const item of availableItems) {
-            randomNum -= getItemWeight(item);
-            if (randomNum <= 0) {
-                randomItem = item;
-                break;
-            }
-        }
-
-        console.log(`[Mint API] Selected ${randomItem.name} from pool '${randomItem.pool || 'default'}' (Supply: ${randomItem.supplyLimit || 'Unlimited'}, Weighted Score: ${getItemWeight(randomItem)}/${totalWeight})`)
+        // 3a. Use shared selection protocol
+        const selectedItems = await selectItemsFromPool(requestedPool, 1);
+        const randomItem = selectedItems[0];
 
         // 4. Determine if we can do real minting
         const collections = await getCollections()

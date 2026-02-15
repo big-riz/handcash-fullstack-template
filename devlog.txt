@@ -5,3 +5,5 @@
 [2026-01-31] [FIX] Fixed missing seed propagation in replay system to prevent save errors
 [2026-01-31] [FIX] Fixed null events value in replays insert causing database constraint error
 [2026-02-01] [FIX] Fixed stale state closure causing 0/1 values for time/level in replay saves
+[2026-02-14] [FIX] Fixed wrong-person minting by prioritizing actual payer in payment webhook
+[2026-02-15] [UPD] Unified minting selection protocol across direct and payment request flows

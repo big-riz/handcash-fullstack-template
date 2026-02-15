@@ -8,6 +8,7 @@ import { eq, sql } from "drizzle-orm"
 import { randomUUID } from "crypto"
 import { getTemplates } from "@/lib/item-templates-storage"
 import { getCollections } from "@/lib/collections-storage"
+import { selectItemsFromPool } from "@/lib/minting-logic"
 
 export async function POST(request: NextRequest) {
     // Rate Limit
@@ -35,16 +36,10 @@ export async function POST(request: NextRequest) {
         const userHandle = profile.publicProfile.handle
         const userId = profile.publicProfile.id
 
-        // 3. Determine Mint Details (Item/Collection/Price)
-        // Similar logic to standard mint route to determine valid pool/item
-        const dbTemplates = await getTemplates() as any[]
+        // 3. Determine Mint Details using Shared Selection Protocol
         const pool = requestedPool || "mint2"
-
-        // This logic mirrors the main mint route to find items in the pool
-        let poolItems = dbTemplates.filter(t => t.pool === pool)
-        if (poolItems.length === 0 && pool !== "mint2") {
-            poolItems = dbTemplates.filter(t => t.pool === "mint2")
-        }
+        const selectedItems = await selectItemsFromPool(pool, quantity || 1);
+        const firstItem = selectedItems[0];
 
         // Reverted to 0.88 BSV price
         const priceBsv = 0.88;
@@ -104,8 +99,8 @@ export async function POST(request: NextRequest) {
 
         const paymentRequest = await handcashService.createPaymentRequest({
             productName: "Slavic Survivors Mint",
-            productDescription: `Mint ${quantity || 1} item(s) from pool ${pool}`,
-            productImageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/ushanka.png", // Generic or specific
+            productDescription: `Mint ${quantity || 1} item(s) from pool ${pool}: ${firstItem.name}${quantity > 1 ? ' and others' : ''}`,
+            productImageUrl: firstItem.imageUrl || "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/ushanka.png",
             receivers: receivers,
             expirationType: "one_time", // Or 'limit' if tracking supply strictly via HC
             redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/payment-complete`,
@@ -113,7 +108,8 @@ export async function POST(request: NextRequest) {
             metadata: {
                 type: "mint_payment",
                 pool: pool,
-                quantity: quantity || 1
+                quantity: quantity || 1,
+                templateId: quantity === 1 ? firstItem.id : undefined
             }
         })
 
@@ -125,12 +121,12 @@ export async function POST(request: NextRequest) {
             paymentRequestUrl: paymentRequest.paymentRequestUrl,
             userId: userId,
             handle: userHandle,
-            collectionId: requestedCollectionId, // Can be null if pool-based
+            collectionId: requestedCollectionId || pool, // Store pool name if no collection ID
+            templateId: quantity === 1 ? firstItem.id : null,
             quantity: quantity || 1,
             amountBsv: amount.toString(),
             status: "pending_payment",
             activationTime: activationTime ? new Date(activationTime) : null,
-            // supplyCount: ... // If we were tracking campaign supply here
         })
 
         return NextResponse.json({

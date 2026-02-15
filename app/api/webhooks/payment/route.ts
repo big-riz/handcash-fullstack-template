@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm"
 import { getMinter, resolveHandlesToUserIds } from "@/lib/items-client"
 import { getTemplates } from "@/lib/item-templates-storage"
 import { randomUUID } from "crypto"
+import { selectItemsFromPool } from "@/lib/minting-logic"
 
 export async function POST(request: NextRequest) {
   // Apply rate limiting (webhooks should not be called frequently)
@@ -172,18 +173,28 @@ export async function POST(request: NextRequest) {
         console.log(`[Webhook] Activating mint intent ${matchingIntent.id} immediately.`)
 
         try {
-          // 1. Determine Pool and Items
-          const dbTemplates = await getTemplates() as any[]
-          // Use the collectionId (which often stores the pool name) or default to mint2
+          // 1. Determine Pool and Quantity
           const pool = matchingIntent.collectionId || "mint2"
+          const quantity = matchingIntent.quantity || 1
 
-          let poolItems = dbTemplates.filter(t => t.pool === pool)
-          if (poolItems.length === 0) {
-            console.log(`[Webhook] Pool '${pool}' not found, falling back to 'mint2'`)
-            poolItems = dbTemplates.filter(t => t.pool === "mint2")
+          // 2. Select Items using shared protocol
+          let selectedItems: any[] = [];
+
+          if (matchingIntent.templateId) {
+            // If an item was pre-selected, use it (but we could add a sold-out check here if desired)
+            const dbTemplates = await getTemplates() as any[];
+            const preSelectedItem = dbTemplates.find(t => t.id === matchingIntent.templateId);
+            if (preSelectedItem) {
+              selectedItems = Array(quantity).fill(preSelectedItem);
+            }
           }
 
-          if (poolItems.length > 0) {
+          if (selectedItems.length === 0) {
+            // No pre-selected item or it's missing, use selection protocol
+            selectedItems = await selectItemsFromPool(pool, quantity);
+          }
+
+          if (selectedItems.length > 0) {
             // 2. Resolve Destination (The actual Payer)
             const businessAuthToken = process.env.BUSINESS_AUTH_TOKEN
 
@@ -208,29 +219,28 @@ export async function POST(request: NextRequest) {
               const quantity = matchingIntent.quantity || 1
               const itemsToCreate = []
 
-              // 3. Prepare Items (Randomly select for each quantity unit)
-              for (let i = 0; i < quantity; i++) {
-                const randomIndex = Math.floor(Math.random() * poolItems.length)
-                const randomItem = poolItems[randomIndex]
+              // 3. Prepare Items
+              for (let i = 0; i < selectedItems.length; i++) {
+                const item = selectedItems[i]
 
                 const mediaDetails: any = {
-                  image: { url: (randomItem as any).imageUrl, contentType: "image/png" }
+                  image: { url: (item as any).imageUrl, contentType: "image/png" }
                 }
-                if ((randomItem as any).multimediaUrl) {
-                  mediaDetails.multimedia = { url: (randomItem as any).multimediaUrl, contentType: "application/glb" }
+                if ((item as any).multimediaUrl) {
+                  mediaDetails.multimedia = { url: (item as any).multimediaUrl, contentType: "application/glb" }
                 }
 
                 itemsToCreate.push({
                   user: destinationUserId,
-                  name: randomItem.name,
-                  rarity: (randomItem as any).rarity,
+                  name: item.name,
+                  rarity: (item as any).rarity,
                   mediaDetails,
-                  attributes: (randomItem as any).attributes || [],
-                  description: (randomItem as any).description || "",
+                  attributes: (item as any).attributes || [],
+                  description: (item as any).description || "",
                   quantity: 1,
                   actions: [],
                   // Store local template ID for persistence later
-                  _localTemplateId: (randomItem as any).id
+                  _localTemplateId: (item as any).id
                 })
               }
 
