@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
     const receiverDestination = destination || `$${adminHandle}`
     const productImage = imageUrl || "/gopnik-logo.jpg"
 
+    const webhookUrl = `${websiteUrl.replace(/\/$/, "")}/api/webhooks/payment`
+
     const paymentRequestData: any = {
       product: {
         name: description || "Payment Request",
@@ -64,8 +66,14 @@ export async function POST(request: NextRequest) {
         },
       ],
       instrumentCurrencyCode: instrumentCurrency || "BSV",
-      denominationCurrencyCode: currency || "USD",
+      currency: currency || "USD",
       expirationType: "never",
+      webhookUrl: webhookUrl,
+      notifications: {
+        webhook: {
+          webhookUrl: webhookUrl,
+        },
+      },
     }
 
     if (redirectUrl) paymentRequestData.redirectUrl = redirectUrl

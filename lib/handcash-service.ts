@@ -356,28 +356,40 @@ export class HandCashService {
     productName: string
     productDescription?: string
     productImageUrl?: string
-    receivers: { destination: string; amount: number; currencyCode: string }[]
-    expirationType?: "one_time" | "expiration" | "limit"
+    receivers: { destination: string; amount: number; currencyCode?: string }[]
+    instrumentCurrencyCode?: string
+    currencyCode?: string
+    expirationType?: "one_time" | "never" | "expiration" | "limit"
     expirationTime?: string
     remainingUnits?: number
     redirectUrl?: string
+    webhookUrl?: string
     metadata?: any
   }) {
     const url = "https://cloud.handcash.io/v3/paymentRequests"
 
-    // Construct the body according to HandCash v3 API
+    // Construct the body according to HandCash v3 "Corrected Documentation"
     const body: any = {
-      productName: params.productName,
-      productDescription: params.productDescription || params.productName,
-      productImageUrl: params.productImageUrl,
+      product: {
+        name: params.productName,
+        description: params.productDescription || params.productName,
+        imageUrl: params.productImageUrl,
+      },
       receivers: params.receivers.map(r => ({
         destination: r.destination,
         sendAmount: r.amount,
-        currencyCode: r.currencyCode,
+        // currencyCode is WRONG in receivers array according to corrected docs
       })),
-      requestedUserData: ["paymail"],
+      instrumentCurrencyCode: params.instrumentCurrencyCode || "BSV",
+      currency: params.currencyCode || params.receivers[0]?.currencyCode || "BSV",
       expirationType: params.expirationType || "one_time",
       redirectUrl: params.redirectUrl,
+      webhookUrl: params.webhookUrl,
+      notifications: params.webhookUrl ? {
+        webhook: {
+          webhookUrl: params.webhookUrl
+        }
+      } : undefined,
       metadata: params.metadata,
     }
 
@@ -401,6 +413,7 @@ export class HandCashService {
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error("[HandCashService] createPaymentRequest failed:", response.status, errorText, "Body sent:", JSON.stringify(body, null, 2));
       throw new Error(`Failed to create payment request: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
@@ -408,7 +421,26 @@ export class HandCashService {
     return data
   }
 
-  async updatePaymentRequest(paymentRequestId: string, params: { decreaseRemainingUnits?: number }) {
+  async getPaymentRequest(paymentRequestId: string) {
+    const url = `https://cloud.handcash.io/v3/paymentRequests/${paymentRequestId}`
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "app-id": this.appId,
+        "app-secret": this.appSecret,
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get payment request: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    return await response.json()
+  }
+
+  async updatePaymentRequest(paymentRequestId: string, body: any) {
     const url = `https://cloud.handcash.io/v3/paymentRequests/${paymentRequestId}`
 
     const response = await fetch(url, {
@@ -418,7 +450,7 @@ export class HandCashService {
         "app-secret": this.appSecret,
         "content-type": "application/json",
       },
-      body: JSON.stringify(params),
+      body: JSON.stringify(body),
     })
 
     if (!response.ok) {
@@ -426,8 +458,87 @@ export class HandCashService {
       throw new Error(`Failed to update payment request: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    const data = await response.json()
-    return data
+    return await response.json()
+  }
+
+  async getPaymentRequestTemplate(templateId: string) {
+    const url = `https://cloud.handcash.io/v3/paymentRequests/templates/${templateId}`
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "app-id": this.appId,
+        "app-secret": this.appSecret,
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get template: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    return await response.json()
+  }
+
+  async updatePaymentRequestTemplate(templateId: string, body: any) {
+    const url = `https://cloud.handcash.io/v3/paymentRequests/templates/${templateId}`
+
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "app-id": this.appId,
+        "app-secret": this.appSecret,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update template: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    return await response.json()
+  }
+
+  async getCampaign(campaignId: string) {
+    const url = `https://cloud.handcash.io/v3/campaigns/${campaignId}`
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "app-id": this.appId,
+        "app-secret": this.appSecret,
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get campaign: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    return await response.json()
+  }
+
+  async updateCampaign(campaignId: string, body: any) {
+    const url = `https://cloud.handcash.io/v3/campaigns/${campaignId}`
+
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "app-id": this.appId,
+        "app-secret": this.appSecret,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update campaign: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    return await response.json()
   }
 }
 

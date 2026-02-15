@@ -292,6 +292,9 @@ export async function POST(request: NextRequest) {
                         currencyCode: "BSV"
                     }));
 
+                    const websiteUrl = process.env.WEBSITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+                    const webhookUrl = `${websiteUrl.replace(/\/$/, "")}/api/webhooks/payment`;
+
                     const paymentRequest = await handcashService.createPaymentRequest({
                         productName: "Slavic Survivors Mint",
                         productDescription: `Minting ${randomItem.name}`,
@@ -300,6 +303,7 @@ export async function POST(request: NextRequest) {
                         expirationType: "expiration",
                         expirationTime: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 minutes
                         redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/mint-complete`, // Or handled by popup
+                        webhookUrl: webhookUrl,
                         metadata: {
                             action: "mint",
                             templateId: randomItem.id,

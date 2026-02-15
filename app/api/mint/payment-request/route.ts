@@ -99,6 +99,9 @@ export async function POST(request: NextRequest) {
         }
 
         // 4. Create Payment Request
+        const websiteUrl = process.env.WEBSITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        const webhookUrl = `${websiteUrl.replace(/\/$/, "")}/api/webhooks/payment`;
+
         const paymentRequest = await handcashService.createPaymentRequest({
             productName: "Slavic Survivors Mint",
             productDescription: `Mint ${quantity || 1} item(s) from pool ${pool}`,
@@ -106,6 +109,7 @@ export async function POST(request: NextRequest) {
             receivers: receivers,
             expirationType: "one_time", // Or 'limit' if tracking supply strictly via HC
             redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/payment-complete`,
+            webhookUrl: webhookUrl,
             metadata: {
                 type: "mint_payment",
                 pool: pool,
