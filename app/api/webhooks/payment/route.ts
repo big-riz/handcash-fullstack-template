@@ -194,16 +194,27 @@ export async function POST(request: NextRequest) {
             }
 
             if (destinationUserId && destinationUserId !== "unknown") {
+              const mediaDetails: any = {
+                image: { url: (randomItem as any).imageUrl, contentType: "image/png" }
+              }
+              if ((randomItem as any).multimediaUrl) {
+                mediaDetails.multimedia = { url: (randomItem as any).multimediaUrl, contentType: "application/glb" }
+              }
+
               const itemToMint: any = {
                 user: destinationUserId,
                 quantity: matchingIntent.quantity || 1,
                 name: randomItem.name,
                 rarity: (randomItem as any).rarity,
-                mediaDetails: {
-                  image: { url: (randomItem as any).imageUrl, contentType: "image/png" }
-                },
+                mediaDetails,
                 attributes: (randomItem as any).attributes || [],
-                templateId: (randomItem as any).id
+                description: (randomItem as any).description || ""
+              }
+
+              // Use templateId ONLY if it's a valid 24-char hex HandCash ID
+              if ((randomItem as any).id && /^[0-9a-fA-F]{24}$/.test((randomItem as any).id)) {
+                // Even if it is, the error suggests we might want to skip it for dynamic mints
+                // itemToMint.templateId = (randomItem as any).id
               }
 
               const collectionId = (randomItem as any).collectionId || process.env.NEXT_PUBLIC_COLLECTION_ID
@@ -221,7 +232,7 @@ export async function POST(request: NextRequest) {
                     id: mintedItem.id,
                     origin: mintedItem.origin,
                     collectionId: collectionId,
-                    templateId: (randomItem as any).id,
+                    templateId: (randomItem as any).id, // Still save our local template ID for tracking
                     mintedToUserId: destinationUserId,
                     mintedToHandle: matchingIntent.handle,
                     itemName: mintedItem.name,
