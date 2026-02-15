@@ -103,6 +103,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updateData.expirationInSeconds = body.expiresInMinutes * 60
     }
 
+    if (body.remainingUnits !== undefined) {
+      updateData.remainingUnits = body.remainingUnits
+      updateData.expirationType = "limit"
+    }
+
     const response = await fetch(`${HANDCASH_API_URL}/paymentRequests/${id}`, {
       method: "PUT",
       headers: {

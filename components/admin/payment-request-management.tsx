@@ -69,6 +69,7 @@ export function PaymentRequestManagement() {
   const [imageUrl, setImageUrl] = useState("")
   const [redirectUrl, setRedirectUrl] = useState("")
   const [expiresInMinutes, setExpiresInMinutes] = useState("")
+  const [remainingUnits, setRemainingUnits] = useState("")
   const [instrumentCurrency, setInstrumentCurrency] = useState("BSV")
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -202,6 +203,7 @@ export function PaymentRequestManagement() {
           imageUrl: imageUrl || undefined,
           redirectUrl: redirectUrl || undefined,
           expiresInMinutes: expiresInMinutes ? Number.parseInt(expiresInMinutes) : undefined,
+          remainingUnits: remainingUnits ? Number.parseInt(remainingUnits) : undefined,
           instrumentCurrency,
         }),
       })
@@ -236,6 +238,7 @@ export function PaymentRequestManagement() {
         destination: destination || undefined,
         imageUrl: imageUrl || undefined,
         createdAt: responseData.createdAt || new Date().toISOString(),
+        remainingUnits: remainingUnits ? Number.parseInt(remainingUnits) : undefined,
       }
 
       setSuccess(`Payment request ${isUpdate ? "updated" : "created"} successfully!`)
@@ -266,6 +269,7 @@ export function PaymentRequestManagement() {
     setImageUrl("")
     setRedirectUrl("")
     setExpiresInMinutes("")
+    setRemainingUnits("")
     setInstrumentCurrency("BSV")
     setIsUpdating(false)
     setUpdateRequestId(null)
@@ -277,6 +281,7 @@ export function PaymentRequestManagement() {
     setDescription(request.description || "")
     setDestination(request.destination || "")
     setImageUrl(request.imageUrl || "")
+    setRemainingUnits(request.remainingUnits?.toString() || "")
     setInstrumentCurrency("BSV")
     setIsUpdating(false)
     setUpdateRequestId(null)
@@ -289,6 +294,7 @@ export function PaymentRequestManagement() {
     setDescription(request.description || "")
     setDestination(request.destination || "")
     setImageUrl(request.imageUrl || "")
+    setRemainingUnits(request.remainingUnits?.toString() || "")
     setInstrumentCurrency("BSV")
     setIsUpdating(true)
     setUpdateRequestId(request.id)
@@ -387,168 +393,183 @@ export function PaymentRequestManagement() {
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogContent className="max-w-[95vw] md:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-                <DialogTitle className="text-base md:text-lg">
-                  {isUpdating ? "Update Payment Request" : "Create Payment Request"}
-                </DialogTitle>
-                <DialogDescription className="text-xs md:text-sm">
-                  {isUpdating ? "Modify the payment request details." : "Generate a QR code and payment link."}
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreatePaymentRequest} className="space-y-4">
-                {!websiteUrlConfigured && (
-                  <Alert variant="destructive" className="mb-4">
-                    <XCircle className="w-4 h-4" />
-                    <AlertDescription className="text-xs md:text-sm">
-                      <strong>WEBSITE_URL not configured.</strong> Payment requests cannot be created until you set the{" "}
-                      <code className="bg-background px-1 py-0.5 rounded">WEBSITE_URL</code> environment variable. This
-                      is required for payment webhooks to work.
-                      {webhookUrl && (
-                        <>
-                          {" "}
-                          Configure the webhook URL in your HandCash dashboard:{" "}
-                          <code className="bg-background px-1 py-0.5 rounded break-all">{webhookUrl}</code>
-                        </>
-                      )}
-                    </AlertDescription>
-                  </Alert>
-                )}
+              <DialogTitle className="text-base md:text-lg">
+                {isUpdating ? "Update Payment Request" : "Create Payment Request"}
+              </DialogTitle>
+              <DialogDescription className="text-xs md:text-sm">
+                {isUpdating ? "Modify the payment request details." : "Generate a QR code and payment link."}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreatePaymentRequest} className="space-y-4">
+              {!websiteUrlConfigured && (
+                <Alert variant="destructive" className="mb-4">
+                  <XCircle className="w-4 h-4" />
+                  <AlertDescription className="text-xs md:text-sm">
+                    <strong>WEBSITE_URL not configured.</strong> Payment requests cannot be created until you set the{" "}
+                    <code className="bg-background px-1 py-0.5 rounded">WEBSITE_URL</code> environment variable. This
+                    is required for payment webhooks to work.
+                    {webhookUrl && (
+                      <>
+                        {" "}
+                        Configure the webhook URL in your HandCash dashboard:{" "}
+                        <code className="bg-background px-1 py-0.5 rounded break-all">{webhookUrl}</code>
+                      </>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
 
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <div className="space-y-1.5 md:space-y-2">
-                    <Label htmlFor="amount" className="text-xs md:text-sm">
-                      Amount *
-                    </Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      required
-                      className="h-9 md:h-10 text-base"
-                    />
-                  </div>
-                  <div className="space-y-1.5 md:space-y-2">
-                    <Label htmlFor="pr-currency" className="text-xs md:text-sm">
-                      Currency
-                    </Label>
-                    <Input id="pr-currency" value="USD" readOnly disabled className="h-9 md:h-10 bg-muted" />
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
                 <div className="space-y-1.5 md:space-y-2">
-                  <Label htmlFor="instrument-currency" className="text-xs md:text-sm">
-                    Blockchain Currency *
-                  </Label>
-                  <Select value={instrumentCurrency} onValueChange={setInstrumentCurrency}>
-                    <SelectTrigger id="instrument-currency" className="h-9 md:h-10">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BSV">BSV (Bitcoin SV)</SelectItem>
-                      <SelectItem value="MNEE">MNEE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5 md:space-y-2">
-                  <Label htmlFor="pr-description" className="text-xs md:text-sm">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="pr-description"
-                    placeholder="Payment for..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={2}
-                    className="text-base"
-                  />
-                </div>
-
-                <div className="space-y-1.5 md:space-y-2">
-                  <Label htmlFor="destination" className="text-xs md:text-sm">
-                    Destination (HandCash Handle) *
+                  <Label htmlFor="amount" className="text-xs md:text-sm">
+                    Amount *
                   </Label>
                   <Input
-                    id="destination"
-                    type="text"
-                    placeholder="$handle"
-                    value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
                     required
                     className="h-9 md:h-10 text-base"
                   />
                 </div>
-
                 <div className="space-y-1.5 md:space-y-2">
-                  <Label htmlFor="image-url" className="text-xs md:text-sm">
-                    Product Image URL
+                  <Label htmlFor="pr-currency" className="text-xs md:text-sm">
+                    Currency
                   </Label>
-                  <Input
-                    id="image-url"
-                    type="url"
-                    placeholder="https://example.com/product.png"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="h-9 md:h-10 text-base"
-                  />
+                  <Input id="pr-currency" value="USD" readOnly disabled className="h-9 md:h-10 bg-muted" />
                 </div>
+              </div>
 
-                <div className="space-y-1.5 md:space-y-2">
-                  <Label htmlFor="expires" className="text-xs md:text-sm">
-                    Expires In (minutes)
-                  </Label>
-                  <Input
-                    id="expires"
-                    type="number"
-                    min="1"
-                    placeholder="30 (optional)"
-                    value={expiresInMinutes}
-                    onChange={(e) => setExpiresInMinutes(e.target.value)}
-                    className="h-9 md:h-10 text-base"
-                  />
-                </div>
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="instrument-currency" className="text-xs md:text-sm">
+                  Blockchain Currency *
+                </Label>
+                <Select value={instrumentCurrency} onValueChange={setInstrumentCurrency}>
+                  <SelectTrigger id="instrument-currency" className="h-9 md:h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BSV">BSV (Bitcoin SV)</SelectItem>
+                    <SelectItem value="MNEE">MNEE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="space-y-1.5 md:space-y-2">
-                  <Label htmlFor="redirect-url" className="text-xs md:text-sm">
-                    Redirect URL (optional)
-                  </Label>
-                  <Input
-                    id="redirect-url"
-                    type="url"
-                    placeholder="https://yoursite.com/success"
-                    value={redirectUrl}
-                    onChange={(e) => setRedirectUrl(e.target.value)}
-                    className="h-9 md:h-10 text-base"
-                  />
-                </div>
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="pr-description" className="text-xs md:text-sm">
+                  Description
+                </Label>
+                <Textarea
+                  id="pr-description"
+                  placeholder="Payment for..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  className="text-base"
+                />
+              </div>
 
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription className="text-xs md:text-sm">{error}</AlertDescription>
-                  </Alert>
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="destination" className="text-xs md:text-sm">
+                  Destination (HandCash Handle) *
+                </Label>
+                <Input
+                  id="destination"
+                  type="text"
+                  placeholder="$handle"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  required
+                  className="h-9 md:h-10 text-base"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="image-url" className="text-xs md:text-sm">
+                  Product Image URL
+                </Label>
+                <Input
+                  id="image-url"
+                  type="url"
+                  placeholder="https://example.com/product.png"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  className="h-9 md:h-10 text-base"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="expires" className="text-xs md:text-sm">
+                  Expires In (minutes)
+                </Label>
+                <Input
+                  id="expires"
+                  type="number"
+                  min="1"
+                  placeholder="30 (optional)"
+                  value={expiresInMinutes}
+                  onChange={(e) => setExpiresInMinutes(e.target.value)}
+                  className="h-9 md:h-10 text-base"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="remaining-units" className="text-xs md:text-sm">
+                  Remaining Supply (Units)
+                </Label>
+                <Input
+                  id="remaining-units"
+                  type="number"
+                  min="1"
+                  placeholder="Enter max supply (optional)"
+                  value={remainingUnits}
+                  onChange={(e) => setRemainingUnits(e.target.value)}
+                  className="h-9 md:h-10 text-base"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="redirect-url" className="text-xs md:text-sm">
+                  Redirect URL (optional)
+                </Label>
+                <Input
+                  id="redirect-url"
+                  type="url"
+                  placeholder="https://yoursite.com/success"
+                  value={redirectUrl}
+                  onChange={(e) => setRedirectUrl(e.target.value)}
+                  className="h-9 md:h-10 text-base"
+                />
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription className="text-xs md:text-sm">{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button type="submit" className="w-full h-10 md:h-11" disabled={isCreating || !websiteUrlConfigured}>
+                {isCreating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {isUpdating ? "Updating..." : "Creating..."}
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="w-4 h-4 mr-2" />
+                    {isUpdating ? "Update Payment Request" : "Create Payment Request"}
+                  </>
                 )}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
 
-                <Button type="submit" className="w-full h-10 md:h-11" disabled={isCreating || !websiteUrlConfigured}>
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {isUpdating ? "Updating..." : "Creating..."}
-                    </>
-                  ) : (
-                    <>
-                      <QrCode className="w-4 h-4 mr-2" />
-                      {isUpdating ? "Update Payment Request" : "Create Payment Request"}
-                    </>
-                  )}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          {/* Success/Error Messages */}
+        {/* Success/Error Messages */}
         {success && (
           <Alert className="mb-4">
             <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -691,7 +712,7 @@ export function PaymentRequestManagement() {
           <div className="space-y-2">
             {(showAllRequests ? recentRequests : recentRequests.slice(0, 5)).map((req) => (
               <div key={req.id} className="border rounded-lg overflow-hidden">
-                <div 
+                <div
                   className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => setExpandedRequestId(expandedRequestId === req.id ? null : req.id)}
                 >
@@ -727,220 +748,220 @@ export function PaymentRequestManagement() {
                 </div>
                 {expandedRequestId === req.id && (
                   <div className="border-t p-4 space-y-4 bg-muted/30">
-                      <div className="flex flex-col md:flex-row items-center justify-center gap-4 p-4 bg-muted rounded-lg">
-                        {req.imageUrl && (
-                          <img
-                            src={req.imageUrl || "/placeholder.svg"}
-                            alt="Product"
-                            className="w-40 h-40 md:w-48 md:h-48 object-cover rounded-lg shrink-0"
-                          />
-                        )}
-                        {req.qrCode ? (
-                          <img
-                            src={req.qrCode || "/placeholder.svg"}
-                            alt="Payment QR Code"
-                            className="w-48 h-48 md:w-56 md:h-56 rounded-lg bg-white p-2 shrink-0"
-                          />
-                        ) : (
-                          <div className="w-48 h-48 md:w-56 md:h-56 flex items-center justify-center bg-background rounded-lg border shrink-0">
-                            <QrCode className="w-16 h-16 text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="text-center">
-                        <p className="text-lg md:text-xl font-semibold">
-                          {formatCurrency(req.amount, req.denominationCurrency || req.currency)}
-                        </p>
-                        {req.description && (
-                          <p className="text-xs md:text-sm text-muted-foreground mt-1">{req.description}</p>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {(req.status || req.isEnabled !== undefined) && (
-                          <div className="space-y-2">
-                            <Label className="text-xs md:text-sm">Status</Label>
-                            <div className="flex items-center gap-2">
-                              {req.status && (
-                                <Badge variant={req.status === "active" ? "default" : "secondary"} className="text-xs">
-                                  {req.status}
-                                </Badge>
-                              )}
-                              {req.isEnabled !== undefined && (
-                                <Badge variant={req.isEnabled ? "default" : "outline"} className="text-xs">
-                                  {req.isEnabled ? "Enabled" : "Disabled"}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {(req.expiresAt || req.expirationType) && (
-                          <div className="space-y-2">
-                            <Label className="text-xs md:text-sm">Expiration</Label>
-                            <div className="text-xs md:text-sm text-muted-foreground">
-                              {req.expiresAt && <p>Expires: {formatDate(req.expiresAt)}</p>}
-                              {req.expirationType && <p>Type: {req.expirationType}</p>}
-                              {req.expirationInSeconds && (
-                                <p>Duration: {Math.floor(req.expirationInSeconds / 60)} minutes</p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {(req.remainingUnits !== undefined || req.paidCount !== undefined) && (
-                          <div className="space-y-2">
-                            <Label className="text-xs md:text-sm">Usage</Label>
-                            <div className="text-xs md:text-sm text-muted-foreground">
-                              {req.remainingUnits !== undefined && <p>Remaining: {req.remainingUnits}</p>}
-                              {req.paidCount !== undefined && <p>Paid: {req.paidCount} time(s)</p>}
-                            </div>
-                          </div>
-                        )}
-
-                        {req.destination && (
-                          <div className="space-y-2">
-                            <Label className="text-xs md:text-sm">Destination</Label>
-                            <p className="text-xs md:text-sm text-muted-foreground font-mono">{req.destination}</p>
-                          </div>
-                        )}
-
-                        {req.redirectUrl && (
-                          <div className="space-y-2">
-                            <Label className="text-xs md:text-sm">Redirect URL</Label>
-                            <p className="text-xs md:text-sm text-muted-foreground break-all">{req.redirectUrl}</p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-xs md:text-sm">Payment URL</Label>
-                        <div className="flex gap-2">
-                          <Input value={req.paymentUrl} readOnly className="h-9 md:h-10 text-xs md:text-sm font-mono" />
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-9 w-9 md:h-10 md:w-10 shrink-0 bg-transparent"
-                            onClick={() => copyToClipboard(req.paymentUrl, "Payment URL")}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-9 w-9 md:h-10 md:w-10 shrink-0 bg-transparent"
-                            onClick={() => window.open(req.paymentUrl, "_blank")}
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </Button>
+                    <div className="flex flex-col md:flex-row items-center justify-center gap-4 p-4 bg-muted rounded-lg">
+                      {req.imageUrl && (
+                        <img
+                          src={req.imageUrl || "/placeholder.svg"}
+                          alt="Product"
+                          className="w-40 h-40 md:w-48 md:h-48 object-cover rounded-lg shrink-0"
+                        />
+                      )}
+                      {req.qrCode ? (
+                        <img
+                          src={req.qrCode || "/placeholder.svg"}
+                          alt="Payment QR Code"
+                          className="w-48 h-48 md:w-56 md:h-56 rounded-lg bg-white p-2 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-48 h-48 md:w-56 md:h-56 flex items-center justify-center bg-background rounded-lg border shrink-0">
+                          <QrCode className="w-16 h-16 text-muted-foreground" />
                         </div>
-                      </div>
+                      )}
+                    </div>
 
-                      {webhookUrl && (
+                    <div className="text-center">
+                      <p className="text-lg md:text-xl font-semibold">
+                        {formatCurrency(req.amount, req.denominationCurrency || req.currency)}
+                      </p>
+                      {req.description && (
+                        <p className="text-xs md:text-sm text-muted-foreground mt-1">{req.description}</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(req.status || req.isEnabled !== undefined) && (
                         <div className="space-y-2">
-                          <Label className="text-xs md:text-sm">Webhook URL</Label>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Configure this URL in your HandCash dashboard to receive payment notifications for this payment request.
-                          </p>
-                          <div className="flex gap-2">
-                            <Input value={webhookUrl} readOnly className="h-9 md:h-10 text-xs md:text-sm font-mono" />
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-9 w-9 md:h-10 md:w-10 shrink-0 bg-transparent"
-                              onClick={() => copyToClipboard(webhookUrl, "Webhook URL")}
-                            >
-                              <Copy className="w-4 h-4" />
-                            </Button>
+                          <Label className="text-xs md:text-sm">Status</Label>
+                          <div className="flex items-center gap-2">
+                            {req.status && (
+                              <Badge variant={req.status === "active" ? "default" : "secondary"} className="text-xs">
+                                {req.status}
+                              </Badge>
+                            )}
+                            {req.isEnabled !== undefined && (
+                              <Badge variant={req.isEnabled ? "default" : "outline"} className="text-xs">
+                                {req.isEnabled ? "Enabled" : "Disabled"}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       )}
 
-                      {/* Payments Section */}
-                      <div className="space-y-2 border-t pt-4">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs md:text-sm font-semibold">Payments</Label>
-                          {loadingPayments[req.id] && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                      {(req.expiresAt || req.expirationType) && (
+                        <div className="space-y-2">
+                          <Label className="text-xs md:text-sm">Expiration</Label>
+                          <div className="text-xs md:text-sm text-muted-foreground">
+                            {req.expiresAt && <p>Expires: {formatDate(req.expiresAt)}</p>}
+                            {req.expirationType && <p>Type: {req.expirationType}</p>}
+                            {req.expirationInSeconds && (
+                              <p>Duration: {Math.floor(req.expirationInSeconds / 60)} minutes</p>
+                            )}
+                          </div>
                         </div>
-                        {payments[req.id] && payments[req.id].length > 0 ? (
-                          <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {payments[req.id].map((payment) => (
-                              <div
-                                key={payment.id}
-                                className="flex items-center justify-between p-3 bg-background rounded-lg border"
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="text-sm font-medium">
-                                      {formatCurrency(payment.amount, payment.currency)}
-                                    </p>
-                                    <Badge
-                                      variant={
-                                        payment.status === "completed"
-                                          ? "default"
-                                          : payment.status === "failed"
-                                            ? "destructive"
-                                            : "secondary"
-                                      }
-                                      className="text-xs"
-                                    >
-                                      {payment.status}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    {payment.paidBy && <span>By: {payment.paidBy}</span>}
-                                    {payment.paidBy && payment.paidAt && <span>•</span>}
-                                    {payment.paidAt && <span>{formatDate(payment.paidAt)}</span>}
-                                  </div>
-                                  {payment.transactionId && (
-                                    <p className="text-xs text-muted-foreground font-mono truncate mt-1">
-                                      TX: {payment.transactionId}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : loadingPayments[req.id] ? (
-                          <div className="text-center py-4 text-sm text-muted-foreground">
-                            Loading payments...
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 text-sm text-muted-foreground border rounded-lg bg-background">
-                            No payments yet
-                          </div>
-                        )}
-                      </div>
+                      )}
 
+                      {(req.remainingUnits !== undefined || req.paidCount !== undefined) && (
+                        <div className="space-y-2">
+                          <Label className="text-xs md:text-sm">Usage</Label>
+                          <div className="text-xs md:text-sm text-muted-foreground">
+                            {req.remainingUnits !== undefined && <p>Remaining: {req.remainingUnits}</p>}
+                            {req.paidCount !== undefined && <p>Paid: {req.paidCount} time(s)</p>}
+                          </div>
+                        </div>
+                      )}
+
+                      {req.destination && (
+                        <div className="space-y-2">
+                          <Label className="text-xs md:text-sm">Destination</Label>
+                          <p className="text-xs md:text-sm text-muted-foreground font-mono">{req.destination}</p>
+                        </div>
+                      )}
+
+                      {req.redirectUrl && (
+                        <div className="space-y-2">
+                          <Label className="text-xs md:text-sm">Redirect URL</Label>
+                          <p className="text-xs md:text-sm text-muted-foreground break-all">{req.redirectUrl}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs md:text-sm">Payment URL</Label>
                       <div className="flex gap-2">
+                        <Input value={req.paymentUrl} readOnly className="h-9 md:h-10 text-xs md:text-sm font-mono" />
                         <Button
                           variant="outline"
-                          className="flex-1 h-10 bg-transparent"
-                          onClick={() => handleCopyRequest(req)}
+                          size="icon"
+                          className="h-9 w-9 md:h-10 md:w-10 shrink-0 bg-transparent"
+                          onClick={() => copyToClipboard(req.paymentUrl, "Payment URL")}
                         >
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copy
-                        </Button>
-                        <Button variant="default" className="flex-1 h-10" onClick={() => handleUpdateRequest(req)}>
-                          Update
+                          <Copy className="w-4 h-4" />
                         </Button>
                         <Button
-                          variant="destructive"
-                          className="flex-1 h-10"
-                          onClick={() => handleDeletePaymentRequest(req.id)}
-                          disabled={isDeleting === req.id}
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-9 md:h-10 md:w-10 shrink-0 bg-transparent"
+                          onClick={() => window.open(req.paymentUrl, "_blank")}
                         >
-                          {isDeleting === req.id ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Deleting...
-                            </>
-                          ) : (
-                            "Delete"
-                          )}
+                          <ExternalLink className="w-4 h-4" />
                         </Button>
                       </div>
+                    </div>
+
+                    {webhookUrl && (
+                      <div className="space-y-2">
+                        <Label className="text-xs md:text-sm">Webhook URL</Label>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Configure this URL in your HandCash dashboard to receive payment notifications for this payment request.
+                        </p>
+                        <div className="flex gap-2">
+                          <Input value={webhookUrl} readOnly className="h-9 md:h-10 text-xs md:text-sm font-mono" />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 md:h-10 md:w-10 shrink-0 bg-transparent"
+                            onClick={() => copyToClipboard(webhookUrl, "Webhook URL")}
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payments Section */}
+                    <div className="space-y-2 border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs md:text-sm font-semibold">Payments</Label>
+                        {loadingPayments[req.id] && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                      </div>
+                      {payments[req.id] && payments[req.id].length > 0 ? (
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {payments[req.id].map((payment) => (
+                            <div
+                              key={payment.id}
+                              className="flex items-center justify-between p-3 bg-background rounded-lg border"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="text-sm font-medium">
+                                    {formatCurrency(payment.amount, payment.currency)}
+                                  </p>
+                                  <Badge
+                                    variant={
+                                      payment.status === "completed"
+                                        ? "default"
+                                        : payment.status === "failed"
+                                          ? "destructive"
+                                          : "secondary"
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {payment.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  {payment.paidBy && <span>By: {payment.paidBy}</span>}
+                                  {payment.paidBy && payment.paidAt && <span>•</span>}
+                                  {payment.paidAt && <span>{formatDate(payment.paidAt)}</span>}
+                                </div>
+                                {payment.transactionId && (
+                                  <p className="text-xs text-muted-foreground font-mono truncate mt-1">
+                                    TX: {payment.transactionId}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : loadingPayments[req.id] ? (
+                        <div className="text-center py-4 text-sm text-muted-foreground">
+                          Loading payments...
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-sm text-muted-foreground border rounded-lg bg-background">
+                          No payments yet
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1 h-10 bg-transparent"
+                        onClick={() => handleCopyRequest(req)}
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy
+                      </Button>
+                      <Button variant="default" className="flex-1 h-10" onClick={() => handleUpdateRequest(req)}>
+                        Update
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="flex-1 h-10"
+                        onClick={() => handleDeletePaymentRequest(req.id)}
+                        disabled={isDeleting === req.id}
+                      >
+                        {isDeleting === req.id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          "Delete"
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

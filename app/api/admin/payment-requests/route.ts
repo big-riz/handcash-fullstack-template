@@ -84,6 +84,11 @@ export async function POST(request: NextRequest) {
       paymentRequestData.expirationType = "limit"
     }
 
+    if (body.remainingUnits !== undefined && body.remainingUnits !== null) {
+      paymentRequestData.remainingUnits = Number.parseInt(body.remainingUnits.toString())
+      paymentRequestData.expirationType = "limit"
+    }
+
     const appId = process.env.HANDCASH_APP_ID
     const appSecret = process.env.HANDCASH_APP_SECRET
 
