@@ -111,24 +111,59 @@ export async function POST(request: NextRequest) {
     console.log("[Webhook] Payment saved:", payment.id)
 
     // Check for associated Mint Intent
-    const matchingIntent = await db.query.mintIntents.findFirst({
+    let matchingIntent = await db.query.mintIntents.findFirst({
       where: eq(mintIntents.paymentRequestId, paymentRequestId)
     })
 
-    if (matchingIntent && matchingIntent.status === "pending_payment") {
-      console.log(`[Webhook] Found matching mint intent ${matchingIntent.id} for payment request ${paymentRequestId}`)
+    if (!matchingIntent) {
+      console.log(`[Webhook] No intent found for ${paymentRequestId}. Creating synthetic intent...`)
+      const syntheticIntentId = randomUUID()
+      const userIdFromWebhook = body.userData?.id || paidBy || "unknown"
+      const handleFromWebhook = paidBy || body.userData?.id || "unknown"
 
-      // Update intent status to 'paid'
-      await db.update(mintIntents)
-        .set({
-          status: "paid",
-          transactionId: transactionId,
-          paidAt: new Date(),
-          updatedAt: new Date()
+      try {
+        await db.insert(mintIntents).values({
+          id: syntheticIntentId,
+          paymentRequestId,
+          paymentRequestUrl: body.paymentRequestUrl || body.url || "",
+          userId: userIdFromWebhook,
+          handle: handleFromWebhook,
+          quantity: body.quantity || 1,
+          amountBsv: (amount || 0).toString(),
+          status: "pending_payment", // Will be updated to 'paid' immediately below
+          createdAt: new Date(),
+          updatedAt: new Date(),
         })
-        .where(eq(mintIntents.id, matchingIntent.id))
 
-      // Check Activation Time
+        // Refresh matchingIntent with the newly created one
+        matchingIntent = await db.query.mintIntents.findFirst({
+          where: eq(mintIntents.id, syntheticIntentId)
+        })
+        console.log(`[Webhook] Synthetic intent created: ${syntheticIntentId}`)
+      } catch (err) {
+        console.error("[Webhook] Failed to create synthetic intent:", err)
+      }
+    }
+
+    if (matchingIntent) {
+      console.log(`[Webhook] Processing intent: ${matchingIntent.id} (Status: ${matchingIntent.status})`)
+
+      // Update intent status to 'paid' if it was pending
+      if (matchingIntent.status === "pending_payment") {
+        await db.update(mintIntents)
+          .set({
+            status: "paid",
+            transactionId: transactionId,
+            paidAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(mintIntents.id, matchingIntent.id))
+
+        // Update local ref to match state
+        matchingIntent.status = "paid"
+      }
+
+      // Check Activation Time for fulfillment
       const now = new Date()
       const activationTime = matchingIntent.activationTime
 
@@ -137,36 +172,28 @@ export async function POST(request: NextRequest) {
         console.log(`[Webhook] Activating mint intent ${matchingIntent.id} immediately.`)
 
         try {
-          // 1. Select Item to Mint (similar logic to main mint route)
-          // We need to pick an item from the pool or specific template
-          // Ideally the intent has stored enough info or we re-run generic selection logic
-
           const dbTemplates = await getTemplates() as any[]
-          // Determine pool/collection from intent or fallback
-          // matchingIntent does not have pool column, maybe stored in dbTemplates logic or we assume default
-          const pool = "mint2" // or derive from intent if added
-          // Simplify: just pick random item from mint2 pool for now as per user standard flow
+          const pool = matchingIntent.collectionId === "mint2" ? "mint2" : "mint2" // Default to mint2 for now
 
           let poolItems = dbTemplates.filter(t => t.pool === pool)
-          if (poolItems.length === 0) {
-            // Fallback check
-            poolItems = dbTemplates.filter(t => t.pool === "mint2")
-          }
+          if (poolItems.length === 0) poolItems = dbTemplates.filter(t => t.pool === "mint2")
 
           if (poolItems.length > 0) {
-            // Weighted random selection
-            const getItemWeight = (item: any) => {
-              return 100 // Simplify weight for webhook context or implement full logic
-            };
             const randomIndex = Math.floor(Math.random() * poolItems.length)
             const randomItem = poolItems[randomIndex]
 
             // 2. Mint Item
             const minter = getMinter()
-            const handleMap = await resolveHandlesToUserIds([matchingIntent.handle], process.env.BUSINESS_AUTH_TOKEN!)
-            const destinationUserId = handleMap[matchingIntent.handle.toLowerCase()]
+            const businessAuthToken = process.env.BUSINESS_AUTH_TOKEN
 
-            if (destinationUserId) {
+            // Resolve destination handle to user ID
+            let destinationUserId = matchingIntent.userId
+            if (matchingIntent.handle && matchingIntent.handle.includes("@") || matchingIntent.handle.length < 24) {
+              const handleMap = await resolveHandlesToUserIds([matchingIntent.handle], businessAuthToken!)
+              destinationUserId = handleMap[matchingIntent.handle.toLowerCase()] || destinationUserId
+            }
+
+            if (destinationUserId && destinationUserId !== "unknown") {
               const itemToMint: any = {
                 user: destinationUserId,
                 quantity: matchingIntent.quantity || 1,
@@ -179,7 +206,6 @@ export async function POST(request: NextRequest) {
                 templateId: (randomItem as any).id
               }
 
-              // Mint
               const collectionId = (randomItem as any).collectionId || process.env.NEXT_PUBLIC_COLLECTION_ID
               if (collectionId) {
                 const creationOrder = await minter.createItemsOrder({
@@ -191,7 +217,6 @@ export async function POST(request: NextRequest) {
                 if (items && items.length > 0) {
                   const mintedItem = items[0]
 
-                  // Record Minted Item
                   await db.insert(mintedItems).values({
                     id: mintedItem.id,
                     origin: mintedItem.origin,
@@ -203,10 +228,9 @@ export async function POST(request: NextRequest) {
                     rarity: mintedItem.rarity,
                     imageUrl: (randomItem as any).imageUrl,
                     paymentId: payment.id,
-                    metadata: { source: "payment_request" }
+                    metadata: { source: "webhook_synthetic" }
                   })
 
-                  // Update Intent to 'activated'
                   await db.update(mintIntents)
                     .set({ status: "activated", updatedAt: new Date() })
                     .where(eq(mintIntents.id, matchingIntent.id))
@@ -214,11 +238,12 @@ export async function POST(request: NextRequest) {
                   console.log(`[Webhook] Mint intent ${matchingIntent.id} activated and item minted: ${mintedItem.id}`)
                 }
               }
+            } else {
+              console.warn(`[Webhook] Could not determine destination user ID for intent ${matchingIntent.id}`)
             }
           }
         } catch (err) {
           console.error(`[Webhook] Failed to fulfill mint intent ${matchingIntent.id}:`, err)
-          // Optionally update status to 'failed' or 'retry_needed'
         }
       } else {
         console.log(`[Webhook] Mint intent ${matchingIntent.id} is scheduled for activation at ${activationTime.toISOString()}`)
