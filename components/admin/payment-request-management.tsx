@@ -80,6 +80,7 @@ export function PaymentRequestManagement() {
   const [loadingPayments, setLoadingPayments] = useState<Record<string, boolean>>({})
   const [websiteUrlConfigured, setWebsiteUrlConfigured] = useState<boolean>(true)
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null)
+  const [isUpdatingSupply, setIsUpdatingSupply] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPaymentRequests()
@@ -177,6 +178,35 @@ export function PaymentRequestManagement() {
       console.error("Failed to fetch payments:", err)
     } finally {
       setLoadingPayments((prev) => ({ ...prev, [paymentRequestId]: false }))
+    }
+  }
+
+  const handleUpdateInlineSupply = async (id: string, newSupply: string) => {
+    setIsUpdatingSupply(id)
+    try {
+      const response = await fetch(`/api/admin/payment-requests/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          remainingUnits: newSupply ? Number.parseInt(newSupply) : null,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update supply")
+      }
+
+      setSuccess("Supply updated successfully!")
+      setRecentRequests((prev) =>
+        prev.map((req) => (req.id === id ? { ...req, remainingUnits: newSupply ? Number.parseInt(newSupply) : undefined } : req)),
+      )
+      setTimeout(() => setSuccess(null), 2000)
+    } catch (err: any) {
+      setError(err.message || "Failed to update supply")
+      setTimeout(() => setError(null), 3000)
+    } finally {
+      setIsUpdatingSupply(null)
     }
   }
 
@@ -810,15 +840,50 @@ export function PaymentRequestManagement() {
                         </div>
                       )}
 
-                      {(req.remainingUnits !== undefined || req.paidCount !== undefined) && (
-                        <div className="space-y-2">
-                          <Label className="text-xs md:text-sm">Usage</Label>
-                          <div className="text-xs md:text-sm text-muted-foreground">
-                            {req.remainingUnits !== undefined && <p>Remaining: {req.remainingUnits}</p>}
-                            {req.paidCount !== undefined && <p>Paid: {req.paidCount} time(s)</p>}
+                      <div className="space-y-2">
+                        <Label className="text-xs md:text-sm font-bold text-primary">Supply Management</Label>
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              type="number"
+                              key={`supply-${req.id}-${req.remainingUnits}`}
+                              defaultValue={req.remainingUnits}
+                              placeholder="Max supply (empty for unlimited)"
+                              className="h-9 pr-16 text-xs md:text-sm bg-background border-primary/20"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleUpdateInlineSupply(req.id, (e.target as HTMLInputElement).value)
+                                }
+                              }}
+                              id={`supply-input-${req.id}`}
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="absolute right-1 top-1 h-7 text-xs px-2 hover:bg-primary/20 hover:text-primary transition-colors"
+                              disabled={isUpdatingSupply === req.id}
+                              onClick={() => {
+                                const input = document.getElementById(`supply-input-${req.id}`) as HTMLInputElement
+                                handleUpdateInlineSupply(req.id, input.value)
+                              }}
+                            >
+                              {isUpdatingSupply === req.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                "Save"
+                              )}
+                            </Button>
                           </div>
+                          {req.paidCount !== undefined && (
+                            <Badge variant="outline" className="h-9 px-3 text-xs shrink-0 bg-background/50 font-medium">
+                              Paid: {req.paidCount}
+                            </Badge>
+                          )}
                         </div>
-                      )}
+                        <p className="text-[10px] text-muted-foreground italic px-1">
+                          Update how many more times this request can be paid.
+                        </p>
+                      </div>
 
                       {req.destination && (
                         <div className="space-y-2">
