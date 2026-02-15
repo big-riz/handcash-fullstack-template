@@ -1,0 +1,27 @@
+
+import { neon } from "@neondatabase/serverless";
+import * as dotenv from "dotenv";
+import { resolve, dirname, join } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config({ path: join(__dirname, "..", ".env.local") });
+
+async function checkTemplates() {
+    if (!process.env.DATABASE_URL) {
+        console.error("❌ No DATABASE_URL found");
+        process.exit(1);
+    }
+    const sql = neon(process.env.DATABASE_URL);
+    try {
+        const templates = await sql`SELECT id, name FROM item_templates ORDER BY created_at DESC LIMIT 50`;
+        console.log(`Found ${templates.length} templates.`);
+        templates.forEach(t => console.log(`- ${t.id}: ${t.name}`));
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+checkTemplates();

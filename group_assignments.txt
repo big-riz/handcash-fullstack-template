@@ -1,0 +1,83 @@
+--------------------------------------------------
+GROUP ASSIGNMENTS (Seed: "cyka blyat where is my eastern treasure!??!?!?!?! PRIVET!!!!!!!!!!!!!!")
+--------------------------------------------------
+
+PLAYER: guxiaolei            -> GROUP G (Score: 15)
+   Items: Doily Bra (Uncommon), Used Lada (Uncommon), Hussar Armor (Legendary)
+
+PLAYER: bsvcrypto            -> GROUP H (Score: 15)
+   Items: Doily Bra (Uncommon), Brick Phone (Uncommon), Dr. Squat's Reflex Hammer (Legendary)
+
+PLAYER: Voyo                 -> GROUP I (Score: 15)
+   Items: Wobbly Nuclear Spinner (Uncommon), Brick Phone (Uncommon), Kharkovchanka (Legendary)
+
+PLAYER: kurt                 -> GROUP R (Score: 15)
+   Items: Used Lada (Uncommon), Bio Phone (Rare), Tsar Tank (Epic)
+
+PLAYER: k83m                 -> GROUP S (Score: 15)
+   Items: Doily Bra (Uncommon), Gop Gargoyle (Rare), Slavic Crusader Armor (Epic)
+
+PLAYER: Johnwayne            -> GROUP T (Score: 15)
+   Items: Wobbly Nuclear Spinner (Uncommon), Ruggage (Rare), Tsar Tank (Epic)
+
+PLAYER: andyrowe             -> GROUP U (Score: 15)
+   Items: Gold Leaf Slipper (Uncommon), Ruggage (Rare), Eastern Golem (Epic)
+
+PLAYER: water                -> GROUP V (Score: 15)
+   Items: Gold Leaf Slipper (Uncommon), Nuclear Spinner (Rare), Matryoshka Grenade (Epic)
+
+PLAYER: XYZbot               -> GROUP W (Score: 15)
+   Items: Gold Leaf Slipper (Uncommon), Nuclear Spinner (Rare), Ushanka Gas Mask (Epic)
+
+PLAYER: rapolan              -> GROUP X (Score: 15)
+   Items: Wobbly Nuclear Spinner (Uncommon), Gop Gargoyle (Rare), Slavic Crusader Armor (Epic)
+
+PLAYER: ChimpinAintEZ        -> GROUP Y (Score: 15)
+   Items: Doily Bra (Uncommon), Premium Used Lada (Rare), Eastern Golem (Epic)
+
+PLAYER: jorge2               -> GROUP Z (Score: 15)
+   Items: Gold Leaf Slipper (Uncommon), Gop Gargoyle (Rare), Slavic Crusader Armor (Epic)
+
+PLAYER: ruhd                 -> GROUP A (Score: 17)
+   Items: Used Lada (Uncommon), Used Lada (Uncommon), Matryoshka Grenade (Epic)
+
+PLAYER: BtheParadise         -> GROUP B (Score: 17)
+   Items: Wobbly Nuclear Spinner (Uncommon), Wobbly Nuclear Spinner (Uncommon), Eastern Golem (Epic)
+
+PLAYER: iainzor              -> GROUP C (Score: 17)
+   Items: Brick Phone (Uncommon), Wobbly Nuclear Spinner (Uncommon), Ushanka Gas Mask (Epic)
+
+PLAYER: mrkozak              -> GROUP D (Score: 17)
+   Items: Gold Leaf Slipper (Uncommon), Brick Phone (Uncommon), Ushanka Gas Mask (Epic)
+
+PLAYER: GameTight            -> GROUP E (Score: 17)
+   Items: Brick Phone (Uncommon), Used Lada (Uncommon), Matryoshka Grenade (Epic)
+
+PLAYER: krause               -> GROUP F (Score: 17)
+   Items: Doily Bra (Uncommon), Wobbly Nuclear Spinner (Uncommon), Tsar Tank (Epic)
+
+PLAYER: peweeroots           -> GROUP J (Score: 17)
+   Items: Brick Phone (Uncommon), Ruggage (Rare), Bio Phone (Rare)
+
+PLAYER: pxl3000              -> GROUP K (Score: 17)
+   Items: Used Lada (Uncommon), Bio Phone (Rare), Premium Used Lada (Rare)
+
+PLAYER: Ahtiainen            -> GROUP L (Score: 17)
+   Items: Doily Bra (Uncommon), Ruggage (Rare), Nuclear Spinner (Rare)
+
+PLAYER: iamtman              -> GROUP M (Score: 17)
+   Items: Used Lada (Uncommon), Premium Used Lada (Rare), Gop Gargoyle (Rare)
+
+PLAYER: kpdad72              -> GROUP N (Score: 17)
+   Items: Gold Leaf Slipper (Uncommon), Nuclear Spinner (Rare), Bio Phone (Rare)
+
+PLAYER: Kritoshi             -> GROUP O (Score: 17)
+   Items: Doily Bra (Uncommon), Gop Gargoyle (Rare), Premium Used Lada (Rare)
+
+PLAYER: asc1768              -> GROUP P (Score: 17)
+   Items: Brick Phone (Uncommon), Ruggage (Rare), Bio Phone (Rare)
+
+PLAYER: cryptochicano        -> GROUP Q (Score: 17)
+   Items: Gold Leaf Slipper (Uncommon), Nuclear Spinner (Rare), Premium Used Lada (Rare)
+
+--------------------------------------------------

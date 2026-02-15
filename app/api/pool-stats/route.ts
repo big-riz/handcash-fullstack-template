@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         const poolStats: Record<string, any> = {}
 
         allTemplates.forEach((template) => {
-            const pool = template.pool || "default"
+            const pool = template.pool || "mint2"
             if (!poolStats[pool]) {
                 poolStats[pool] = {
                     poolName: pool,

@@ -94,6 +94,25 @@ export const mintedItems = pgTable("minted_items", {
     index("minted_items_template_idx").on(table.templateId),
 ])
 
+export const mintIntents = pgTable("mint_intents", {
+    id: text("id").primaryKey(),
+    paymentRequestId: text("payment_request_id").notNull().unique(),
+    paymentRequestUrl: text("payment_request_url").notNull(),
+    userId: text("user_id").notNull(),
+    handle: text("handle").notNull(), // User handle for reference
+    collectionId: text("collection_id"),
+    templateId: text("template_id"),
+    quantity: integer("quantity").default(1),
+    supplyCount: integer("supply_count"),
+    activationTime: timestamp("activation_time"),
+    amountBsv: decimal("amount_bsv", { precision: 18, scale: 8 }),
+    status: text("status").notNull().default("pending_payment"), // pending_payment | paid | activated | expired | cancelled
+    transactionId: text("transaction_id"),
+    paidAt: timestamp("paid_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+})
+
 export const sessions = pgTable("sessions", {
     id: text("id").primaryKey(), // Session ID
     userId: text("user_id").references(() => users.id),
@@ -182,6 +201,9 @@ export type NewSession = typeof sessions.$inferInsert
 
 export type RateLimit = typeof rateLimits.$inferSelect
 export type NewRateLimit = typeof rateLimits.$inferInsert
+
+export type MintIntent = typeof mintIntents.$inferSelect
+export type NewMintIntent = typeof mintIntents.$inferInsert
 
 export const replays = pgTable("replays", {
     id: serial("id").primaryKey(),

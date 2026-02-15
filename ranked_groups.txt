@@ -1,0 +1,33 @@
+Generating 26 evenly balanced subgroups (Finite Supply Distribution)...
+
+(Supply Limits enforced: Legendary=1, Epic=3, Rare=5, Uncommon=7)
+
+Group G (Score: 15): Doily Bra (Uncommon), Used Lada (Uncommon), Hussar Armor (Legendary)
+Group H (Score: 15): Doily Bra (Uncommon), Brick Phone (Uncommon), Dr. Squat's Reflex Hammer (Legendary)
+Group I (Score: 15): Wobbly Nuclear Spinner (Uncommon), Brick Phone (Uncommon), Kharkovchanka (Legendary)
+Group R (Score: 15): Used Lada (Uncommon), Bio Phone (Rare), Tsar Tank (Epic)
+Group S (Score: 15): Doily Bra (Uncommon), Gop Gargoyle (Rare), Slavic Crusader Armor (Epic)
+Group T (Score: 15): Wobbly Nuclear Spinner (Uncommon), Ruggage (Rare), Tsar Tank (Epic)
+Group U (Score: 15): Gold Leaf Slipper (Uncommon), Ruggage (Rare), Eastern Golem (Epic)
+Group V (Score: 15): Gold Leaf Slipper (Uncommon), Nuclear Spinner (Rare), Matryoshka Grenade (Epic)
+Group W (Score: 15): Gold Leaf Slipper (Uncommon), Nuclear Spinner (Rare), Ushanka Gas Mask (Epic)
+Group X (Score: 15): Wobbly Nuclear Spinner (Uncommon), Gop Gargoyle (Rare), Slavic Crusader Armor (Epic)
+Group Y (Score: 15): Doily Bra (Uncommon), Premium Used Lada (Rare), Eastern Golem (Epic)
+Group Z (Score: 15): Gold Leaf Slipper (Uncommon), Gop Gargoyle (Rare), Slavic Crusader Armor (Epic)
+Group A (Score: 17): Used Lada (Uncommon), Used Lada (Uncommon), Matryoshka Grenade (Epic)
+Group B (Score: 17): Wobbly Nuclear Spinner (Uncommon), Wobbly Nuclear Spinner (Uncommon), Eastern Golem (Epic)
+Group C (Score: 17): Brick Phone (Uncommon), Wobbly Nuclear Spinner (Uncommon), Ushanka Gas Mask (Epic)
+Group D (Score: 17): Gold Leaf Slipper (Uncommon), Brick Phone (Uncommon), Ushanka Gas Mask (Epic)
+Group E (Score: 17): Brick Phone (Uncommon), Used Lada (Uncommon), Matryoshka Grenade (Epic)
+Group F (Score: 17): Doily Bra (Uncommon), Wobbly Nuclear Spinner (Uncommon), Tsar Tank (Epic)
+Group J (Score: 17): Brick Phone (Uncommon), Ruggage (Rare), Bio Phone (Rare)
+Group K (Score: 17): Used Lada (Uncommon), Bio Phone (Rare), Premium Used Lada (Rare)
+Group L (Score: 17): Doily Bra (Uncommon), Ruggage (Rare), Nuclear Spinner (Rare)
+Group M (Score: 17): Used Lada (Uncommon), Premium Used Lada (Rare), Gop Gargoyle (Rare)
+Group N (Score: 17): Gold Leaf Slipper (Uncommon), Nuclear Spinner (Rare), Bio Phone (Rare)
+Group O (Score: 17): Doily Bra (Uncommon), Gop Gargoyle (Rare), Premium Used Lada (Rare)
+Group P (Score: 17): Brick Phone (Uncommon), Ruggage (Rare), Bio Phone (Rare)
+Group Q (Score: 17): Gold Leaf Slipper (Uncommon), Nuclear Spinner (Rare), Premium Used Lada (Rare)
+
+Total items used: 78 from pool of 78
+Leftover items (unused): 

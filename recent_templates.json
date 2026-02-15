@@ -1,0 +1,128 @@
+[
+  {
+    "id": "9ef44730-2cad-435a-a07e-84086a3b4fa6",
+    "name": "Ruggage",
+    "created_at": "2026-02-14T07:17:53.658Z",
+    "rarity": "Rare",
+    "supply_limit": 5
+  },
+  {
+    "id": "8826bc73-c54b-4fc1-9948-8ecd1f74082e",
+    "name": "Premium Used Lada",
+    "created_at": "2026-02-14T07:17:13.398Z",
+    "rarity": "Rare",
+    "supply_limit": 5
+  },
+  {
+    "id": "ceba8b3d-c51c-40de-9db4-26ce32db6775",
+    "name": "Hussar Armor",
+    "created_at": "2026-02-14T06:45:57.484Z",
+    "rarity": "Legendary",
+    "supply_limit": 1
+  },
+  {
+    "id": "e39d5bbb-73c2-4678-aa5a-b822a86715f4",
+    "name": "Gold Leaf Slipper",
+    "created_at": "2026-02-14T06:45:20.509Z",
+    "rarity": "Uncommon",
+    "supply_limit": 7
+  },
+  {
+    "id": "c5fed2f9-76d2-4cfe-8d50-a421032c630c",
+    "name": "Slavic Crusader Armor",
+    "created_at": "2026-02-14T06:44:25.626Z",
+    "rarity": "Epic",
+    "supply_limit": 3
+  },
+  {
+    "id": "40b4dad8-1b68-4f1b-b4f3-772184553f50",
+    "name": "Brick Phone",
+    "created_at": "2026-02-14T06:42:40.574Z",
+    "rarity": "Uncommon",
+    "supply_limit": 7
+  },
+  {
+    "id": "68c2ea34-dcc9-4d7e-8429-26c58bd7439d",
+    "name": "Gop Gargoyle",
+    "created_at": "2026-02-14T06:42:10.113Z",
+    "rarity": "Rare",
+    "supply_limit": 5
+  },
+  {
+    "id": "94ccf824-6629-41c6-a2c2-84357c1e741f",
+    "name": "Eastern Golem",
+    "created_at": "2026-02-14T06:41:15.448Z",
+    "rarity": "Epic",
+    "supply_limit": 3
+  },
+  {
+    "id": "19b5551e-6e67-40c1-9763-08245431b968",
+    "name": "Kharkovchanka",
+    "created_at": "2026-02-14T06:40:26.384Z",
+    "rarity": "Legendary",
+    "supply_limit": 1
+  },
+  {
+    "id": "a1972f32-db27-44bf-bbda-cabe690b08fa",
+    "name": "Matryoshka Grenade",
+    "created_at": "2026-02-14T06:37:46.764Z",
+    "rarity": "Epic",
+    "supply_limit": 3
+  },
+  {
+    "id": "85ae85f2-e65c-49a0-ad55-04296ff094f0",
+    "name": "Dr. Squat's Reflex Hammer",
+    "created_at": "2026-02-14T06:37:01.047Z",
+    "rarity": "Legendary",
+    "supply_limit": 1
+  },
+  {
+    "id": "f1dc547d-a632-4cb0-b56d-52b79d1dc9ad",
+    "name": "Doily Bra",
+    "created_at": "2026-02-14T06:35:54.219Z",
+    "rarity": "Uncommon",
+    "supply_limit": 7
+  },
+  {
+    "id": "efb1aa8a-57a8-49f6-9e0e-e76714fead5f",
+    "name": "Wobbly Nuclear Spinner",
+    "created_at": "2026-02-14T06:35:31.984Z",
+    "rarity": "Uncommon",
+    "supply_limit": 7
+  },
+  {
+    "id": "f4f0e9e3-b312-43e2-8ed3-33edeeca8f79",
+    "name": "Nuclear Spinner",
+    "created_at": "2026-02-14T06:35:05.906Z",
+    "rarity": "Rare",
+    "supply_limit": 5
+  },
+  {
+    "id": "be6449b4-d467-469a-941d-c20d4221afd3",
+    "name": "Bio Phone",
+    "created_at": "2026-02-14T06:34:37.006Z",
+    "rarity": "Rare",
+    "supply_limit": 5
+  },
+  {
+    "id": "5996be83-93e8-4da4-9c51-b24843315ab2",
+    "name": "Tsar Tank",
+    "created_at": "2026-02-14T06:34:01.073Z",
+    "rarity": "Epic",
+    "supply_limit": 3
+  },
+  {
+    "id": "ed8b06fe-58a9-479c-9975-c928bcb83c81",
+    "name": "Used Lada",
+    "created_at": "2026-02-14T06:33:17.132Z",
+    "rarity": "Uncommon",
+    "supply_limit": 7
+  },
+  {
+    "id": "010d0af7-0ddc-4537-9ddb-2123b19b1c65",
+    "name": "Ushanka Gas Mask",
+    "created_at": "2026-02-14T06:32:19.092Z",
+    "rarity": "Epic",
+    "supply_limit": 3
+  }
+]

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Zap, CheckCircle2, AlertCircle, ShoppingBag, RotateCcw, ShieldCheck, ChevronLeft, ChevronRight, ExternalLink, Share2 } from "lucide-react"
 import { usePayments } from "@/hooks/use-payments"
+import { usePaymentRequest } from "@/hooks/use-payment-request"
 import useEmblaCarousel from "embla-carousel-react"
 import { toast } from "sonner"
 import { getRarityClasses } from "@/lib/rarity-colors"
@@ -55,6 +56,7 @@ interface MintModuleProps {
 
 export function MintModule({ onTabChange }: MintModuleProps = {}) {
     const { balance, fetchBalance } = usePayments()
+    const { openPaymentRequestPopup } = usePaymentRequest()
     const [mintState, setMintState] = useState<MintState>("IDLE")
     const [statusText, setStatusText] = useState("")
     const [mintedItem, setMintedItem] = useState<MintedItem | null>(null)
@@ -66,12 +68,12 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
     const [isRateLoading, setIsRateLoading] = useState(true)
 
     // Live Pool Progress
-    const { totalMinted: liveMinted, totalSupplyLimit: liveLimit, isAnimating: isProgressAnimating } = usePoolProgress("default")
+    const { totalMinted: liveMinted, totalSupplyLimit: liveLimit, isAnimating: isProgressAnimating } = usePoolProgress("mint2")
 
     const [shuffledItems, setShuffledItems] = useState<any[]>([])
     const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false, duration: 20 })
 
-    const PRICE_BSV = 1.23
+    const PRICE_BSV = 0.88
     const usdPrice = bsvUsdRate !== null ? bsvUsdRate * PRICE_BSV : null
 
     const fetchUsdRate = useCallback(async () => {
@@ -99,7 +101,7 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
             const data = await response.json()
             if (data.success && data.pools) {
                 // Find default pool
-                const defaultPool = data.pools.find((p: any) => p.poolName === "default")
+                const defaultPool = data.pools.find((p: any) => p.poolName === "mint2")
                 if (defaultPool && defaultPool.items) {
                     // Shuffle items
                     const shuffled = [...defaultPool.items].sort(() => Math.random() - 0.5)
@@ -183,6 +185,66 @@ export function MintModule({ onTabChange }: MintModuleProps = {}) {
 
             if (!response.ok) {
                 const errorData = await response.json()
+
+                // Handle Payment Request Fallback
+                if (errorData.needPaymentRequest && errorData.paymentRequestUrl) {
+                    setStatusText("Opening payment popup...")
+                    const success = await openPaymentRequestPopup(errorData.paymentRequestUrl)
+
+                    if (success) {
+                        setStatusText("Payment complete! Finalizing mint...")
+                        setMintState("MINTING")
+
+                        // Poll for status
+                        let attempts = 0;
+                        const maxAttempts = 30; // 60 seconds
+                        let mintSuccess = false;
+
+                        while (attempts < maxAttempts) {
+                            await new Promise(r => setTimeout(r, 2000))
+                            try {
+                                const statusRes = await fetch(`/api/mint/status?intentId=${errorData.mintIntentId}`)
+                                const statusData = await statusRes.json()
+
+                                if (statusData.status === 'activated' || statusData.status === 'paid') {
+                                    mintSuccess = true;
+                                    break;
+                                }
+                            } catch (e) {
+                                console.warn("Status check failed, retrying...")
+                            }
+                            attempts++;
+                        }
+
+                        if (mintSuccess) {
+                            // Fetch Balance to update
+                            fetchBalance()
+
+                            // Mock item for display if real item details aren't returned by status endpoint yet
+                            // Ideally, status endpoint returns minted item details.
+                            // For now, we show a generic success or fetch last minted item?
+                            // Let's assume generic success for fallback flow or construct a dummy item object
+                            setMintedItem({
+                                id: "pending",
+                                name: "Mystery Item",
+                                imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tracksuit_blue.png", // placeholder
+                                rarity: "Unknown",
+                                origin: "pending",
+                                collectionId: ""
+                            })
+
+                            setMintState("SUCCESS")
+                            toast.success("Mint successful! Check your wallet shortly.")
+                            return
+                        } else {
+                            throw new Error("Minting timed out. Please check your wallet.")
+                        }
+
+                    } else {
+                        throw new Error("Payment cancelled or failed")
+                    }
+                }
+
                 throw new Error(errorData.error || "Minting failed")
             }
 

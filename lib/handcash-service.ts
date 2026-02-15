@@ -350,6 +350,85 @@ export class HandCashService {
       return false
     }
   }
+
+  // Payment Requests (v3 API)
+  async createPaymentRequest(params: {
+    productName: string
+    productDescription?: string
+    productImageUrl?: string
+    receivers: { destination: string; amount: number; currencyCode: string }[]
+    expirationType?: "one_time" | "expiration" | "limit"
+    expirationTime?: string
+    remainingUnits?: number
+    redirectUrl?: string
+    metadata?: any
+  }) {
+    const url = "https://cloud.handcash.io/v3/paymentRequests"
+
+    // Construct the body according to HandCash v3 API
+    const body: any = {
+      productName: params.productName,
+      productDescription: params.productDescription || params.productName,
+      productImageUrl: params.productImageUrl,
+      receivers: params.receivers.map(r => ({
+        destination: r.destination,
+        sendAmount: r.amount,
+        currencyCode: r.currencyCode,
+      })),
+      requestedUserData: ["paymail"],
+      expirationType: params.expirationType || "one_time",
+      redirectUrl: params.redirectUrl,
+      metadata: params.metadata,
+    }
+
+    if (params.expirationTime) {
+      body.expirationTime = params.expirationTime;
+    }
+
+    if (params.remainingUnits !== undefined) {
+      body.remainingUnits = params.remainingUnits;
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "app-id": this.appId,
+        "app-secret": this.appSecret,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create payment request: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json()
+    return data
+  }
+
+  async updatePaymentRequest(paymentRequestId: string, params: { decreaseRemainingUnits?: number }) {
+    const url = `https://cloud.handcash.io/v3/paymentRequests/${paymentRequestId}`
+
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "app-id": this.appId,
+        "app-secret": this.appSecret,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(params),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update payment request: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json()
+    return data
+  }
 }
 
 // Export singleton instance

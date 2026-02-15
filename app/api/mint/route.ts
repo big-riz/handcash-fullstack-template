@@ -8,7 +8,7 @@ import { recordMintedItem } from "@/lib/minted-items-storage"
 import { getTemplates } from "@/lib/item-templates-storage"
 import { savePayment } from "@/lib/payments-storage"
 import { db } from "@/lib/db"
-import { mintedItems as mintedItemsTable } from "@/lib/schema"
+import { mintedItems as mintedItemsTable, mintIntents } from "@/lib/schema"
 import { eq, sql } from "drizzle-orm"
 import { randomUUID } from "crypto"
 
@@ -94,18 +94,18 @@ export async function POST(request: NextRequest) {
 
         // Hardcoded fallbacks if DB is empty
         const fallbackItemTypes = [
-            { name: "Adidas Tracksuit", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tracksuit_blue.png", pool: "default", supplyLimit: 1000 },
-            { name: "Sunflower Seeds", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/seeds.png", pool: "default", supplyLimit: 500 },
-            { name: "KV-2 Tank Model", rarity: "Rare", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tank.png", multimediaUrl: "https://res.cloudinary.com/handcash-io/raw/upload/v1710255990/items/kv2.glb", pool: "default", supplyLimit: 50 },
-            { name: "Gold Chain", rarity: "Epic", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/gold_chain.png", pool: "default", supplyLimit: 10 },
-            { name: "Golden Ushanka", rarity: "Legendary", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/ushanka.png", pool: "default", supplyLimit: 1 }
+            { name: "Adidas Tracksuit", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tracksuit_blue.png", pool: "mint2", supplyLimit: 1000 },
+            { name: "Sunflower Seeds", rarity: "Common", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/seeds.png", pool: "mint2", supplyLimit: 500 },
+            { name: "KV-2 Tank Model", rarity: "Rare", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tank.png", multimediaUrl: "https://res.cloudinary.com/handcash-io/raw/upload/v1710255990/items/kv2.glb", pool: "mint2", supplyLimit: 50 },
+            { name: "Gold Chain", rarity: "Epic", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/gold_chain.png", pool: "mint2", supplyLimit: 10 },
+            { name: "Golden Ushanka", rarity: "Legendary", imageUrl: "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/ushanka.png", pool: "mint2", supplyLimit: 1 }
         ]
 
         // 3a. Pool Selection Logic
         const allTemplates = dbTemplates.length > 0 ? dbTemplates : fallbackItemTypes;
 
         // Try to get pool from body or query params
-        let requestedPool = "default";
+        let requestedPool = "mint2";
         let requestedCollectionId: string | null = null;
         let requestBody: any = null;
         try {
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
             }
         } catch (e) {
             const { searchParams } = new URL(request.url);
-            requestedPool = searchParams.get("pool") || "default";
+            requestedPool = searchParams.get("pool") || "mint2";
         }
         const allowDebugDetails = process.env.NODE_ENV !== "production";
         const includeSplitDetails = allowDebugDetails && (requestBody?.includeSplits === true || requestBody?.debug === true);
@@ -127,8 +127,8 @@ export async function POST(request: NextRequest) {
 
         // Fallback if pool is empty
         if (poolItems.length === 0) {
-            console.log(`[Mint API] Pool '${requestedPool}' not found or empty, falling back to 'default'`);
-            poolItems = allTemplates.filter(t => t.pool === "default");
+            console.log(`[Mint API] Pool '${requestedPool}' not found or empty, falling back to 'mint2'`);
+            poolItems = allTemplates.filter(t => t.pool === "mint2");
         }
         if (poolItems.length === 0) {
             poolItems = allTemplates;
@@ -196,11 +196,28 @@ export async function POST(request: NextRequest) {
         // - Business Auth Token is missing
         // - Specific flag is set (optional, but for now we try to be real)
         const allowCollectionOverride = process.env.NODE_ENV !== "production";
-        const collectionIdOverride = allowCollectionOverride ? requestedCollectionId : null;
+        let collectionIdOverride = allowCollectionOverride ? requestedCollectionId : null;
+
+        if (collectionIdOverride && !/^[0-9a-fA-F]{24}$/.test(collectionIdOverride)) {
+            console.warn(`[Mint API] Requested Collection ID "${collectionIdOverride}" is invalid (must be 24-char hex). Ignoring.`);
+            collectionIdOverride = null;
+        }
+
         if (requestedCollectionId && !allowCollectionOverride) {
             console.warn("[Mint API] Collection override ignored outside development.");
         }
-        const collectionId = collectionIdOverride || (randomItem as any).collectionId || (collections.length > 0 ? collections[0].id : null);
+
+        // Prioritize: 1. Override, 2. Item specifc, 3. First available DB collection
+        let collectionId = collectionIdOverride;
+        if (!collectionId) {
+            const itemCollectionId = (randomItem as any).collectionId;
+            if (itemCollectionId && /^[0-9a-fA-F]{24}$/.test(itemCollectionId)) {
+                collectionId = itemCollectionId;
+            }
+        }
+        if (!collectionId && collections.length > 0) {
+            collectionId = collections[0].id;
+        }
 
         const isMockMode = !businessAuthToken || !collectionId || !hasPaymentDestinations;
 
@@ -210,7 +227,7 @@ export async function POST(request: NextRequest) {
             console.log(`[Mint API] Real Mode: Minting ${randomItem.name} to ${userHandle} using collection ${collectionId}`)
 
             // 5. Process Payment (User -> Business)
-            const mintPriceBsv = 1.23;
+            const mintPriceBsv = 0.88;
             const paymentSplits = buildMintSplits(mintPriceBsv, mintDestinations);
 
             console.log(`[Mint API] Processing payment of ${mintPriceBsv} BSV split across ${paymentSplits.length} destination(s)`)
@@ -219,40 +236,104 @@ export async function POST(request: NextRequest) {
             const paymentNote = "Slavic Survivors Mint";
             const paymentRequestBase = `mint-${randomItem.id || 'random'}-${Date.now()}`
 
-            for (let i = 0; i < paymentSplits.length; i++) {
-                const split = paymentSplits[i]
-                if (split.amountBsv <= 0) continue
+            // 5a. Check User Balance
+            const balance = await handcashService.getBalance(privateKey);
+            const balanceItems = (balance.spendableBalances as any).items || [];
+            const spendableBsv = balanceItems.find((b: any) => b.currencyCode === 'BSV')?.spendableBalance || 0;
 
-                const paymentResponse = await handcashService.sendPayment(privateKey, {
-                    destination: split.destination,
-                    amount: split.amountBsv,
-                    currency: "BSV",
-                    description: paymentNote
-                }) as any
+            if (spendableBsv < mintPriceBsv) {
+                throw new Error(`Insufficient funds: ${spendableBsv.toFixed(4)} BSV available, ${mintPriceBsv} BSV required. Please top up your wallet or increase your spending limit if you believe this is a mistake.`);
+            }
 
-                const paymentId = randomUUID();
-                paymentIds.push(paymentId)
+            try {
+                for (let i = 0; i < paymentSplits.length; i++) {
+                    const split = paymentSplits[i]
+                    if (split.amountBsv <= 0) continue
 
-                // Log Payment to DB
-                await savePayment({
-                    id: paymentId,
-                    paymentRequestId: `${paymentRequestBase}-${i + 1}`,
-                    transactionId: paymentResponse.transactionId,
-                    amount: split.amountBsv,
-                    currency: "BSV",
-                    paidBy: userHandle,
-                    paidAt: new Date().toISOString(),
-                    status: "completed",
-                    metadata: {
-                        type: "mint_payment",
-                        templateId: randomItem.id,
-                        pool: randomItem.pool,
+                    const paymentResponse = await handcashService.sendPayment(privateKey, {
                         destination: split.destination,
-                        splitIndex: i + 1,
-                        splitCount: paymentSplits.length,
-                        paymentRequestBase
-                    }
-                })
+                        amount: split.amountBsv,
+                        currency: "BSV",
+                        description: paymentNote
+                    }) as any
+
+                    const paymentId = randomUUID();
+                    paymentIds.push(paymentId)
+
+                    // Log Payment to DB
+                    await savePayment({
+                        id: paymentId,
+                        paymentRequestId: `${paymentRequestBase}-${i + 1}`,
+                        transactionId: paymentResponse.transactionId,
+                        amount: split.amountBsv,
+                        currency: "BSV",
+                        paidBy: userHandle,
+                        paidAt: new Date().toISOString(),
+                        status: "completed",
+                        metadata: {
+                            type: "mint_payment",
+                            templateId: randomItem.id,
+                            pool: randomItem.pool,
+                            destination: split.destination,
+                            splitIndex: i + 1,
+                            splitCount: paymentSplits.length,
+                            paymentRequestBase
+                        }
+                    })
+                }
+            } catch (paymentError: any) {
+                console.warn("[Mint API] Direct payment failed, attempting fallback to Payment Request:", paymentError.message);
+
+                // Fallback: Create Payment Request
+                try {
+                    const receivers = paymentSplits.map(split => ({
+                        destination: split.destination,
+                        amount: split.amountBsv,
+                        currencyCode: "BSV"
+                    }));
+
+                    const paymentRequest = await handcashService.createPaymentRequest({
+                        productName: "Slavic Survivors Mint",
+                        productDescription: `Minting ${randomItem.name}`,
+                        productImageUrl: (randomItem as any).imageUrl || "https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/tracksuit_blue.png",
+                        receivers: receivers,
+                        expirationType: "expiration",
+                        expirationTime: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 minutes
+                        redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/mint-complete`, // Or handled by popup
+                        metadata: {
+                            action: "mint",
+                            templateId: randomItem.id,
+                            pool: randomItem.pool,
+                            userHandle: userHandle
+                        }
+                    });
+
+                    const mintIntentId = randomUUID();
+                    await db.insert(mintIntents).values({
+                        id: mintIntentId,
+                        paymentRequestId: paymentRequest.id,
+                        paymentRequestUrl: paymentRequest.paymentRequestUrl,
+                        userId: userId,
+                        handle: userHandle,
+                        collectionId: collectionId,
+                        templateId: (randomItem as any).id,
+                        quantity: 1,
+                        amountBsv: mintPriceBsv.toString(),
+                        status: "pending_payment"
+                    });
+
+                    return NextResponse.json({
+                        success: false,
+                        needPaymentRequest: true,
+                        paymentRequestUrl: paymentRequest.paymentRequestUrl,
+                        mintIntentId: mintIntentId,
+                        message: "Insufficient funds. Please complete payment to continue."
+                    });
+
+                } catch (fallbackError: any) {
+                    console.error("[Mint API] Payment Request fallback failed:", fallbackError);
+                    throw paymentError; // Throw original payment error if fallback also fails
+                }
             }
 
             // 6. Mint Item (Business -> User)
@@ -302,6 +383,10 @@ export async function POST(request: NextRequest) {
             // Local debug templates often use UUIDs which would cause HandCash to error
             if (sourceTemplateId && /^[0-9a-fA-F]{24}$/.test(sourceTemplateId)) {
                 itemToMint.templateId = sourceTemplateId;
+            }
+
+            if (!collectionId || !/^[0-9a-fA-F]{24}$/.test(collectionId)) {
+                throw new Error(`Invalid Collection ID configuration: "${collectionId}". Must be a 24-character hex string.`);
             }
 
             const creationOrder = await minter.createItemsOrder({
@@ -366,7 +451,7 @@ export async function POST(request: NextRequest) {
             const imageUrl = (randomItem as any).imageUrl || (randomItem as any).image;
 
             // Log Mock Payment to DB
-            const mockPriceBsv = 1.23;
+            const mockPriceBsv = 0.88;
             const mockSplits = buildMintSplits(mockPriceBsv, mintDestinations);
             const mockPaymentRequestBase = `mock-mint-${randomItem.id || 'random'}-${Date.now()}`;
             for (let i = 0; i < mockSplits.length; i++) {

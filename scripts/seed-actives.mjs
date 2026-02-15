@@ -1,0 +1,347 @@
+
+import { neon } from "@neondatabase/serverless";
+import * as dotenv from "dotenv";
+import { resolve, dirname, join } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables
+dotenv.config({ path: join(__dirname, "..", ".env.local") });
+
+// Inlined actives data
+const actives = [
+    // === COMMON WEAPONS (minLevel 1-3, ~30 DPS) ===
+    {
+        "id": "tt33",
+        "name": "TT33 Pistol",
+        "description": "Balanced shots at nearest enemy. Reliable.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 1,
+        "tags": ["projectile", "gun"]
+    },
+    {
+        "id": "shank",
+        "name": "Babushka's Shank",
+        "description": "Very fast close-range stabs. High damage.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 1,
+        "tags": ["melee"]
+    },
+    {
+        "id": "knuckles",
+        "name": "Ceramic Knuckles",
+        "description": "Slow but devastating punches. Massive hits.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 1,
+        "tags": ["melee"]
+    },
+    {
+        "id": "stilleto",
+        "name": "Stilleto",
+        "description": "Fast throwing knives at multiple targets.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 2,
+        "tags": ["projectile"]
+    },
+    {
+        "id": "dagger",
+        "name": "Throwing Dagger",
+        "description": "Basic projectile weapon. Reliable damage.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 1,
+        "tags": ["projectile"]
+    },
+    {
+        "id": "holywater",
+        "name": "Holy Water",
+        "description": "Creates damaging puddles on the ground.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 2,
+        "tags": ["area"]
+    },
+    {
+        "id": "cross",
+        "name": "Holy Cross",
+        "description": "Boomerang cross that returns to you.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 2,
+        "tags": ["projectile"]
+    },
+    {
+        "id": "salt",
+        "name": "Salt Line",
+        "description": "Creates protective barriers of salt.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 3,
+        "tags": ["area"]
+    },
+    {
+        "id": "stake",
+        "name": "Aspen Stake",
+        "description": "Thrown wooden stakes. High damage.",
+        "category": "ActiveWeapon",
+        "rarity": "Common",
+        "minLevel": 2,
+        "tags": ["projectile"]
+    },
+
+    // === UNCOMMON WEAPONS (minLevel 4-7, ~35-40 DPS) ===
+    {
+        "id": "ak_radioactive",
+        "name": "Radioactive AK",
+        "description": "Toxic bullets that pierce enemies.",
+        "category": "ActiveWeapon",
+        "rarity": "Uncommon",
+        "minLevel": 4,
+        "tags": ["projectile", "gun"]
+    },
+    {
+        "id": "peppermill",
+        "name": "Peppermill Gun",
+        "description": "Rapid spray of bullets. Quantity over quality.",
+        "category": "ActiveWeapon",
+        "rarity": "Uncommon",
+        "minLevel": 5,
+        "tags": ["projectile", "gun"]
+    },
+    {
+        "id": "soviet_stick",
+        "name": "Soviet Stick",
+        "description": "Slow heavy strikes. Massive damage per hit.",
+        "category": "ActiveWeapon",
+        "rarity": "Uncommon",
+        "minLevel": 4,
+        "tags": ["melee"]
+    },
+    {
+        "id": "vampire_rat",
+        "name": "Vampire Rat",
+        "description": "Companion that scurries and bites enemies.",
+        "category": "Companion",
+        "rarity": "Uncommon",
+        "minLevel": 5,
+        "tags": ["companion"]
+    },
+    {
+        "id": "pig_luggage",
+        "name": "Pig Luggage",
+        "description": "Companion that drops health pickups.",
+        "category": "Companion",
+        "rarity": "Uncommon",
+        "minLevel": 6,
+        "tags": ["companion"]
+    },
+
+    // === RARE WEAPONS (minLevel 8-13, ~45-55 DPS) ===
+    {
+        "id": "kabar",
+        "name": "Kabar Knife",
+        "description": "Armor-piercing blade. High single-target damage.",
+        "category": "ActiveWeapon",
+        "rarity": "Rare",
+        "minLevel": 8,
+        "tags": ["melee"]
+    },
+    {
+        "id": "grail",
+        "name": "Gopnik Grail",
+        "description": "Holy aura that damages nearby enemies.",
+        "category": "ActiveWeapon",
+        "rarity": "Rare",
+        "minLevel": 9,
+        "tags": ["area"]
+    },
+    {
+        "id": "propaganda_tower",
+        "name": "Propaganda Tower",
+        "description": "Deploy towers that damage and slow enemies.",
+        "category": "Deployable",
+        "rarity": "Rare",
+        "minLevel": 10,
+        "tags": ["deployable"]
+    },
+    {
+        "id": "dadushka_chair",
+        "name": "Dadushka Chair",
+        "description": "Slow armored vehicle. High defense.",
+        "category": "Vehicle",
+        "rarity": "Rare",
+        "minLevel": 11,
+        "tags": ["vehicle"]
+    },
+    {
+        "id": "tank_stroller",
+        "name": "Tank Stroller",
+        "description": "Armored transport. Crushes enemies.",
+        "category": "Vehicle",
+        "rarity": "Rare",
+        "minLevel": 12,
+        "tags": ["vehicle"]
+    },
+
+    // === EPIC WEAPONS (minLevel 14-19, ~60-70 DPS) ===
+    {
+        "id": "gzhel_smg",
+        "name": "Gzhel SMG",
+        "description": "Rapid bursts with high crit chance.",
+        "category": "ActiveWeapon",
+        "rarity": "Epic",
+        "minLevel": 14,
+        "tags": ["projectile", "gun"]
+    },
+    {
+        "id": "kvass_reactor",
+        "name": "Kvass Reactor",
+        "description": "Deploy healing zones that boost speed.",
+        "category": "Deployable",
+        "rarity": "Epic",
+        "minLevel": 15,
+        "tags": ["deployable"]
+    },
+    {
+        "id": "skull_screen",
+        "name": "Skull Screen",
+        "description": "Orbiting skulls damage nearby enemies.",
+        "category": "ActiveWeapon",
+        "rarity": "Epic",
+        "minLevel": 16,
+        "tags": ["orbital"]
+    },
+    {
+        "id": "gopnik_gondola",
+        "name": "Gopnik Gondola",
+        "description": "Floating vehicle. Ignores terrain.",
+        "category": "Vehicle",
+        "rarity": "Epic",
+        "minLevel": 18,
+        "tags": ["vehicle"]
+    },
+
+    // === LEGENDARY WEAPONS (minLevel 20+, ~75-95 DPS) ===
+    {
+        "id": "visors",
+        "name": "Orthodox Visors",
+        "description": "Devastating holy lasers. High damage.",
+        "category": "ActiveWeapon",
+        "rarity": "Legendary",
+        "minLevel": 20,
+        "tags": ["projectile"]
+    },
+    {
+        "id": "nuclear_pigeon",
+        "name": "Nuclear Pigeon",
+        "description": "Radioactive companion. Orbits and nukes.",
+        "category": "Companion",
+        "rarity": "Legendary",
+        "minLevel": 22,
+        "tags": ["companion"]
+    },
+    {
+        "id": "haunted_lada",
+        "name": "Haunted Lada",
+        "description": "Ghost car. Phases through dealing cold damage.",
+        "category": "Vehicle",
+        "rarity": "Legendary",
+        "minLevel": 24,
+        "tags": ["vehicle"]
+    },
+    {
+        "id": "big_biz_lada",
+        "name": "Big Biz Lada",
+        "description": "Gold tank. Generates coins while ramming.",
+        "category": "Vehicle",
+        "rarity": "Legendary",
+        "minLevel": 26,
+        "tags": ["vehicle"]
+    }
+];
+
+async function seedActives() {
+    console.log("🌱 Seeding item templates from inlined actives data (MJS)...");
+
+    if (!process.env.DATABASE_URL) {
+        console.error("❌ No DATABASE_URL found");
+        process.exit(1);
+    }
+
+    const sql = neon(process.env.DATABASE_URL);
+
+    // 1. Get or Create Collection
+    const existingCollections = await sql`SELECT * FROM collections`;
+    let targetCollectionId;
+
+    if (existingCollections.length > 0) {
+        targetCollectionId = existingCollections[0].id;
+        console.log(`📦 Using existing collection: ${existingCollections[0].name} (${targetCollectionId})`);
+    } else {
+        console.log("⚠️ No collections found. Please create a collection in the Admin Dashboard first.");
+        process.exit(1);
+    }
+
+    // 2. Map actives to item template structure
+    for (const active of actives) {
+        const attributes = [
+            { name: "Category", value: active.category, displayType: "string" },
+            { name: "Min Level", value: active.minLevel.toString(), displayType: "number" },
+            { name: "Tags", value: active.tags.join(", "), displayType: "string" },
+        ];
+
+        const attributesJson = JSON.stringify(attributes);
+
+        try {
+            // Upsert using ON CONFLICT logic with raw SQL
+            // Using updated_at field for conflict update trigger manually if needed, or just standard update
+            await sql`
+                INSERT INTO item_templates (
+                    id, 
+                    name, 
+                    description, 
+                    rarity, 
+                    attributes, 
+                    collection_id, 
+                    image_url, 
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    ${active.id},
+                    ${active.name},
+                    ${active.description},
+                    ${active.rarity},
+                    ${attributesJson},
+                    ${targetCollectionId},
+                    'https://res.cloudinary.com/handcash-io/image/upload/v1710255990/items/default_weapon.png',
+                    NOW(),
+                    NOW()
+                )
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    rarity = EXCLUDED.rarity,
+                    attributes = EXCLUDED.attributes,
+                    updated_at = NOW();
+            `;
+
+            console.log(`✅ Upserted template: ${active.name} (${active.id})`);
+        } catch (error) {
+            console.error(`❌ Failed to upsert ${active.name}:`, error);
+        }
+    }
+
+    console.log("✨ Seeding from actives complete!");
+    process.exit(0);
+}
+
+seedActives().catch(err => {
+    console.error("💥 Fatal error during seeding:", err);
+    process.exit(1);
+});
